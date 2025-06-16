@@ -1,0 +1,29 @@
+{
+  "name": "echo-app",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "mobile"
+  ],
+  "scripts": {
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "format": "prettier --write ."
+  }, 
+  "lint-staged": {
+    "*.{js,ts,tsx,jsx,json,md}": [
+      "prettier --write",
+      "eslint --fix"
+    ]
+  },
+  "scripts": {
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "eslint": "^9.29.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-prettier": "^5.4.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.2",
+    "prettier": "^3.5.3"
+  }
+}
