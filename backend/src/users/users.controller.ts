@@ -31,4 +31,9 @@ export class UsersController {
   updateAvatar(@Request() req, @Body() dto: UpdateAvatarDto) {
     return this.usersService.updateAvatar(req.user.userId, dto);
   }
+
+  @Get('me/stats')
+  async getStats(@Request() req) {
+    return this.usersService.getStats(req.user.userId);
+  }
 }

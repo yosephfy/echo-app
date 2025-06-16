@@ -3,9 +3,15 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { User } from './user.entity';
+import { Bookmark } from 'src/bookmarks/bookmark.entity';
+import { Secret } from 'src/secrets/secret.entity';
+import { Streak } from 'src/streaks/streak.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User])],
+  imports: [
+    // e.g. in UsersModule
+    TypeOrmModule.forFeature([User, Secret, Bookmark, Streak]),
+  ],
   providers: [UsersService],
   controllers: [UsersController],
   exports: [UsersService],

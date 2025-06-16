@@ -4,18 +4,27 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from './user.entity';
-import { RegisterDto } from '../auth/dto/register.dto';
 import * as argon2 from 'argon2';
-import { UpdateCredentialsDto } from 'src/auth/dto/update-credentials.dto';
 import { UpdateAvatarDto } from 'src/auth/dto/update-avatar.dto';
+import { UpdateCredentialsDto } from 'src/auth/dto/update-credentials.dto';
+import { Repository } from 'typeorm';
+import { RegisterDto } from '../auth/dto/register.dto';
+import { Bookmark } from '../bookmarks/bookmark.entity';
+import { Secret } from '../secrets/secret.entity';
+import { Streak } from '../streaks/streak.entity'; // if you have a Streak entity
+import { User } from './user.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepo: Repository<User>,
+    @InjectRepository(Secret)
+    private secretsRepo: Repository<Secret>,
+    @InjectRepository(Bookmark)
+    private bookmarksRepo: Repository<Bookmark>,
+    @InjectRepository(Streak)
+    private streaksRepo: Repository<Streak>,
   ) {}
 
   async findByEmail(email: string): Promise<User | null> {
@@ -67,5 +76,19 @@ export class UsersService {
 
     (user as any).avatarUrl = dto.avatarUrl;
     return this.usersRepo.save(user);
+  }
+
+  async getStats(userId: string) {
+    const postsCount = await this.secretsRepo.count({ where: { userId } });
+    const bookmarksCount = await this.bookmarksRepo.count({
+      where: { userId },
+    });
+    // assuming one active streak record per user
+    const streak = await this.streaksRepo.findOne({ where: { userId } });
+    return {
+      postsCount,
+      bookmarksCount,
+      currentStreak: streak?.days || 0,
+    };
   }
 }
