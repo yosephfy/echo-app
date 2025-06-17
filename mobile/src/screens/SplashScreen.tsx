@@ -1,12 +1,15 @@
 import React, { useEffect } from "react";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { useAuthStore } from "../store/authStore";
+import { usePreferencesStore } from "../store/preferencesStore";
 
 export default function SplashScreen() {
   const restore = useAuthStore((s) => s.restoreToken);
 
   useEffect(() => {
-    restore();
+    Promise.all([restore(), usePreferencesStore.getState().load()]).then(() => {
+      // both token & prefs are loaded
+    });
   }, []);
 
   return (

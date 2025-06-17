@@ -1,15 +1,16 @@
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React, { useEffect, useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
+  View,
 } from "react-native";
 import { api } from "../api/client";
-import { useAuthStore } from "../store/authStore";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { AppStackParamList } from "../navigation/AppNavigator";
+import { useAuthStore } from "../store/authStore";
+import { useTheme } from "../theme/ThemeContext";
 
 type Props = NativeStackScreenProps<AppStackParamList, "Profile">;
 
@@ -20,6 +21,26 @@ interface Stats {
 }
 
 export default function ProfileScreen({ navigation }: Props) {
+  const theme = useTheme();
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 24,
+      backgroundColor: theme.colors.background,
+    },
+    heading: { fontSize: 22, marginBottom: 16, color: theme.colors.text },
+    stat: { fontSize: 16, marginVertical: 4, color: theme.colors.text },
+    center: { flex: 1, justifyContent: "center", alignItems: "center" },
+
+    button: {
+      marginTop: 24,
+      backgroundColor: theme.colors.primary,
+      padding: 12,
+      borderRadius: 4,
+      alignItems: "center",
+    },
+    buttonText: { color: "#fff", fontSize: 16 },
+  });
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const token = useAuthStore((s) => s.token);
@@ -67,18 +88,3 @@ export default function ProfileScreen({ navigation }: Props) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24 },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  heading: { fontSize: 22, marginBottom: 16 },
-  stat: { fontSize: 16, marginVertical: 4 },
-  button: {
-    marginTop: 24,
-    backgroundColor: "#0066CC",
-    padding: 12,
-    borderRadius: 4,
-    alignItems: "center",
-  },
-  buttonText: { color: "#fff", fontSize: 16 },
-});
