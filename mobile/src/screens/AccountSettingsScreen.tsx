@@ -1,3 +1,5 @@
+// mobile/src/screens/AccountSettingsScreen.tsx
+
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -10,8 +12,12 @@ import {
 import * as SecureStore from "expo-secure-store";
 import { api } from "../api/client";
 import { useAuthStore } from "../store/authStore";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { AppStackParamList } from "../navigation/AppNavigator";
 
-export default function AccountSettingsScreen() {
+type Props = NativeStackScreenProps<AppStackParamList, "AccountSettings">;
+
+export default function AccountSettingsScreen({ navigation }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -20,10 +26,13 @@ export default function AccountSettingsScreen() {
 
   useEffect(() => {
     if (!token) return;
-    api.get<{ email: string; avatarUrl?: string }>("/users/me").then((u) => {
-      setEmail(u.email);
-      if (u.avatarUrl) setAvatarUrl(u.avatarUrl);
-    });
+    api
+      .get<{ email: string; avatarUrl?: string }>("/users/me")
+      .then((u) => {
+        setEmail(u.email);
+        if (u.avatarUrl) setAvatarUrl(u.avatarUrl);
+      })
+      .catch((e) => console.error(e));
   }, [token]);
 
   const updateCredentials = async () => {
@@ -113,6 +122,23 @@ export default function AccountSettingsScreen() {
       <TouchableOpacity style={styles.deleteButton} onPress={deleteAccount}>
         <Text style={styles.deleteText}>Delete Account</Text>
       </TouchableOpacity>
+
+      {/* New navigation buttons */}
+      <View style={styles.divider} />
+
+      <TouchableOpacity
+        style={styles.linkButton}
+        onPress={() => navigation.navigate("Help")}
+      >
+        <Text style={styles.linkText}>Help</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.linkButton}
+        onPress={() => navigation.navigate("About")}
+      >
+        <Text style={styles.linkText}>About</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -156,4 +182,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   deleteText: { color: "#fff", fontSize: 16 },
+  linkButton: {
+    padding: 12,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#0066CC",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  linkText: { color: "#0066CC", fontSize: 16 },
 });

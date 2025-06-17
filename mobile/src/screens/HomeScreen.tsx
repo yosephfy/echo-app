@@ -15,6 +15,18 @@ export default function HomeScreen({ navigation }: Props) {
       >
         <Text style={styles.buttonText}>Account Settings</Text>
       </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => navigation.navigate("Profile")}
+      >
+        <Text style={styles.buttonText}>Profile</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => navigation.navigate("Preferences")}
+      >
+        <Text style={styles.buttonText}>Preferences</Text>
+      </TouchableOpacity>
     </View>
   );
 }
