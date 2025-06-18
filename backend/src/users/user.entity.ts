@@ -12,6 +12,7 @@ import { UserPreference } from 'src/preferences/user-preference.entity';
 
 @Entity()
 export class User {
+  [x: string]: any;
   @PrimaryGeneratedColumn('uuid')
   id: string;
 

@@ -6,6 +6,9 @@ import { AuthModule } from './auth/auth.module';
 import { PreferencesModule } from './preferences/preferences.module';
 import { RedisModule } from './redis/redis.module';
 import { SecretsModule } from './secrets/secrets.module';
+import { ReactionsModule } from './reactions/reactions.module';
+import { RepliesModule } from './replies/replies.module';
+import { BookmarksModule } from './bookmarks/bookmarks.module';
 
 @Module({
   imports: [
@@ -23,6 +26,9 @@ import { SecretsModule } from './secrets/secrets.module';
     PreferencesModule,
     RedisModule,
     SecretsModule,
+    ReactionsModule,
+    RepliesModule,
+    BookmarksModule,
     // ... your feature modules (Users, Auth) go here
   ],
 })

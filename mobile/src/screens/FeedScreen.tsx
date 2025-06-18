@@ -10,6 +10,7 @@ import {
 import { api } from "../api/client";
 import io from "socket.io-client";
 import { useAuthStore } from "../store/authStore";
+import { useReactions } from "../hooks/useReactions";
 
 interface SecretItem {
   id: string;
@@ -81,13 +82,40 @@ export default function FeedScreen() {
     }
   };
 
+  function SecretItemComponent({ item }: { item: SecretItem }) {
+    const { count, toggle } = useReactions(item.id);
+    useEffect(() => {
+      /* fetch initial count if needed */
+    }, []);
+
+    return (
+      <View style={styles.item}>
+        <Text style={styles.text}>{item.text}</Text>
+        <View style={styles.actionsRow}>
+          <TouchableOpacity onPress={toggle}>
+            <Text>❤️ {count}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              /* open reply thread */
+            }}
+          >
+            <Text>💬 Reply</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              /* bookmark hook */
+            }}
+          >
+            <Text>🔖</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   const renderItem = ({ item }: { item: SecretItem }) => (
-    <View style={styles.item}>
-      <Text style={styles.text}>{item.text}</Text>
-      <Text style={styles.meta}>
-        {item.mood ? `Mood: ${item.mood}` : "No mood"} • {item.status}
-      </Text>
-    </View>
+    <SecretItemComponent item={item} />
   );
 
   if (!token) {
@@ -125,4 +153,9 @@ const styles = StyleSheet.create({
   },
   text: { fontSize: 16, marginBottom: 4 },
   meta: { fontSize: 12, color: "#666" },
+  actionsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 8,
+  },
 });
