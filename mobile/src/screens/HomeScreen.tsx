@@ -36,6 +36,12 @@ export default function HomeScreen({ navigation }: Props) {
       >
         <Text style={styles.buttonText}>New Secret</Text>
       </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => navigation.navigate("Feed")}
+      >
+        <Text style={styles.buttonText}>View Feed</Text>
+      </TouchableOpacity>
 
       <ComposerModal
         visible={showComposer}

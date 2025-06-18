@@ -6,6 +6,7 @@ import ProfileScreen from "../screens/ProfileScreen";
 import PreferencesScreen from "../screens/PreferenceScreen";
 import HelpScreen from "../screens/HelpScreen";
 import AboutScreen from "../screens/AboutScreen";
+import FeedScreen from "../screens/FeedScreen";
 
 export type AppStackParamList = {
   Home: undefined;
@@ -14,6 +15,7 @@ export type AppStackParamList = {
   Preferences: undefined;
   Help: undefined;
   About: undefined;
+  Feed: undefined;
 };
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
@@ -27,6 +29,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Preferences" component={PreferencesScreen} />
       <Stack.Screen name="Help" component={HelpScreen} />
       <Stack.Screen name="About" component={AboutScreen} />
+      <Stack.Screen name="Feed" component={FeedScreen} />
     </Stack.Navigator>
   );
 }
