@@ -4,6 +4,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { PreferencesModule } from './preferences/preferences.module';
+import { RedisModule } from './redis/redis.module';
+import { SecretsModule } from './secrets/secrets.module';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { PreferencesModule } from './preferences/preferences.module';
     UsersModule,
     AuthModule,
     PreferencesModule,
+    RedisModule,
+    SecretsModule,
     // ... your feature modules (Users, Auth) go here
   ],
 })
