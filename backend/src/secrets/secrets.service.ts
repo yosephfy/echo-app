@@ -1,6 +1,6 @@
 import { Injectable, Inject, ForbiddenException } from '@nestjs/common';
 import { Repository } from 'typeorm';
-import { Secret } from './secret.entity';
+import { Secret, SecretStatus } from './secret.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import Redis from 'ioredis';
 
@@ -46,12 +46,24 @@ export class SecretsService {
   }
 
   /** Returns an array of secrets for the feed with pagination */
-  async getFeed(userId: string, page: number, limit: number) {
-    const [items, total] = await this.secretsRepo.findAndCount({
-      order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+  async getFeed(userId: string, page: number, limit: number, mood?: string) {
+    const q = this.secretsRepo
+      .createQueryBuilder('s')
+      .where('s.status = :status', {
+        status: SecretStatus.PUBLISHED,
+      })
+      .orWhere('s.status = :status', {
+        status: SecretStatus.UNDER_REVIEW,
+      })
+      .orderBy('s.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    if (mood) {
+      q.andWhere('s.mood = :mood', { mood });
+    }
+
+    const [items, total] = await q.getManyAndCount();
     return {
       items: items.map((s) => ({
         id: s.id,

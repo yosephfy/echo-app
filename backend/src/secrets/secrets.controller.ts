@@ -30,10 +30,11 @@ export class SecretsController {
     @Request() req,
     @Query('page') page = '1',
     @Query('limit') limit = '20',
+    @Query('mood') mood?: string, // new
   ) {
     const pageNum = Math.max(parseInt(page, 10), 1);
     const limitNum = Math.min(Math.max(parseInt(limit, 10), 1), 100);
-    return this.secrets.getFeed(req.user.userId, pageNum, limitNum);
+    return this.secrets.getFeed(req.user.userId, pageNum, limitNum, mood);
   }
   @Post()
   async create(@Request() req, @Body() dto: CreateSecretDto) {

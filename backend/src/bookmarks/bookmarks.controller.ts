@@ -12,6 +12,7 @@ import { BookmarksService } from './bookmarks.service';
 @UseGuards(JwtAuthGuard)
 @Controller('bookmarks')
 export class BookmarksController {
+  secretsRepo: any;
   constructor(private svc: BookmarksService) {}
 
   @Post(':secretId')
@@ -21,6 +22,17 @@ export class BookmarksController {
 
   @Get()
   async list(@Request() req) {
-    return this.svc.list(req.user.userId);
+    // returns Bookmark entities; map to { id, text, mood, status, createdAt }
+    const bms = await this.svc.list(req.user.userId);
+    return Promise.all(
+      bms.map(async (bm) => {
+        const secret = await this.secretsRepo.findOne({
+          where: { id: bm.secretId },
+        });
+        return {
+          /* pick fields from secret */
+        };
+      }),
+    );
   }
 }
