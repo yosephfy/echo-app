@@ -44,4 +44,25 @@ export class SecretsService {
     // redis.ttl returns -2 if key doesn’t exist, -1 if no expiry
     return ttl > 0 ? ttl : 0;
   }
+
+  /** Returns an array of secrets for the feed with pagination */
+  async getFeed(userId: string, page: number, limit: number) {
+    const [items, total] = await this.secretsRepo.findAndCount({
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return {
+      items: items.map((s) => ({
+        id: s.id,
+        text: s.text,
+        mood: s.mood,
+        status: s.status,
+        createdAt: s.createdAt,
+      })),
+      total,
+      page,
+      limit,
+    };
+  }
 }

@@ -5,6 +5,7 @@ import {
   UseGuards,
   Request,
   Get,
+  Query,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SecretsService } from './secrets.service';
@@ -23,7 +24,17 @@ export class CreateSecretDto {
 @Controller('secrets')
 export class SecretsController {
   constructor(private secrets: SecretsService) {}
-
+  // GET /secrets/feed?page=1&limit=20
+  @Get('feed')
+  async feed(
+    @Request() req,
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+  ) {
+    const pageNum = Math.max(parseInt(page, 10), 1);
+    const limitNum = Math.min(Math.max(parseInt(limit, 10), 1), 100);
+    return this.secrets.getFeed(req.user.userId, pageNum, limitNum);
+  }
   @Post()
   async create(@Request() req, @Body() dto: CreateSecretDto) {
     console.log('Incoming DTO:', dto);
