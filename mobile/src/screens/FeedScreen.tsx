@@ -109,6 +109,30 @@ export default function FeedScreen() {
           >
             <Text>🔖</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              /* share functionality */
+            }}
+          >
+            <Text>🔗 Share</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              api
+                .post(`/secrets/${item.id}/report`, {
+                  reason: "Inappropriate content",
+                })
+                .then(() => {
+                  alert("Reported successfully");
+                })
+                .catch((err) => {
+                  console.error("Report failed", err);
+                  alert("Failed to report");
+                });
+            }}
+          >
+            <Text>🚩 Report</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );

@@ -6,11 +6,16 @@ import { AuthModule } from './auth/auth.module';
 import { PreferencesModule } from './preferences/preferences.module';
 import { RedisModule } from './redis/redis.module';
 import { SecretsModule } from './secrets/secrets.module';
-import { ReactionsModule } from './reactions/reactions.module';
-import { RepliesModule } from './replies/replies.module';
-import { BookmarksModule } from './bookmarks/bookmarks.module';
+import { APP_GUARD } from '@nestjs/core/constants';
+import { RolesGuard } from './auth/roles.guard';
+import { ReportsModule } from './reports/reports.module';
+import { ModerationModule } from './moderation/moderation.module';
 
 @Module({
+  providers: [
+    { provide: APP_GUARD, useClass: RolesGuard },
+    // ...
+  ],
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
@@ -26,9 +31,8 @@ import { BookmarksModule } from './bookmarks/bookmarks.module';
     PreferencesModule,
     RedisModule,
     SecretsModule,
-    ReactionsModule,
-    RepliesModule,
-    BookmarksModule,
+    ReportsModule,
+    ModerationModule,
     // ... your feature modules (Users, Auth) go here
   ],
 })

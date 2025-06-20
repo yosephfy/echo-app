@@ -4,6 +4,8 @@ import { Secret } from './secret.entity';
 import { SecretsService } from './secrets.service';
 import { SecretsController } from './secrets.controller';
 import { SecretsGateway } from './secrets.getaway';
+import { ModerationModule } from 'src/moderation/moderation.module';
+import { ReportsModule } from 'src/reports/reports.module';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Secret])],

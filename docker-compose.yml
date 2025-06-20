@@ -26,13 +26,15 @@ services:
       - postgres
       - redis
     environment:
-      DATABASE_URL: postgres://echo:changeme@postgres:5432/echo_dev
+      DATABASE_URL: postgres://echo:foreveryoung@postgres:5432/echo_dev
       REDIS_URL: redis://redis:6379
+      OPENAI_KEY: ${OPENAI_KEY}
+      NODE_ENV: development
     ports:
       - "3000:3000"
     volumes:
       - ./backend:/usr/src/app
-
+      - /usr/src/app/node_modules
   mobile:
     image: node:20-alpine
     working_dir: /app

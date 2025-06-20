@@ -52,7 +52,13 @@ export default function HomeScreen({ navigation }: Props) {
         onPress={() => navigation.navigate("Bookmarks")}
         style={styles.button}
       >
-        <Text style={styles.buttonText}>Bookmarks</Text>
+        <Text style={styles.buttonText}>Bookmark</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => navigation.navigate("Admin")}
+        style={styles.button}
+      >
+        <Text style={styles.buttonText}>ADMIN</Text>
       </TouchableOpacity>
 
       <ComposerModal
