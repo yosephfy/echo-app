@@ -10,6 +10,8 @@ import { APP_GUARD } from '@nestjs/core/constants';
 import { RolesGuard } from './auth/roles.guard';
 import { ReportsModule } from './reports/reports.module';
 import { ModerationModule } from './moderation/moderation.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { StreaksModule } from './streaks/streaks.module';
 
 @Module({
   providers: [
@@ -17,6 +19,7 @@ import { ModerationModule } from './moderation/moderation.module';
     // ...
   ],
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       useFactory: () => ({
@@ -33,6 +36,7 @@ import { ModerationModule } from './moderation/moderation.module';
     SecretsModule,
     ReportsModule,
     ModerationModule,
+    StreaksModule,
     // ... your feature modules (Users, Auth) go here
   ],
 })

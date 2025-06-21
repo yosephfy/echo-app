@@ -1,4 +1,4 @@
-import { Injectable, Inject, ForbiddenException } from '@nestjs/common';
+import { Injectable, Inject, ForbiddenException, Logger } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { Secret, SecretStatus } from './secret.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -9,11 +9,14 @@ const COOLDOWN_SECONDS = 24 * 60 * 60; // 24h
 
 @Injectable()
 export class SecretsService {
+  private readonly logger = new Logger(SecretsService.name);
+
   constructor(
     @InjectRepository(Secret)
     private secretsRepo: Repository<Secret>,
     @Inject('REDIS') private redis: Redis,
     @Inject('MOD_QUEUE') private modQueue: Queue,
+    @Inject('NOTIF_QUEUE') private readonly notifQueue: Queue,
   ) {}
 
   /** Attempt to create a secret for a user, enforcing 24h cooldown */
@@ -43,6 +46,22 @@ export class SecretsService {
       text: saved.text,
     });
     console.log(`🔔 [SecretsService] Enqueued moderation for ${saved.id}`);
+
+    // 24-h cooldown complete notification
+    await this.notifQueue.add(
+      'cooldown',
+      { userId, type: 'cooldown' },
+      { delay: 24 * 60 * 60 * 1000 }, // 24 hours
+    );
+
+    // 3-h before cooldown ends reminder
+    await this.notifQueue.add(
+      'reminder',
+      { userId, type: 'reminder' },
+      { delay: 21 * 60 * 60 * 1000 }, // 21 hours
+    );
+
+    this.logger.log(`Scheduled cooldown and reminder for user ${userId}`);
     return saved;
   }
 
