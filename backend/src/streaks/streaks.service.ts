@@ -58,4 +58,14 @@ export class StreaksService {
 
     this.logger.log('Daily streak calculation complete');
   }
+
+  // fetch all
+  async findAll(): Promise<Streak[]> {
+    return this.streakRepo.find();
+  }
+
+  // fetch one
+  async findByUserId(userId: string): Promise<Streak | null> {
+    return this.streakRepo.findOne({ where: { userId } });
+  }
 }
