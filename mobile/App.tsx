@@ -11,6 +11,7 @@ import * as Notifications from "expo-notifications";
 import { useEffect } from "react";
 import { api } from "./src/api/client";
 import { registerForPushNotificationsAsync } from "./src/utils/pushNotifications";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function App() {
   const { token, loading } = useAuthStore();
@@ -33,10 +34,12 @@ export default function App() {
   }
 
   return (
-    <ThemeProvider>
-      <NavigationContainer>
-        {token ? <AppNavigator /> : <AuthNavigator />}
-      </NavigationContainer>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <NavigationContainer>
+          {token ? <AppNavigator /> : <AuthNavigator />}
+        </NavigationContainer>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

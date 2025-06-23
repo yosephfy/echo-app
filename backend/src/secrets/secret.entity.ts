@@ -39,4 +39,6 @@ export class Secret {
 
   @CreateDateColumn()
   createdAt: Date;
+  reactions: any;
+  caps: any;
 }

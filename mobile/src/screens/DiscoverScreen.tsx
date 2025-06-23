@@ -5,6 +5,7 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
+  SafeAreaView,
 } from "react-native";
 import { api } from "../api/client";
 import { useTheme } from "../theme/ThemeContext";
@@ -46,7 +47,7 @@ export default function DiscoverScreen() {
   );
 
   return (
-    <View
+    <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       <View style={styles.chipRow}>
@@ -77,12 +78,12 @@ export default function DiscoverScreen() {
         onEndReached={() => feed.length < total && load(page + 1)}
         onEndReachedThreshold={0.5}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 12 },
+  container: { flex: 1 },
   chipRow: { flexDirection: "row", marginBottom: 12 },
   chip: {
     borderWidth: 1,

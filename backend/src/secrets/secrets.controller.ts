@@ -38,8 +38,6 @@ export class SecretsController {
   }
   @Post()
   async create(@Request() req, @Body() dto: CreateSecretDto) {
-    console.log('Incoming DTO:', dto);
-
     const { userId } = req.user;
     const secret = await this.secrets.createSecret(userId, dto.text, dto.mood);
     // Return minimal view

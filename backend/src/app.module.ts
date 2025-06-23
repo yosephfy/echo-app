@@ -12,6 +12,8 @@ import { ReportsModule } from './reports/reports.module';
 import { ModerationModule } from './moderation/moderation.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { StreaksModule } from './streaks/streaks.module';
+import { ReactionsModule } from './reactions/reactions.module';
+import { CapsModule } from './caps/caps.module';
 
 @Module({
   providers: [
@@ -37,6 +39,8 @@ import { StreaksModule } from './streaks/streaks.module';
     ReportsModule,
     ModerationModule,
     StreaksModule,
+    ReactionsModule,
+    CapsModule,
     // ... your feature modules (Users, Auth) go here
   ],
 })

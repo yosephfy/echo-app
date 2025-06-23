@@ -90,7 +90,6 @@ export class SecretsService {
     }
 
     const [items, total] = await q.getManyAndCount();
-    console.log(items, total);
     return {
       items: items.map((s) => ({
         id: s.id,
