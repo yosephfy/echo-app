@@ -1,20 +1,19 @@
 import { NavigationContainer } from "@react-navigation/native";
-import React from "react";
+import React, { useEffect } from "react";
 import "react-native-gesture-handler";
 import "react-native-reanimated";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { api } from "./src/api/client";
 import AppNavigator from "./src/navigation/AppNavigator"; // placeholder for main app flow
 import AuthNavigator from "./src/navigation/AuthNavigator";
+import OnboardingNavigator from "./src/navigation/OnboardingNavigator";
 import SplashScreen from "./src/screens/SplashScreen";
 import { useAuthStore } from "./src/store/authStore";
 import { ThemeProvider } from "./src/theme/ThemeContext";
-import * as Notifications from "expo-notifications";
-import { useEffect } from "react";
-import { api } from "./src/api/client";
 import { registerForPushNotificationsAsync } from "./src/utils/pushNotifications";
-import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function App() {
-  const { token, loading } = useAuthStore();
+  const { token, loading, onboarded } = useAuthStore();
 
   useEffect(() => {
     (async () => {
@@ -37,7 +36,13 @@ export default function App() {
     <SafeAreaProvider>
       <ThemeProvider>
         <NavigationContainer>
-          {token ? <AppNavigator /> : <AuthNavigator />}
+          {!token ? (
+            <AuthNavigator />
+          ) : !onboarded ? (
+            <OnboardingNavigator />
+          ) : (
+            <AppNavigator />
+          )}
         </NavigationContainer>
       </ThemeProvider>
     </SafeAreaProvider>

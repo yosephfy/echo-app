@@ -4,8 +4,9 @@ import SignInScreen from "../screens/SignInScreen";
 import SignUpScreen from "../screens/SignUpScreen";
 
 export type AuthStackParamList = {
-  SignIn: undefined;
   SignUp: undefined;
+  SignIn: undefined;
+  ChooseProfile: { handle: string; avatarUrl: string };
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
