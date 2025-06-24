@@ -1,22 +1,24 @@
+// backend/src/users/user.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
   OneToMany,
-  ManyToOne,
+  Unique,
 } from 'typeorm';
 import { Secret } from '../secrets/secret.entity';
 import { Bookmark } from '../bookmarks/bookmark.entity';
 import { Streak } from '../streaks/streak.entity';
-import { UserPreference } from 'src/preferences/user-preference.entity';
+import { UserPreference } from '../preferences/user-preference.entity';
 
 @Entity()
+@Unique(['email'])
+@Unique(['handle'])
 export class User {
-  [x: string]: any;
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
+  @Column()
   email: string;
 
   @Column()
@@ -25,6 +27,11 @@ export class User {
   @Column({ default: true })
   active: boolean;
 
+  /** User-selected or auto-assigned handle, e.g. "SilverFox42" */
+  @Column({ unique: true, nullable: true })
+  handle: string;
+
+  /** URL to an avatar image; chosen from a fixed pool */
   @Column({ nullable: true })
   avatarUrl?: string;
 
@@ -39,4 +46,10 @@ export class User {
 
   @OneToMany(() => UserPreference, (preference) => preference.user)
   preferences: UserPreference[];
+
+  reactions: any;
+  tokens: any;
+  caps: any;
+  reports: any;
+  replies: any;
 }

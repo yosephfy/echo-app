@@ -5,12 +5,17 @@ import {
   Body,
   UseGuards,
   Request,
+  Post,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UpdateCredentialsDto } from '../auth/dto/update-credentials.dto';
 import { UpdateAvatarDto } from '..//auth/dto/update-avatar.dto';
 import { UsersService } from './users.service';
 
+type RefreshDto = {
+  handle?: boolean;
+  avatar?: boolean;
+};
 @UseGuards(JwtAuthGuard)
 @Controller('users')
 export class UsersController {
@@ -35,5 +40,10 @@ export class UsersController {
   @Get('me/stats')
   async getStats(@Request() req) {
     return this.usersService.getStats(req.user.userId);
+  }
+
+  @Post('refresh-profile')
+  refresh(@Request() req, @Body() dto: RefreshDto) {
+    return this.usersService.refreshProfile(req.user.userId, dto);
   }
 }

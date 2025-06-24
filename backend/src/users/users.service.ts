@@ -13,6 +13,7 @@ import { Bookmark } from '../bookmarks/bookmark.entity';
 import { Secret } from '../secrets/secret.entity';
 import { Streak } from '../streaks/streak.entity'; // if you have a Streak entity
 import { User } from './user.entity';
+import { HandleService } from './handle.service';
 
 @Injectable()
 export class UsersService {
@@ -25,6 +26,7 @@ export class UsersService {
     private bookmarksRepo: Repository<Bookmark>,
     @InjectRepository(Streak)
     private streaksRepo: Repository<Streak>,
+    private handleSvc: HandleService,
   ) {}
 
   async findByEmail(email: string): Promise<User | null> {
@@ -37,15 +39,60 @@ export class UsersService {
   }
 
   async register(dto: RegisterDto): Promise<Omit<User, 'passwordHash'>> {
+    // 1) Check email uniqueness
     const existing = await this.findByEmail(dto.email);
     if (existing) {
       throw new ConflictException('Email already registered');
     }
+
+    // 2) Generate unique handle
+    let handle: string;
+    let exists: User | null;
+    do {
+      handle = this.handleSvc.generateHandle();
+      exists = await this.usersRepo.findOne({ where: { handle } });
+    } while (exists);
+
+    // 3) Pick avatar
+    const avatarUrl = this.handleSvc.pickAvatar();
+
+    // 4) Create the user
     const hash = await argon2.hash(dto.password);
     const user = this.usersRepo.create({
       email: dto.email,
       passwordHash: hash,
+      handle,
+      avatarUrl,
     });
+
+    const saved = await this.usersRepo.save(user);
+    // remove hash before returning
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { passwordHash, ...result } = saved;
+    return result;
+  }
+
+  /** Allow refreshing handle and/or avatar later */
+  async refreshProfile(
+    userId: string,
+    opts: { handle?: boolean; avatar?: boolean },
+  ) {
+    const user = await this.usersRepo.findOne({ where: { id: userId } });
+    if (!user) throw new Error('User not found');
+
+    if (opts.handle) {
+      let newHandle: string;
+      let exists: User | null;
+      do {
+        newHandle = this.handleSvc.generateHandle();
+        exists = await this.usersRepo.findOne({ where: { handle: newHandle } });
+      } while (exists);
+      user.handle = newHandle;
+    }
+    if (opts.avatar) {
+      user.avatarUrl = this.handleSvc.pickAvatar();
+    }
+
     const saved = await this.usersRepo.save(user);
     // remove hash before returning
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
