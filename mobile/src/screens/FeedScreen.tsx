@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FlatList, ActivityIndicator, StyleSheet } from "react-native";
 import { api } from "../api/client";
@@ -7,6 +7,9 @@ import SecretItem, { SecretItemProps } from "../components/SecretItem";
 import { useAuthStore } from "../store/authStore";
 import { useTheme } from "../theme/ThemeContext";
 import usePaginatedData from "../hooks/usePaginatedData";
+import ActionButton from "../components/ActionButton";
+import { useNavigation } from "@react-navigation/native";
+import ComposerModal from "../components/ComposerModal";
 
 export default function FeedScreen() {
   const { colors } = useTheme();
@@ -14,6 +17,7 @@ export default function FeedScreen() {
   const { data, loading, loadFirstPage, loadNextPage, isAtEnd } =
     usePaginatedData<SecretItemProps>("/secrets/feed");
 
+  const [composerActive, setComposerActive] = useState(false);
   // real-time updates
   useSocket("secretCreated", (newItem: SecretItemProps) =>
     loadFirstPage((prev) => [newItem, ...prev])
@@ -29,6 +33,12 @@ export default function FeedScreen() {
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
     >
+      <ComposerModal
+        visible={composerActive}
+        onClose={() => setComposerActive(false)}
+        onPosted={() => setComposerActive(false)}
+      />
+      <ActionButton icon={"plus"} onPress={() => setComposerActive(true)} />
       {loading && data.length === 0 ? (
         <ActivityIndicator size="large" color={colors.primary} />
       ) : (

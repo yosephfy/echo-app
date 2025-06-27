@@ -4,6 +4,7 @@ import { Secret, SecretStatus } from './secret.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import Redis from 'ioredis';
 import { Queue } from 'bullmq';
+import { User } from 'src/users/user.entity';
 
 const COOLDOWN_SECONDS = 24 * 60 * 60; // 24h
 
@@ -71,15 +72,14 @@ export class SecretsService {
     return ttl > 0 ? ttl : 0;
   }
 
-  /** Returns an array of secrets for the feed with pagination */
+  // backend/src/secrets/secrets.service.ts
+
   async getFeed(userId: string, page: number, limit: number, mood?: string) {
     const q = this.secretsRepo
       .createQueryBuilder('s')
-      .where('s.status = :status', {
-        status: SecretStatus.PUBLISHED,
-      })
-      .orWhere('s.status = :status1', {
-        status1: SecretStatus.UNDER_REVIEW,
+      .leftJoinAndSelect('s.author', 'author')
+      .where('s.status IN (:...statuses)', {
+        statuses: [SecretStatus.PUBLISHED, SecretStatus.UNDER_REVIEW],
       })
       .orderBy('s.createdAt', 'DESC')
       .skip((page - 1) * limit)
@@ -90,18 +90,49 @@ export class SecretsService {
     }
 
     const [items, total] = await q.getManyAndCount();
+
+    // OPTION A: Filter out secrets with no author
+    const filtered = items.filter((s) => s.author !== null);
+
     return {
-      items: items.map((s) => ({
+      items: filtered.map((s) => ({
         id: s.id,
         text: s.text,
         mood: s.mood,
         status: s.status,
         createdAt: s.createdAt,
+        author: {
+          id: s.author.id,
+          handle: s.author.handle,
+          avatarUrl: s.author.avatarUrl,
+        },
       })),
-      total,
+      total: filtered.length,
       page,
       limit,
     };
+
+    // OPTION B: Fallback author for null
+    /*
+  return {
+    items: items.map((s) => {
+      const a = s.author;
+      return {
+        id: s.id,
+        text: s.text,
+        mood: s.mood,
+        status: s.status,
+        createdAt: s.createdAt,
+        author: a
+          ? { id: a.id, handle: a.handle, avatarUrl: a.avatarUrl }
+          : { id: s.userId, handle: 'unknown', avatarUrl: null },
+      };
+    }),
+    total,
+    page,
+    limit,
+  };
+  */
   }
 
   async updateStatus(secretId: string, status: SecretStatus): Promise<void> {

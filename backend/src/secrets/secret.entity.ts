@@ -4,6 +4,7 @@ import {
   Column,
   ManyToOne,
   CreateDateColumn,
+  JoinColumn,
 } from 'typeorm';
 import { User } from '../users/user.entity';
 
@@ -31,10 +32,11 @@ export class Secret {
   })
   status: SecretStatus;
 
-  @Column()
+  @Column({ nullable: true })
   userId: string;
 
   @ManyToOne(() => User, (user) => user.secrets, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'userId' }) // tells TypeORM which column is the FK
   author: User;
 
   @CreateDateColumn()

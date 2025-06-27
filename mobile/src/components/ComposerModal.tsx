@@ -17,7 +17,7 @@ interface Props {
   onPosted: () => void;
 }
 
-const MAX_CHARS = 280;
+const MAX_CHARS = 2000;
 const RADIUS = 40;
 const STROKE_WIDTH = 6;
 const CIRCLE_CIRC = 2 * Math.PI * RADIUS;
