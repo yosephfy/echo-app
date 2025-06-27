@@ -72,6 +72,23 @@ export class SecretsService {
     return ttl > 0 ? ttl : 0;
   }
 
+  /** Returns the cooldown start, total duration, and seconds remaining */
+  async getCooldownInfo(userId: string): Promise<{
+    start: string;
+    duration: number;
+    remaining: number;
+  }> {
+    // how many seconds remain before the key expires
+    const ttl = await this.redis.ttl(`cooldown:${userId}`);
+    const remaining = ttl > 0 ? ttl : 0;
+    const startTimestamp = Date.now() - (COOLDOWN_SECONDS - remaining) * 1000;
+    return {
+      start: new Date(startTimestamp).toISOString(),
+      duration: COOLDOWN_SECONDS,
+      remaining,
+    };
+  }
+
   // backend/src/secrets/secrets.service.ts
 
   async getFeed(userId: string, page: number, limit: number, mood?: string) {
@@ -111,28 +128,6 @@ export class SecretsService {
       page,
       limit,
     };
-
-    // OPTION B: Fallback author for null
-    /*
-  return {
-    items: items.map((s) => {
-      const a = s.author;
-      return {
-        id: s.id,
-        text: s.text,
-        mood: s.mood,
-        status: s.status,
-        createdAt: s.createdAt,
-        author: a
-          ? { id: a.id, handle: a.handle, avatarUrl: a.avatarUrl }
-          : { id: s.userId, handle: 'unknown', avatarUrl: null },
-      };
-    }),
-    total,
-    page,
-    limit,
-  };
-  */
   }
 
   async updateStatus(secretId: string, status: SecretStatus): Promise<void> {

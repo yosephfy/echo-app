@@ -1,15 +1,25 @@
-import React, { useState, useEffect } from "react";
+// mobile/src/components/ComposerModal.tsx
+import React, { useState } from "react";
 import {
   Modal,
-  View,
-  TextInput,
-  Text,
-  TouchableOpacity,
+  SafeAreaView,
   StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
   ActivityIndicator,
+  ScrollView,
+  Switch,
 } from "react-native";
-import Svg, { Circle } from "react-native-svg";
+import { useTheme } from "../theme/ThemeContext";
 import { api } from "../api/client";
+import { CircularProgress } from "./CircularProgressComponent";
+
+const MAX_CHARS = 2000;
+const MOODS = ["happy", "sad", "angry", "relieved"] as const;
+
+type Mood = (typeof MOODS)[number];
 
 interface Props {
   visible: boolean;
@@ -17,36 +27,21 @@ interface Props {
   onPosted: () => void;
 }
 
-const MAX_CHARS = 2000;
-const RADIUS = 40;
-const STROKE_WIDTH = 6;
-const CIRCLE_CIRC = 2 * Math.PI * RADIUS;
-
 export default function ComposerModal({ visible, onClose, onPosted }: Props) {
+  const { colors, spacing, fontSizes, radii } = useTheme();
+
   const [text, setText] = useState("");
-  const [mood, setMood] = useState<string | undefined>(undefined);
+  const [mood, setMood] = useState<Mood | undefined>(undefined);
   const [panic, setPanic] = useState(false);
-  const [seconds, setSeconds] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // Fetch cooldown seconds whenever modal opens or after post
-  const fetchQuota = async () => {
-    const { secondsRemaining } = await api.get<{ secondsRemaining: number }>(
-      "/secrets/quota"
-    );
-    setSeconds(secondsRemaining);
-  };
-
-  useEffect(() => {
-    if (visible) {
-      fetchQuota();
-    }
-  }, [visible]);
+  const remainingChars = MAX_CHARS - text.length;
+  const charPct = text.length / MAX_CHARS;
 
   const postSecret = async () => {
     setLoading(true);
     try {
-      await api.post("/secrets", { text, mood });
+      await api.post("/secrets", { text, mood, panic });
       setText("");
       setMood(undefined);
       setPanic(false);
@@ -56,155 +51,216 @@ export default function ComposerModal({ visible, onClose, onPosted }: Props) {
       alert(err.message);
     } finally {
       setLoading(false);
-      fetchQuota();
     }
   };
 
-  // Derived values for circle progress
-  const progress = seconds / (24 * 60 * 60);
-  const strokeDashoffset = CIRCLE_CIRC * (1 - progress);
-
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={styles.container}>
-        <Text style={styles.label}>Compose your secret</Text>
-
-        <TextInput
-          style={styles.textInput}
-          placeholder="What's on your mind?"
-          multiline
-          maxLength={MAX_CHARS}
-          value={text}
-          onChangeText={setText}
-          editable={seconds === 0 && !loading}
-        />
-        <Text style={styles.charCount}>
-          {text.length} / {MAX_CHARS}
+      <SafeAreaView
+        style={[
+          styles.container,
+          {
+            backgroundColor: colors.background,
+            padding: spacing.md,
+            margin: spacing.md,
+          },
+        ]}
+      >
+        <Text
+          style={[styles.title, { color: colors.text, fontSize: fontSizes.lg }]}
+        >
+          Share a Secret
         </Text>
 
-        {/* Mood selector */}
-        <View style={styles.moodRow}>
-          {["happy", "sad", "angry", "relieved"].map((m) => (
-            <TouchableOpacity
-              key={m}
-              style={[styles.moodButton, mood === m && styles.moodSelected]}
-              onPress={() => setMood(m)}
-            >
-              <Text style={styles.moodText}>{m}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: spacing.lg }}
+        >
+          {/* TEXT INPUT */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={[
+                //styles.textInput,
+                {
+                  borderColor: colors.border,
+                  color: colors.text,
+                  fontSize: fontSizes.md,
+                  borderRadius: radii.md,
+                  minHeight: 100,
+                },
+              ]}
+              placeholder="What's on your mind?"
+              placeholderTextColor={colors.muted}
+              multiline
+              maxLength={MAX_CHARS}
+              value={text}
+              onChangeText={setText}
+            />
+            <View style={styles.charCountRow}>
+              <Text
+                style={[
+                  styles.charCount,
+                  {
+                    color: remainingChars < 0 ? colors.error : colors.muted,
+                    marginRight: spacing.sm,
+                  },
+                ]}
+              >
+                {remainingChars}
+                {"/"}
+                {MAX_CHARS}
+              </Text>
+              <CircularProgress
+                size={24}
+                progress={charPct}
+                strokeWidth={4}
+                color={remainingChars < 0 ? colors.error : colors.primary}
+                backgroundColor={colors.border}
+              />
+            </View>
+          </View>
 
-        {/* Panic-delete toggle */}
-        <View style={styles.panicRow}>
-          <Text>Enable Panic Delete</Text>
-          <TouchableOpacity onPress={() => setPanic((p) => !p)}>
-            <Text style={{ color: panic ? "red" : "gray" }}>
-              {panic ? "ON" : "OFF"}
+          {/* MOOD SELECTOR */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionLabel, { color: colors.text }]}>
+              Mood (optional)
             </Text>
-          </TouchableOpacity>
-        </View>
+            <View style={styles.moodRow}>
+              {MOODS.map((m) => (
+                <MoodButton
+                  key={m}
+                  mood={m}
+                  selected={mood === m}
+                  onPress={() => setMood(m)}
+                />
+              ))}
+            </View>
+          </View>
 
-        {/* Cooldown ring */}
-        <Svg width={100} height={100} style={styles.ring}>
-          <Circle
-            cx={50}
-            cy={50}
-            r={RADIUS}
-            stroke="#eee"
-            strokeWidth={STROKE_WIDTH}
-            fill="none"
-          />
-          <Circle
-            cx={50}
-            cy={50}
-            r={RADIUS}
-            stroke="#0066CC"
-            strokeWidth={STROKE_WIDTH}
-            fill="none"
-            strokeDasharray={CIRCLE_CIRC}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
-            rotation="-90"
-            origin="50,50"
-          />
-          {seconds > 0 && (
-            <Text style={styles.ringText}>{Math.ceil(seconds / 3600)}h</Text>
-          )}
-        </Svg>
+          {/* PANIC DELETE */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionLabel, { color: colors.text }]}>
+              Panic Delete
+            </Text>
+            <View style={styles.panicRow}>
+              <Text style={{ color: colors.text, flex: 1 }}>
+                Allow immediate deletion from server?
+              </Text>
+              <Switch
+                value={panic}
+                onValueChange={setPanic}
+                trackColor={{ false: colors.muted, true: colors.error }}
+              />
+            </View>
+          </View>
+        </ScrollView>
 
-        {/* Action buttons */}
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.cancel} onPress={onClose}>
-            <Text>Cancel</Text>
-          </TouchableOpacity>
+        {/* ACTIONS */}
+        <View style={styles.actionsRow}>
           <TouchableOpacity
+            onPress={onClose}
             style={[
-              styles.post,
-              (seconds > 0 || !text.trim() || loading) && styles.disabled,
+              styles.cancelButton,
+              {
+                borderColor: colors.muted,
+                borderRadius: radii.sm,
+                padding: spacing.sm,
+              },
             ]}
+          >
+            <Text style={{ color: colors.muted }}>Cancel</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             onPress={postSecret}
-            disabled={seconds > 0 || !text.trim() || loading}
+            disabled={!text.trim() || text.length > MAX_CHARS || loading}
+            style={[
+              styles.postButton,
+              {
+                backgroundColor:
+                  !text.trim() || text.length > MAX_CHARS
+                    ? colors.muted
+                    : colors.primary,
+                borderRadius: radii.sm,
+                padding: spacing.sm,
+              },
+            ]}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.postText}>Post</Text>
+              <Text style={[styles.postText, { fontSize: fontSizes.md }]}>
+                Post
+              </Text>
             )}
           </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
 
+// small mood button component
+function MoodButton({
+  mood,
+  selected,
+  onPress,
+}: {
+  mood: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const { colors, spacing, fontSizes, radii } = useTheme();
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={{
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        marginRight: spacing.sm,
+        borderRadius: radii.sm,
+        borderWidth: 1,
+        borderColor: selected ? colors.primary : colors.border,
+        backgroundColor: selected ? colors.primary + "22" : "transparent",
+      }}
+    >
+      <Text
+        style={{
+          color: selected ? colors.primary : colors.text,
+          fontSize: fontSizes.sm,
+        }}
+      >
+        {mood.charAt(0).toUpperCase() + mood.slice(1)}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, justifyContent: "flex-start" },
-  label: { fontSize: 18, marginBottom: 12 },
-  textInput: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 4,
-    padding: 12,
-    height: 100,
-    textAlignVertical: "top",
-  },
-  charCount: { textAlign: "right", marginBottom: 12, color: "#666" },
-  moodRow: { flexDirection: "row", marginBottom: 12 },
-  moodButton: {
-    padding: 8,
-    borderWidth: 1,
-    borderColor: "#0066CC",
-    borderRadius: 4,
-    marginRight: 8,
-  },
-  moodSelected: { backgroundColor: "#0066CC" },
-  moodText: { color: "#0066CC" },
-  panicRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  ring: { alignSelf: "center", marginBottom: 24 },
-  ringText: {
+  container: { flex: 1 },
+  title: { fontWeight: "600", marginBottom: 12 },
+  inputContainer: { marginBottom: 24 },
+  charCountRow: {
     position: "absolute",
-    top: 42,
-    left: 0,
     right: 0,
-    textAlign: "center",
-    fontSize: 16,
+    bottom: -24,
+    flexDirection: "row",
+    alignItems: "center",
   },
-  buttonRow: {
+  charCount: { fontWeight: "500" },
+
+  section: { marginBottom: 24 },
+  sectionLabel: { marginBottom: 8, fontWeight: "500" },
+  moodRow: { flexDirection: "row" },
+  panicRow: { flexDirection: "row", alignItems: "center" },
+
+  actionsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  cancel: { padding: 12 },
-  post: {
-    backgroundColor: "#0066CC",
-    padding: 12,
-    borderRadius: 4,
-  },
-  disabled: { backgroundColor: "#888" },
-  postText: { color: "#fff" },
+  cancelButton: { flex: 1, alignItems: "center", marginRight: 8 },
+  postButton: { flex: 1, alignItems: "center", marginLeft: 8 },
+  postText: { color: "#fff", fontWeight: "600" },
 });

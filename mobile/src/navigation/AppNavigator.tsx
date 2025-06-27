@@ -8,6 +8,8 @@ import ProfileScreen from "../screens/ProfileScreen";
 import { useTheme } from "../theme/ThemeContext";
 import AccountSettingsScreen from "../screens/AccountSettingsScreen";
 import AdminPanelScreen from "../screens/AdminPannelScreen";
+import { IconSvg } from "../icons/IconSvg";
+import { IconName } from "../icons/icons";
 
 export type AppStackParamList = {
   Home: undefined;
@@ -34,15 +36,22 @@ export default function TabsNavigator() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.text,
         tabBarStyle: { backgroundColor: colors.background },
-        tabBarIcon: ({ color, size }) => {
-          let iconName: keyof typeof MaterialIcons.glyphMap = "home";
+        tabBarIcon: ({ color, size, focused }) => {
+          let iconName: IconName = "home";
 
-          if (route.name === "Feed") iconName = "dynamic-feed";
-          else if (route.name === "Discover") iconName = "search";
-          else if (route.name === "Bookmarks") iconName = "bookmark";
-          else if (route.name === "Profile") iconName = "person";
+          if (route.name === "Feed") iconName = "home";
+          else if (route.name === "Discover") iconName = "search-alt";
+          else if (route.name === "Bookmarks") iconName = "bookmarks";
+          else if (route.name === "Profile") iconName = "circle-user";
 
-          return <MaterialIcons name={iconName} size={size} color={color} />;
+          return (
+            <IconSvg
+              icon={iconName}
+              size={size}
+              state={focused ? "pressed" : "default"}
+            />
+          );
+          //return <MaterialIcons name={iconName} size={size} color={color} />;
         },
       })}
     >

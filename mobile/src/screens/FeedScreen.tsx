@@ -1,21 +1,27 @@
-import React, { useEffect, useCallback, useState } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { FlatList, ActivityIndicator, StyleSheet } from "react-native";
-import { api } from "../api/client";
-import useSocket from "../hooks/useSocket";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import ComposeButton from "../components/ComposeButtonComponent";
+import ComposerModal from "../components/ComposerModal";
 import SecretItem, { SecretItemProps } from "../components/SecretItem";
+import useCooldown from "../hooks/useCooldown";
+import usePaginatedData from "../hooks/usePaginatedData";
+import useSocket from "../hooks/useSocket";
 import { useAuthStore } from "../store/authStore";
 import { useTheme } from "../theme/ThemeContext";
-import usePaginatedData from "../hooks/usePaginatedData";
-import ActionButton from "../components/ActionButton";
-import { useNavigation } from "@react-navigation/native";
-import ComposerModal from "../components/ComposerModal";
 
 export default function FeedScreen() {
   const { colors } = useTheme();
   const token = useAuthStore((s) => s.token);
   const { data, loading, loadFirstPage, loadNextPage, isAtEnd } =
     usePaginatedData<SecretItemProps>("/secrets/feed");
+  const { remaining, duration, refresh } = useCooldown();
 
   const [composerActive, setComposerActive] = useState(false);
   // real-time updates
@@ -28,6 +34,9 @@ export default function FeedScreen() {
   }, [token]);
 
   if (!token) return null;
+  useEffect(() => {
+    refresh();
+  }, [composerActive]);
 
   return (
     <SafeAreaView
@@ -38,12 +47,22 @@ export default function FeedScreen() {
         onClose={() => setComposerActive(false)}
         onPosted={() => setComposerActive(false)}
       />
-      <ActionButton icon={"plus"} onPress={() => setComposerActive(true)} />
+      <ComposeButton
+        cooldown={remaining}
+        totalCooldown={duration}
+        onPress={() => setComposerActive(true)}
+      />
+      <View style={[styles.headerContainer, { borderColor: colors.border }]}>
+        <Text style={styles.headerTitle}>Echo</Text>
+      </View>
       {loading && data.length === 0 ? (
         <ActivityIndicator size="large" color={colors.primary} />
       ) : (
         <FlatList
           data={data}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingVertical: 20, paddingHorizontal: 12 }}
+          showsVerticalScrollIndicator={false}
           refreshing={loading}
           onRefresh={() => loadFirstPage()}
           keyExtractor={(item) => item.id}
@@ -61,4 +80,18 @@ export default function FeedScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 12 },
+  headerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    height: 70,
+    borderBottomWidth: 1,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#333",
+    paddingHorizontal: 42,
+  },
 });

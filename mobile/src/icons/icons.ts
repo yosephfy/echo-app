@@ -3,6 +3,7 @@ import { SvgProps } from 'react-native-svg';
 import bookmark from '../../assets/icons/bookmark.svg';
 import bookmarks from '../../assets/icons/bookmarks.svg';
 import cap from '../../assets/icons/cap.svg';
+import circle_user from '../../assets/icons/circle-user.svg';
 import comment from '../../assets/icons/comment.svg';
 import face_screaming_in_fear from '../../assets/icons/face-screaming-in-fear.svg';
 import face_with_tears_of_joy from '../../assets/icons/face-with-tears-of-joy.svg';
@@ -23,6 +24,7 @@ const iconMap: Record<string, React.FC<SvgProps>> = {
   "bookmark": bookmark,
   "bookmarks": bookmarks,
   "cap": cap,
+  "circle-user": circle_user,
   "comment": comment,
   "face-screaming-in-fear": face_screaming_in_fear,
   "face-with-tears-of-joy": face_with_tears_of_joy,

@@ -55,4 +55,11 @@ export class SecretsController {
     const seconds = await this.secrets.getCooldownSeconds(req.user.userId);
     return { secondsRemaining: seconds };
   }
+
+  /** GET /secrets/cooldown */
+  @Get('cooldown')
+  async getCooldown(@Request() req) {
+    // returns { start: Date, duration: number, remaining: number }
+    return this.secrets.getCooldownInfo(req.user.userId);
+  }
 }
