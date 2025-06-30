@@ -11,6 +11,7 @@ import Avatar from "./Avatar";
 import { timeAgo } from "../utils/timeAgo";
 import { LinearGradient } from "expo-linear-gradient";
 import Reaction from "./Reaction";
+import useBookmark from "../hooks/useBookmarks";
 
 export interface SecretItemProps {
   id: string;
@@ -33,15 +34,16 @@ export default function SecretItem({
   const { colors } = useTheme();
   const { currentType, counts: reactionCounts, react } = useReactions(id);
   const { hasCapped, count: capCount, toggle: toggleCap } = useCap(id);
+  const {
+    bookmarked,
+    count: bookmarkCount,
+    loading: bookmarkLoading,
+    toggle: toggleBookmark,
+    refresh: refreshBookmark,
+  } = useBookmark(id);
 
   const { report, ReportModal } = useReport(id);
   const { share, ShareModal } = useShare(id);
-
-  const [pickerVisible, setPickerVisible] = useState(false);
-  const togglePicker = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setPickerVisible((v) => !v);
-  };
 
   const totalReactions = Object.values(reactionCounts).reduce(
     (s, c) => s + c,
@@ -126,7 +128,11 @@ export default function SecretItem({
           <ActionButton icon="share" onPress={share} />
         </View>
         <View style={styles.rightActions}>
-          <ActionButton icon="bookmark" onPress={() => {}} />
+          <ActionButton
+            icon={bookmarked ? "bookmark-fill" : "bookmark"}
+            onPress={toggleBookmark}
+            active={bookmarked}
+          />
         </View>
       </View>
 

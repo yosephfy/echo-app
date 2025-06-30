@@ -1,5 +1,5 @@
 // mobile/src/components/ComposeButton.tsx
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   TouchableOpacity,
   View,
@@ -10,19 +10,18 @@ import {
 } from "react-native";
 import Svg, { Circle as SvgCircle } from "react-native-svg";
 import { useTheme } from "../theme/ThemeContext";
+import useCooldown from "../hooks/useCooldown";
 
 const AnimatedCircle = Animated.createAnimatedComponent(SvgCircle);
 
 interface ComposeButtonProps {
-  cooldown: number;
-  totalCooldown: number;
+  composerActive?: boolean;
   onPress: () => void;
   size?: number;
 }
 
 export default function ComposeButton({
-  cooldown,
-  totalCooldown,
+  composerActive = false,
   onPress,
   size = 84,
 }: ComposeButtonProps) {
@@ -30,6 +29,14 @@ export default function ComposeButton({
   const radius = (size - 8) / 2;
   const strokeWidth = 4;
   const circumference = 2 * Math.PI * radius;
+
+  //const [cooldown, setCooldown] = useState<number>(0);
+  //const [totalCooldown, setTotalCooldown] = useState<number>(0);
+  const {
+    remaining: cooldown,
+    duration: totalCooldown,
+    refresh,
+  } = useCooldown();
 
   const progress = useRef(new Animated.Value(1)).current;
 

@@ -1,5 +1,6 @@
 // AUTO-GENERATED FILE. DO NOT EDIT MANUALLY.
 import { SvgProps } from 'react-native-svg';
+import bookmark_fill from '../../assets/icons/bookmark-fill.svg';
 import bookmark from '../../assets/icons/bookmark.svg';
 import bookmarks from '../../assets/icons/bookmarks.svg';
 import cap from '../../assets/icons/cap.svg';
@@ -21,6 +22,7 @@ import share from '../../assets/icons/share.svg';
 import thumbs_up from '../../assets/icons/thumbs-up.svg';
 
 const iconMap: Record<string, React.FC<SvgProps>> = {
+  "bookmark-fill": bookmark_fill,
   "bookmark": bookmark,
   "bookmarks": bookmarks,
   "cap": cap,

@@ -1,19 +1,20 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { UsersModule } from './users/users.module';
-import { AuthModule } from './auth/auth.module';
-import { PreferencesModule } from './preferences/preferences.module';
-import { RedisModule } from './redis/redis.module';
-import { SecretsModule } from './secrets/secrets.module';
 import { APP_GUARD } from '@nestjs/core/constants';
-import { RolesGuard } from './auth/roles.guard';
-import { ReportsModule } from './reports/reports.module';
-import { ModerationModule } from './moderation/moderation.module';
 import { ScheduleModule } from '@nestjs/schedule';
-import { StreaksModule } from './streaks/streaks.module';
-import { ReactionsModule } from './reactions/reactions.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from './auth/auth.module';
+import { RolesGuard } from './auth/roles.guard';
+import { BookmarksModule } from './bookmarks/bookmarks.module';
 import { CapsModule } from './caps/caps.module';
+import { ModerationModule } from './moderation/moderation.module';
+import { PreferencesModule } from './preferences/preferences.module';
+import { ReactionsModule } from './reactions/reactions.module';
+import { RedisModule } from './redis/redis.module';
+import { ReportsModule } from './reports/reports.module';
+import { SecretsModule } from './secrets/secrets.module';
+import { StreaksModule } from './streaks/streaks.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   providers: [
@@ -41,6 +42,7 @@ import { CapsModule } from './caps/caps.module';
     StreaksModule,
     ReactionsModule,
     CapsModule,
+    BookmarksModule,
     // ... your feature modules (Users, Auth) go here
   ],
 })

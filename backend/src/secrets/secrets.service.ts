@@ -63,7 +63,15 @@ export class SecretsService {
     );
 
     this.logger.log(`Scheduled cooldown and reminder for user ${userId}`);
-    return saved;
+
+    // now reload with author relation
+    const full = await this.secretsRepo.findOne({
+      where: { id: saved.id },
+      relations: ['author'],
+    });
+
+    // full should never be null here
+    return full!;
   }
 
   async getCooldownSeconds(userId: string): Promise<number> {
@@ -128,6 +136,13 @@ export class SecretsService {
       page,
       limit,
     };
+  }
+
+  async getSecretById(secretId: string): Promise<Secret | null> {
+    return this.secretsRepo.findOne({
+      where: { id: secretId },
+      relations: ['author'],
+    });
   }
 
   async updateStatus(secretId: string, status: SecretStatus): Promise<void> {

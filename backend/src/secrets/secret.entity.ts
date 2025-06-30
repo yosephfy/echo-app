@@ -5,8 +5,10 @@ import {
   ManyToOne,
   CreateDateColumn,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { User } from '../users/user.entity';
+import { Bookmark } from 'src/bookmarks/bookmark.entity';
 
 export enum SecretStatus {
   UNDER_REVIEW = 'under_review',
@@ -38,6 +40,9 @@ export class Secret {
   @ManyToOne(() => User, (user) => user.secrets, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' }) // tells TypeORM which column is the FK
   author: User;
+
+  @OneToMany(() => Bookmark, (bookmark) => bookmark.secret)
+  bookmarks: Bookmark[];
 
   @CreateDateColumn()
   createdAt: Date;

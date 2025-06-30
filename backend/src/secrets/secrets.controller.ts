@@ -10,6 +10,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SecretsService } from './secrets.service';
 import { IsOptional, IsString } from 'class-validator';
+import { SecretsGateway } from './secrets.getaway';
 
 export class CreateSecretDto {
   @IsString()
@@ -23,7 +24,10 @@ export class CreateSecretDto {
 @UseGuards(JwtAuthGuard)
 @Controller('secrets')
 export class SecretsController {
-  constructor(private secrets: SecretsService) {}
+  constructor(
+    private secrets: SecretsService,
+    private getaway: SecretsGateway,
+  ) {}
   // GET /secrets/feed?page=1&limit=20
   @Get('feed')
   async feed(
@@ -40,14 +44,11 @@ export class SecretsController {
   async create(@Request() req, @Body() dto: CreateSecretDto) {
     const { userId } = req.user;
     const secret = await this.secrets.createSecret(userId, dto.text, dto.mood);
+    // Notify WebSocket client about the new secret
+
+    this.getaway.notifyNewSecret(secret);
     // Return minimal view
-    return {
-      id: secret.id,
-      text: secret.text,
-      mood: secret.mood,
-      status: secret.status,
-      createdAt: secret.createdAt,
-    };
+    return secret;
   }
 
   @Get('quota')

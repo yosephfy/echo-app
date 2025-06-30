@@ -21,7 +21,7 @@ export default function FeedScreen() {
   const token = useAuthStore((s) => s.token);
   const { data, loading, loadFirstPage, loadNextPage, isAtEnd } =
     usePaginatedData<SecretItemProps>("/secrets/feed");
-  const { remaining, duration, refresh } = useCooldown();
+  // const { remaining, duration, refresh } = useCooldown();
 
   const [composerActive, setComposerActive] = useState(false);
   // real-time updates
@@ -35,7 +35,7 @@ export default function FeedScreen() {
 
   if (!token) return null;
   useEffect(() => {
-    refresh();
+    //refresh();
   }, [composerActive]);
 
   return (
@@ -48,9 +48,8 @@ export default function FeedScreen() {
         onPosted={() => setComposerActive(false)}
       />
       <ComposeButton
-        cooldown={remaining}
-        totalCooldown={duration}
         onPress={() => setComposerActive(true)}
+        composerActive={composerActive}
       />
       <View style={[styles.headerContainer, { borderColor: colors.border }]}>
         <Text style={styles.headerTitle}>Echo</Text>

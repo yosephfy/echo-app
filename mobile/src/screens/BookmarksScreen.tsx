@@ -1,31 +1,38 @@
 import React, { useEffect, useState } from "react";
-import { View, FlatList, Text, StyleSheet } from "react-native";
+import { View, FlatList, Text, StyleSheet, SafeAreaView } from "react-native";
 import { api } from "../api/client";
 import { useTheme } from "../theme/ThemeContext";
+import usePaginatedData from "../hooks/usePaginatedData";
+import SecretItem, { SecretItemProps } from "../components/SecretItem";
 
 export default function BookmarksScreen() {
   const theme = useTheme();
-  type Bookmark = { id: string; text: string };
+  type Bookmark = SecretItemProps;
   const [items, setItems] = useState<Bookmark[]>([]);
+  const { data, loading, page, total, isAtEnd, loadFirstPage, loadNextPage } =
+    usePaginatedData<Bookmark>("/bookmarks", { limit: 20 });
 
   useEffect(() => {
-    api.get("/bookmarks").then((res: any) => setItems(res.data));
-  }, []);
+    //api.get("/bookmarks").then((res: any) => setItems(res.data));
+    setItems(data);
+  }, [data, loadFirstPage]);
 
   return (
-    <View
+    <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       <FlatList
         data={items}
+        style={{ flex: 1, padding: 12 }}
+        contentContainerStyle={{ paddingBottom: 12 }}
         keyExtractor={(i) => i.id}
-        renderItem={({ item }) => (
-          <View style={[styles.item, { borderColor: theme.colors.border }]}>
-            <Text style={{ color: theme.colors.text }}>{item.text}</Text>
-          </View>
-        )}
+        onEndReached={loadNextPage}
+        onEndReachedThreshold={0.5}
+        refreshing={loading}
+        onRefresh={loadFirstPage}
+        renderItem={({ item }) => <SecretItem {...item} />}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
