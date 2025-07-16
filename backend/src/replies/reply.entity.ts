@@ -34,4 +34,6 @@ export class Reply {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  reactions: any;
 }

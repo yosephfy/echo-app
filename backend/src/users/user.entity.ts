@@ -52,4 +52,5 @@ export class User {
   caps: any;
   reports: any;
   replies: any;
+  replyReactions: any;
 }

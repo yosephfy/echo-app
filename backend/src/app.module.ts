@@ -16,6 +16,7 @@ import { SecretsModule } from './secrets/secrets.module';
 import { StreaksModule } from './streaks/streaks.module';
 import { UsersModule } from './users/users.module';
 import { RepliesModule } from './replies/replies.module';
+import { ReplyReactionsModule } from './reply-reactions/reply-reactions.module';
 
 @Module({
   providers: [
@@ -45,6 +46,7 @@ import { RepliesModule } from './replies/replies.module';
     CapsModule,
     BookmarksModule,
     RepliesModule,
+    ReplyReactionsModule,
     // ... your feature modules (Users, Auth) go here
   ],
 })

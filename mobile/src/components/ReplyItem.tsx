@@ -1,11 +1,13 @@
 // components/ReplyItem.tsx
 import React from "react";
-import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { Reply } from "../hooks/useReplies";
 import { useTheme } from "../theme/ThemeContext";
 import { timeAgo } from "../utils/timeAgo";
 import Reaction from "./Reaction";
 import Avatar from "./Avatar";
+import useReplyReactions from "../hooks/useReplyReactions";
+import { ReactionType } from "../hooks/useReactions";
 
 interface Props {
   reply: Reply;
@@ -14,6 +16,9 @@ interface Props {
 const ReplyItem: React.FC<Props> = ({ reply }) => {
   const { colors } = useTheme();
   const timestamp = timeAgo(reply.createdAt, "medium");
+
+  const { counts, currentType, toggle } = useReplyReactions(reply.id);
+  const totalReactions = Object.values(counts).reduce((sum, c) => sum + c, 0);
 
   return (
     <View
@@ -38,14 +43,11 @@ const ReplyItem: React.FC<Props> = ({ reply }) => {
             {timestamp}
           </Text>
         </View>
-        <TouchableOpacity
-          style={styles.reactionButton}
-          onPress={() => {
-            /* handle react */
-          }}
-        >
-          <Reaction current={null} onReact={() => {}} totalCount={0} />
-        </TouchableOpacity>
+        <Reaction
+          current={currentType}
+          onReact={(type: ReactionType) => toggle(type)}
+          totalCount={totalReactions}
+        />
       </View>
 
       {/* Comment text */}
@@ -65,7 +67,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 0,
+    marginBottom: 4,
   },
   meta: {
     flexDirection: "row",
@@ -82,9 +84,6 @@ const styles = StyleSheet.create({
   },
   time: {
     fontSize: 12,
-  },
-  reactionButton: {
-    padding: 4,
   },
   text: {
     fontSize: 15,
