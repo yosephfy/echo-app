@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { User } from '../users/user.entity';
 import { Bookmark } from 'src/bookmarks/bookmark.entity';
+import { Reply } from 'src/replies/reply.entity';
 
 export enum SecretStatus {
   UNDER_REVIEW = 'under_review',
@@ -44,8 +45,12 @@ export class Secret {
   @OneToMany(() => Bookmark, (bookmark) => bookmark.secret)
   bookmarks: Bookmark[];
 
+  @OneToMany(() => Reply, (reply) => reply.secret)
+  replies: Reply[];
+
   @CreateDateColumn()
   createdAt: Date;
+
   reactions: any;
   caps: any;
 }

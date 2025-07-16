@@ -6,6 +6,7 @@ import {
   Request,
   Get,
   Query,
+  Param,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SecretsService } from './secrets.service';
@@ -39,6 +40,12 @@ export class SecretsController {
     const pageNum = Math.max(parseInt(page, 10), 1);
     const limitNum = Math.min(Math.max(parseInt(limit, 10), 1), 100);
     return this.secrets.getFeed(req.user.userId, pageNum, limitNum, mood);
+  }
+
+  @Get('find/:id')
+  async getSecret(@Param('id') secretId: string) {
+    const secret = await this.secrets.getSecretById(secretId);
+    return secret;
   }
   @Post()
   async create(@Request() req, @Body() dto: CreateSecretDto) {

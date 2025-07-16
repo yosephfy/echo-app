@@ -1,6 +1,12 @@
 // mobile/src/components/SecretItem.tsx
 import React, { useState } from "react";
-import { LayoutAnimation, StyleSheet, Text, View } from "react-native";
+import {
+  LayoutAnimation,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import useCap from "../hooks/useCap";
 import useReactions, { ReactionType } from "../hooks/useReactions";
 import { useReport } from "../hooks/useReport";
@@ -12,6 +18,7 @@ import { timeAgo } from "../utils/timeAgo";
 import { LinearGradient } from "expo-linear-gradient";
 import Reaction from "./Reaction";
 import useBookmark from "../hooks/useBookmarks";
+import { useReplies } from "../hooks/useReplies";
 
 export interface SecretItemProps {
   id: string;
@@ -24,13 +31,13 @@ export interface SecretItemProps {
 }
 
 export default function SecretItem({
-  id,
-  text,
-  mood,
-  createdAt,
-  author,
-  onReply,
-}: SecretItemProps) {
+  secret,
+  expanded = false,
+}: {
+  secret: SecretItemProps;
+  expanded?: boolean;
+}) {
+  const { id, text, mood, status, createdAt, author, onReply } = secret;
   const { colors } = useTheme();
   const { currentType, counts: reactionCounts, react } = useReactions(id);
   const { hasCapped, count: capCount, toggle: toggleCap } = useCap(id);
@@ -39,9 +46,8 @@ export default function SecretItem({
     count: bookmarkCount,
     loading: bookmarkLoading,
     toggle: toggleBookmark,
-    refresh: refreshBookmark,
   } = useBookmark(id);
-
+  const { total: countReplies } = useReplies(id);
   const { report, ReportModal } = useReport(id);
   const { share, ShareModal } = useShare(id);
 
@@ -93,9 +99,20 @@ export default function SecretItem({
       </View>
 
       {/* BODY */}
-      <View style={styles.bodyContainer}>
-        <Text style={[styles.bodyText, { color: colors.text }]}>{text}</Text>
-        {text.length > 250 && (
+      <Pressable
+        style={[styles.bodyContainer, expanded ? { maxHeight: undefined } : {}]}
+        onPress={onReply}
+      >
+        <Text
+          style={[
+            styles.bodyText,
+            { color: colors.text },
+            expanded ? { maxHeight: undefined } : {},
+          ]}
+        >
+          {text}
+        </Text>
+        {!expanded && text.length > 250 && (
           <LinearGradient
             colors={["rgba(255,	247,	237, 0)", "rgba(255, 247, 237, 1)"]}
             start={{ x: 0, y: 0 }}
@@ -105,7 +122,7 @@ export default function SecretItem({
             pointerEvents="none"
           />
         )}
-      </View>
+      </Pressable>
       {/* DIVIDER */}
 
       <View style={styles.divider} />
@@ -124,7 +141,11 @@ export default function SecretItem({
             onReact={(type) => react(type)}
             totalCount={totalReactions}
           />
-          <ActionButton icon="comment" onPress={onReply} />
+          <ActionButton
+            icon="comment"
+            onPress={onReply}
+            label={countReplies > 0 ? countReplies : undefined}
+          />
           <ActionButton icon="share" onPress={share} />
         </View>
         <View style={styles.rightActions}>
@@ -132,6 +153,7 @@ export default function SecretItem({
             icon={bookmarked ? "bookmark-fill" : "bookmark"}
             onPress={toggleBookmark}
             active={bookmarked}
+            label={bookmarkCount > 0 ? bookmarkCount : undefined}
           />
         </View>
       </View>
@@ -148,8 +170,9 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    marginBottom: 16,
+    //marginBottom: 16,
     flex: 1,
+    margin: 10,
   },
   header: {
     flexDirection: "row",

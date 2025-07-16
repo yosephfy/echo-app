@@ -35,4 +35,9 @@ export class BookmarksService {
   async countForUser(userId: string): Promise<number> {
     return this.repo.count({ where: { userId } });
   }
+
+  async isBookmarked(userId: string, secretId: string) {
+    const existing = await this.repo.findOne({ where: { userId, secretId } });
+    return !!existing;
+  }
 }

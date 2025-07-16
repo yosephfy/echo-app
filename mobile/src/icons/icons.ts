@@ -4,6 +4,7 @@ import bookmark_fill from '../../assets/icons/bookmark-fill.svg';
 import bookmark from '../../assets/icons/bookmark.svg';
 import bookmarks from '../../assets/icons/bookmarks.svg';
 import cap from '../../assets/icons/cap.svg';
+import chevron_left from '../../assets/icons/chevron-left.svg';
 import circle_user from '../../assets/icons/circle-user.svg';
 import comment from '../../assets/icons/comment.svg';
 import face_screaming_in_fear from '../../assets/icons/face-screaming-in-fear.svg';
@@ -26,6 +27,7 @@ const iconMap: Record<string, React.FC<SvgProps>> = {
   "bookmark": bookmark,
   "bookmarks": bookmarks,
   "cap": cap,
+  "chevron-left": chevron_left,
   "circle-user": circle_user,
   "comment": comment,
   "face-screaming-in-fear": face_screaming_in_fear,

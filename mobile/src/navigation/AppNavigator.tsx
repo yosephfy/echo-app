@@ -10,18 +10,22 @@ import AccountSettingsScreen from "../screens/AccountSettingsScreen";
 import AdminPanelScreen from "../screens/AdminPannelScreen";
 import { IconSvg } from "../icons/IconSvg";
 import { IconName } from "../icons/icons";
+import SecretDetailScreen from "../screens/SecretDetailScreen";
+import BackButton from "../components/BackButtonComponent";
 
 export type AppStackParamList = {
   Home: undefined;
-  Profile: undefined;
-  AccountSettings: undefined;
+  Profile: any;
+  AccountSettings: any;
   Preferences: undefined;
   Help: undefined;
   About: undefined;
-  Feed: undefined;
+  Feed: any;
   Discover: undefined;
   Bookmarks: undefined;
   Admin: undefined;
+  Tab: undefined;
+  SecretDetail: any;
 };
 const Tab = createBottomTabNavigator();
 
@@ -59,13 +63,16 @@ export default function TabsNavigator() {
       <Tab.Screen name="Discover" component={DiscoverScreen} />
       <Tab.Screen name="Bookmarks" component={BookmarksScreen} />
       <Tab.Screen name="Admin" component={AdminPanelScreen} />
+      <Tab.Screen name="AccountSettings" component={AccountSettingsScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
       <Tab.Screen
-        name="AccountSettings"
-        component={(props: any) => <AccountSettingsScreen {...props} />}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={(props: any) => <ProfileScreen {...props} />}
+        name="SecretDetail"
+        component={SecretDetailScreen}
+        options={{
+          headerShown: true,
+          headerTitle: "",
+          headerLeft: () => <BackButton />,
+        }}
       />
     </Tab.Navigator>
   );

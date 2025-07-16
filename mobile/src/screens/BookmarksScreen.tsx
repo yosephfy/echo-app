@@ -30,7 +30,7 @@ export default function BookmarksScreen() {
         onEndReachedThreshold={0.5}
         refreshing={loading}
         onRefresh={loadFirstPage}
-        renderItem={({ item }) => <SecretItem {...item} />}
+        renderItem={({ item }) => <SecretItem secret={item} />}
       />
     </SafeAreaView>
   );

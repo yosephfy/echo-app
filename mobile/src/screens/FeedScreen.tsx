@@ -1,3 +1,4 @@
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -10,13 +11,15 @@ import {
 import ComposeButton from "../components/ComposeButtonComponent";
 import ComposerModal from "../components/ComposerModal";
 import SecretItem, { SecretItemProps } from "../components/SecretItem";
-import useCooldown from "../hooks/useCooldown";
 import usePaginatedData from "../hooks/usePaginatedData";
 import useSocket from "../hooks/useSocket";
+import { AppStackParamList } from "../navigation/AppNavigator";
 import { useAuthStore } from "../store/authStore";
 import { useTheme } from "../theme/ThemeContext";
 
-export default function FeedScreen() {
+type Props = NativeStackScreenProps<AppStackParamList, "Feed">;
+
+export default function FeedScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const token = useAuthStore((s) => s.token);
   const { data, loading, loadFirstPage, loadNextPage, isAtEnd } =
@@ -60,12 +63,20 @@ export default function FeedScreen() {
         <FlatList
           data={data}
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingVertical: 20, paddingHorizontal: 12 }}
+          contentContainerStyle={{}}
           showsVerticalScrollIndicator={false}
           refreshing={loading}
           onRefresh={() => loadFirstPage()}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <SecretItem {...item} />}
+          renderItem={({ item }) => (
+            <SecretItem
+              secret={{
+                ...item,
+                onReply: () =>
+                  navigation.navigate("SecretDetail", { secretId: item.id }),
+              }}
+            />
+          )}
           onEndReached={() => !isAtEnd && loadNextPage()}
           onEndReachedThreshold={0.5}
           ListFooterComponent={

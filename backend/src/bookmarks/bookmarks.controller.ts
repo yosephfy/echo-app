@@ -70,4 +70,10 @@ export class BookmarksController {
     const count = await this.svc.countForUser(req.user.userId);
     return { userId: req.user.userId, count };
   }
+
+  @Get(':secretId/me')
+  async isBookmarked(@Request() req, @Param('secretId') secretId: string) {
+    const bookmarked = await this.svc.isBookmarked(req.user.userId, secretId);
+    return { bookmarked };
+  }
 }

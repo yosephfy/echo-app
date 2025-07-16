@@ -13,19 +13,8 @@ interface CountResponse {
   count: number;
 }
 
-interface BookmarkListItem {
-  id: string;
-  secret: {
-    id: string;
-  };
-  createdAt: string;
-}
-
-interface ListResponse {
-  items: BookmarkListItem[];
-  total: number;
-  page: number;
-  limit: number;
+interface MeResponse {
+  bookmarked: boolean;
 }
 
 /**
@@ -38,22 +27,15 @@ export default function useBookmark(secretId: string) {
   const [bookmarked, setBookmarked] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
 
-  /** Fetch current bookmark count and whether this user has bookmarked it */
+  // Fetch count and bookmarked status
   const refresh = useCallback(async () => {
     try {
-      // 1) get total count for this secret
-      const countRes = await api.get<CountResponse>(
-        `/bookmarks/secret/${secretId}/count`
-      );
-      setCount(countRes.count);
-
-      // 2) check if current user has bookmarked it
-      // Fetch first page of bookmarks for user (could be optimized)
-      const listRes = await api.get<ListResponse>("/bookmarks", {
-        page: 1,
-        limit: 1000,
-      });
-      setBookmarked(listRes.items.some((item) => item.secret.id === secretId));
+      const [{ count }, { bookmarked }] = await Promise.all([
+        api.get<CountResponse>(`/bookmarks/secret/${secretId}/count`),
+        api.get<MeResponse>(`/bookmarks/${secretId}/me`),
+      ]);
+      setCount(count);
+      setBookmarked(bookmarked);
     } catch (err) {
       console.error("useBookmark.refresh error", err);
     }
@@ -68,26 +50,20 @@ export default function useBookmark(secretId: string) {
     setLoading(true);
     try {
       const res = await api.post<ToggleResponse>(`/bookmarks/${secretId}`);
-      console.log("Bookmark toggle response:", res);
-      // update count
+      // update count directly
       setCount(res.count);
-      // update bookmarked flag
+      // set bookmarked based on added/removed flags
       if (res.added !== undefined) {
-        setBookmarked(res.added);
+        setBookmarked(true);
       } else if (res.removed !== undefined) {
-        setBookmarked(!res.removed ? bookmarked : false);
-        // removed true means it's unbookmarked
-        if (res.removed) setBookmarked(false);
-      } else {
-        // fallback: flip boolean
-        setBookmarked((b) => !b);
+        setBookmarked(false);
       }
     } catch (err) {
       console.error("useBookmark.toggle error", err);
     } finally {
       setLoading(false);
     }
-  }, [secretId, bookmarked]);
+  }, [secretId]);
 
   return { count, bookmarked, loading, toggle, refresh };
 }
