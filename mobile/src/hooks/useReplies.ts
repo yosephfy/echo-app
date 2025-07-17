@@ -75,23 +75,19 @@ export function useReplies(secretId: string, pageSize = 20) {
 
   const add = useCallback(
     async (text: string) => {
-      const tempId = `temp-${Date.now()}`;
-      const temp: Reply = {
-        id: tempId,
-        text,
-        createdAt: new Date().toISOString(),
-        author: { id: "", handle: "", avatarUrl: "" },
-      };
-      setReplies((prev) => [temp, ...prev]);
+      setLoading(true);
       try {
         const saved = await api.post<Reply>(`/secrets/${secretId}/replies`, {
           text,
         });
-        setReplies((prev) => prev.map((r) => (r.id === tempId ? saved : r)));
+        // prepend the newly created reply
+        setReplies((prev) => [saved, ...prev]);
+        setTotal((t) => t + 1);
       } catch (err) {
         console.error("useReplies add error", err);
-        setReplies((prev) => prev.filter((r) => r.id !== tempId));
         throw err;
+      } finally {
+        if (mounted.current) setLoading(false);
       }
     },
     [secretId]

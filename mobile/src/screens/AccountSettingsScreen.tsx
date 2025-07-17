@@ -14,6 +14,8 @@ import { api } from "../api/client";
 import { useAuthStore } from "../store/authStore";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { AppStackParamList } from "../navigation/AppNavigator";
+import useOnboard from "../hooks/useOnboard";
+import useAsyncAction from "../hooks/useAsyncAction";
 
 type Props = NativeStackScreenProps<AppStackParamList, "AccountSettings">;
 
@@ -53,11 +55,17 @@ export default function AccountSettingsScreen({ navigation }: Props) {
       Alert.alert("Error", err.message);
     }
   };
+  const { logout } = useOnboard();
+  const [signOut, { loading }] = useAsyncAction(
+    async () => await logout(),
+    (e) => alert("Sign Out Failed: " + e.message)
+  );
 
-  const signOut = async () => {
-    await SecureStore.deleteItemAsync("jwt");
-    setToken(null);
-  };
+  /* const signOut = async () => {
+     await SecureStore.deleteItemAsync("jwt");
+    await SecureStore.deleteItemAsync("signup_preview");
+    setToken(null); 
+  }; */
 
   const deleteAccount = async () => {
     Alert.alert(

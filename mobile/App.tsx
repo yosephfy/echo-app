@@ -1,5 +1,5 @@
 import { NavigationContainer } from "@react-navigation/native";
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import "react-native-gesture-handler";
 import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -28,6 +28,7 @@ export default function App() {
       }
     })();
   }, []);
+
   if (loading) {
     return <SplashScreen />;
   }
