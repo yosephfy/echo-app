@@ -69,13 +69,7 @@ export default function FeedScreen({ navigation }: Props) {
           onRefresh={() => loadFirstPage()}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <SecretItem
-              secret={{
-                ...item,
-                onReply: () =>
-                  navigation.navigate("SecretDetail", { secretId: item.id }),
-              }}
-            />
+            <SecretItem secret={item} navigation={navigation} />
           )}
           onEndReached={() => !isAtEnd && loadNextPage()}
           onEndReachedThreshold={0.5}

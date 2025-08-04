@@ -7,13 +7,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as argon2 from 'argon2';
 import { UpdateAvatarDto } from 'src/auth/dto/update-avatar.dto';
 import { UpdateCredentialsDto } from 'src/auth/dto/update-credentials.dto';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { RegisterDto } from '../auth/dto/register.dto';
 import { Bookmark } from '../bookmarks/bookmark.entity';
 import { Secret } from '../secrets/secret.entity';
 import { Streak } from '../streaks/streak.entity'; // if you have a Streak entity
 import { User } from './user.entity';
 import { HandleService } from './handle.service';
+import { Reaction } from 'src/reactions/reaction.entity';
+import { Cap } from 'src/caps/cap.entity';
 
 @Injectable()
 export class UsersService {
@@ -26,6 +28,10 @@ export class UsersService {
     private bookmarksRepo: Repository<Bookmark>,
     @InjectRepository(Streak)
     private streaksRepo: Repository<Streak>,
+    @InjectRepository(Reaction)
+    private reactionsRepo: Repository<Reaction>,
+    @InjectRepository(Cap)
+    private capsRepo: Repository<Cap>,
     private handleSvc: HandleService,
   ) {}
 
@@ -130,12 +136,23 @@ export class UsersService {
     const bookmarksCount = await this.bookmarksRepo.count({
       where: { userId },
     });
+    const totalReactions = await this.reactionsRepo.count({
+      where: { userId },
+    });
+    const totalCaps = await this.capsRepo.count({ where: { userId } });
     // assuming one active streak record per user
     const streak = await this.streaksRepo.findOne({ where: { userId } });
     return {
       postsCount,
       bookmarksCount,
       currentStreak: streak?.days || 0,
+      totalReactions: totalReactions, // implement if you have reactions
+      totalCaps: totalCaps, // implement if you have caps
+      handle:
+        (await this.usersRepo.findOne({ where: { id: userId } }))?.handle || '',
+      avatarUrl:
+        (await this.usersRepo.findOne({ where: { id: userId } }))?.avatarUrl ||
+        '',
     };
   }
 }

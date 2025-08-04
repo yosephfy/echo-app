@@ -7,11 +7,13 @@ import { Bookmark } from 'src/bookmarks/bookmark.entity';
 import { Secret } from 'src/secrets/secret.entity';
 import { Streak } from 'src/streaks/streak.entity';
 import { HandleService } from './handle.service';
+import { Cap } from 'src/caps/cap.entity';
+import { Reaction } from 'src/reactions/reaction.entity';
 
 @Module({
   imports: [
     // e.g. in UsersModule
-    TypeOrmModule.forFeature([User, Secret, Bookmark, Streak]),
+    TypeOrmModule.forFeature([User, Secret, Bookmark, Streak, Reaction, Cap]),
   ],
   providers: [UsersService, HandleService],
   controllers: [UsersController],

@@ -1,4 +1,3 @@
-// mobile/src/components/SecretItem.tsx
 import React, { useState } from "react";
 import {
   LayoutAnimation,
@@ -19,6 +18,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import Reaction from "./Reaction";
 import useBookmark from "../hooks/useBookmarks";
 import { useReplies } from "../hooks/useReplies";
+import { useNavigation } from "@react-navigation/native";
+import { AppStackParamList } from "../navigation/AppNavigator";
 
 export interface SecretItemProps {
   id: string;
@@ -27,17 +28,20 @@ export interface SecretItemProps {
   status: string;
   createdAt: string;
   author: { handle: string; avatarUrl: string };
-  onReply: () => void;
 }
+
+export type DisplayMode = "normal" | "expanded" | "condensed";
 
 export default function SecretItem({
   secret,
-  expanded = false,
+  display = "normal",
+  navigation,
 }: {
   secret: SecretItemProps;
-  expanded?: boolean;
+  display?: DisplayMode;
+  navigation?: any;
 }) {
-  const { id, text, mood, status, createdAt, author, onReply } = secret;
+  const { id, text, mood, createdAt, author } = secret;
   const { colors } = useTheme();
   const { currentType, counts: reactionCounts, react } = useReactions(id);
   const { hasCapped, count: capCount, toggle: toggleCap } = useCap(id);
@@ -51,112 +55,136 @@ export default function SecretItem({
   const { report, ReportModal } = useReport(id);
   const { share, ShareModal } = useShare(id);
 
+  // computed flags
+  const isExpanded = display === "expanded";
+  const isCondensed = display === "condensed";
+
   const totalReactions = Object.values(reactionCounts).reduce(
     (s, c) => s + c,
     0
   );
 
+  const onReply = () => {
+    display != "expanded"
+      ? navigation.navigate("SecretDetail", { secretId: id })
+      : undefined;
+  };
+
+  // animation trigger on mode change
+  React.useEffect(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+  }, [display]);
+
   return (
     <View
       style={[
         styles.card,
+        isCondensed && styles.condensedCard,
         { backgroundColor: colors.card, borderColor: colors.border },
       ]}
     >
       {/* HEADER */}
       <View style={styles.header}>
-        <Avatar url={author.avatarUrl} handle={author.handle} size={40} />
-        <View style={styles.meta}>
-          <Text style={[styles.handle, { color: colors.text }]}>
-            @{author.handle}
-          </Text>
-          <Text style={[styles.timestamp, { color: colors.muted }]}>
-            {timeAgo(createdAt, "long")}
-          </Text>
-        </View>
-        {mood && (
-          <View style={[styles.moodPill, { borderColor: colors.primary }]}>
-            <Text style={[styles.moodText, { color: colors.primary }]}>
-              {mood[0].toUpperCase()}
-              {mood.slice(1)}
-            </Text>
-          </View>
+        <Avatar
+          url={author.avatarUrl}
+          handle={author.handle}
+          size={isCondensed ? 32 : 40}
+        />
+        {!isCondensed && (
+          <>
+            <View style={styles.meta}>
+              <Text style={[styles.handle, { color: colors.text }]}>
+                @{author.handle}
+              </Text>
+              <Text style={[styles.timestamp, { color: colors.muted }]}>
+                {" "}
+                {timeAgo(createdAt, "long")}{" "}
+              </Text>
+            </View>
+            {mood && (
+              <View style={[styles.moodPill, { borderColor: colors.primary }]}>
+                <Text style={[styles.moodText, { color: colors.primary }]}>
+                  {mood[0].toUpperCase() + mood.slice(1)}
+                </Text>
+              </View>
+            )}
+            <View style={styles.headerRightButtons}>
+              <ActionButton
+                icon="cap"
+                onPress={toggleCap}
+                label={capCount > 0 ? capCount.toString() : undefined}
+                active={hasCapped}
+              />
+              <ActionButton
+                icon="more-vertical"
+                onPress={report}
+                style={{ marginRight: 0 }}
+              />
+            </View>
+          </>
         )}
-        <View style={styles.headerRightButtons}>
-          <ActionButton
-            icon={"cap"}
-            onPress={toggleCap}
-            label={capCount > 0 ? capCount.toString() : undefined}
-            active={hasCapped}
-          />
-
-          <ActionButton
-            icon={"more-vertical"}
-            onPress={report}
-            style={{ marginRight: 0 }}
-          />
-        </View>
       </View>
 
       {/* BODY */}
       <Pressable
-        style={[styles.bodyContainer, expanded ? { maxHeight: undefined } : {}]}
+        style={[
+          styles.bodyContainer,
+          isExpanded && { maxHeight: undefined },
+          isCondensed && styles.condensedBodyContainer,
+        ]}
         onPress={onReply}
       >
         <Text
           style={[
             styles.bodyText,
             { color: colors.text },
-            expanded ? { maxHeight: undefined } : {},
+            isExpanded && { maxHeight: undefined },
+            isCondensed && styles.condensedBodyText,
           ]}
         >
           {text}
         </Text>
-        {!expanded && text.length > 250 && (
+        {!isExpanded && text.length > 100 && !isCondensed && (
           <LinearGradient
-            colors={["rgba(255,	247,	237, 0)", "rgba(255, 247, 237, 1)"]}
+            colors={["rgba(255,247,237,0)", "rgba(255,247,237,1)"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 7 }}
             locations={[0, 0.15]}
-            style={[styles.fadeOverlay]}
+            style={styles.fadeOverlay}
             pointerEvents="none"
           />
         )}
       </Pressable>
-      {/* DIVIDER */}
 
-      <View style={styles.divider} />
+      {/* DIVIDER */}
+      {!isCondensed && <View style={styles.divider} />}
 
       {/* FOOTER ACTIONS */}
-      <View style={styles.footer}>
-        <View style={styles.leftActions}>
-          {/* <ActionButton
-            icon="heart"
-            label={totalReactions > 0 ? totalReactions.toString() : undefined}
-            active={currentType !== null}
-            onPress={togglePicker}
-          /> */}
-          <Reaction
-            current={currentType}
-            onReact={(type) => react(type)}
-            totalCount={totalReactions}
-          />
-          <ActionButton
-            icon="comment"
-            onPress={onReply}
-            label={countReplies > 0 ? countReplies : undefined}
-          />
-          <ActionButton icon="share" onPress={share} />
+      {!isCondensed && (
+        <View style={styles.footer}>
+          <View style={styles.leftActions}>
+            <Reaction
+              current={currentType}
+              onReact={react}
+              totalCount={totalReactions}
+            />
+            <ActionButton
+              icon="comment"
+              onPress={onReply}
+              label={countReplies > 0 ? countReplies : undefined}
+            />
+            <ActionButton icon="share" onPress={share} />
+          </View>
+          <View style={styles.rightActions}>
+            <ActionButton
+              icon={bookmarked ? "bookmark-fill" : "bookmark"}
+              onPress={toggleBookmark}
+              active={bookmarked}
+              label={bookmarkCount > 0 ? bookmarkCount : undefined}
+            />
+          </View>
         </View>
-        <View style={styles.rightActions}>
-          <ActionButton
-            icon={bookmarked ? "bookmark-fill" : "bookmark"}
-            onPress={toggleBookmark}
-            active={bookmarked}
-            label={bookmarkCount > 0 ? bookmarkCount : undefined}
-          />
-        </View>
-      </View>
+      )}
 
       {/* MODALS */}
       <ReportModal />
@@ -170,59 +198,38 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    //marginBottom: 16,
-    flex: 1,
+    //flex: 1,
     margin: 10,
+    borderWidth: 1,
+  },
+  condensedCard: {
+    padding: 8,
+    margin: 4,
+    maxWidth: 120,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 12,
-    justifyContent: "flex-start",
   },
   meta: {
     flex: 1,
     marginLeft: 12,
-    justifyContent: "center",
   },
-  handle: {
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  timestamp: {
-    fontSize: 12,
-    marginTop: 2,
-  },
+  handle: { fontSize: 16, fontWeight: "500" },
+  timestamp: { fontSize: 12, marginTop: 2 },
   moodPill: {
     borderWidth: 1.5,
     borderRadius: 5,
     paddingHorizontal: 8,
     paddingVertical: 4,
     marginRight: 8,
-    justifyContent: "center",
-    alignItems: "center",
   },
-  moodText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  headerButton: {
-    marginHorizontal: 4,
-    alignItems: "center",
-  },
+  moodText: { fontSize: 14, fontWeight: "500" },
   headerRightButtons: {
     flexDirection: "row",
     alignItems: "center",
     marginLeft: 10,
-  },
-  capCount: {
-    fontSize: 10,
-  },
-  bodyText: {
-    fontSize: 16,
-    lineHeight: 22,
-    minHeight: 20,
-    maxHeight: 180,
   },
   bodyContainer: {
     maxHeight: 200,
@@ -230,23 +237,9 @@ const styles = StyleSheet.create({
     position: "relative",
     marginBottom: 12,
   },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  leftActions: {
-    flexDirection: "row",
-    gap: 16,
-    justifyContent: "flex-start",
-    alignItems: "center",
-    alignContent: "center",
-  },
-  rightActions: {
-    flexDirection: "row",
-    gap: 16,
-    alignItems: "center",
-  },
+  condensedBodyContainer: { maxHeight: 60 },
+  bodyText: { fontSize: 16, lineHeight: 22, minHeight: 20, maxHeight: 180 },
+  condensedBodyText: { fontSize: 14, lineHeight: 18, maxHeight: 60 },
   fadeOverlay: {
     position: "absolute",
     left: 0,
@@ -254,11 +247,17 @@ const styles = StyleSheet.create({
     bottom: 0,
     height: 80,
   },
-
   divider: {
     height: StyleSheet.hairlineWidth,
     marginBottom: 12,
     backgroundColor: "#ccc",
     opacity: 0.5,
   },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  leftActions: { flexDirection: "row", gap: 16, alignItems: "center" },
+  rightActions: { flexDirection: "row", gap: 16, alignItems: "center" },
 });

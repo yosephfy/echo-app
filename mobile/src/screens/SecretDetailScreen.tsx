@@ -67,7 +67,7 @@ export default function SecretDetailScreen({ route }: Props) {
         data={replies}
         keyExtractor={(r) => r.id}
         ListHeaderComponent={() =>
-          secret && <SecretItem secret={secret} expanded />
+          secret && <SecretItem secret={secret} display="expanded" />
         }
         ListHeaderComponentStyle={styles.secretItem}
         renderItem={({ item }) => <ReplyItem reply={item} />}

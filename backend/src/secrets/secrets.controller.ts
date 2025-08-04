@@ -42,6 +42,18 @@ export class SecretsController {
     return this.secrets.getFeed(req.user.userId, pageNum, limitNum, mood);
   }
 
+  @Get('secretslist/me')
+  async getMySecrets(
+    @Request() req,
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Query('mood') mood?: string,
+  ) {
+    const pageNum = Math.max(parseInt(page, 10), 1);
+    const limitNum = Math.min(Math.max(parseInt(limit, 10), 1), 100);
+    return this.secrets.getSecrets(req.user.userId, pageNum, limitNum, mood);
+  }
+
   @Get('find/:id')
   async getSecret(@Param('id') secretId: string) {
     const secret = await this.secrets.getSecretById(secretId);

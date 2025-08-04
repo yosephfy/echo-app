@@ -138,6 +138,44 @@ export class SecretsService {
     };
   }
 
+  /** Fetch a paginated list of this user’s own secrets */
+  async getSecrets(userId: string, page: number, limit: number, mood?: string) {
+    const q = this.secretsRepo
+      .createQueryBuilder('s')
+      .leftJoinAndSelect('s.author', 'author')
+      .where('s.userId = :userId', { userId })
+      .andWhere('s.status IN (:...statuses)', {
+        statuses: [SecretStatus.PUBLISHED, SecretStatus.UNDER_REVIEW],
+      })
+      .orderBy('s.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    if (mood) {
+      q.andWhere('s.mood = :mood', { mood });
+    }
+
+    const [items, totalCount] = await q.getManyAndCount();
+
+    return {
+      items: items.map((s) => ({
+        id: s.id,
+        text: s.text,
+        mood: s.mood,
+        status: s.status,
+        createdAt: s.createdAt,
+        author: {
+          id: s.author.id,
+          handle: s.author.handle,
+          avatarUrl: s.author.avatarUrl,
+        },
+      })),
+      total: totalCount,
+      page,
+      limit,
+    };
+  }
+
   async getSecretById(secretId: string): Promise<Secret | null> {
     return this.secretsRepo.findOne({
       where: { id: secretId },
