@@ -12,6 +12,7 @@ import { IconSvg } from "../icons/IconSvg";
 import { IconName } from "../icons/icons";
 import SecretDetailScreen from "../screens/SecretDetailScreen";
 import BackButton from "../components/BackButtonComponent";
+import AccountSettingsNavigator from "./AccountScreenNavigator";
 
 export type AppStackParamList = {
   Home: undefined;
@@ -63,7 +64,13 @@ export default function TabsNavigator() {
       <Tab.Screen name="Discover" component={DiscoverScreen} />
       <Tab.Screen name="Bookmarks" component={BookmarksScreen} />
       <Tab.Screen name="Admin" component={AdminPanelScreen} />
-      <Tab.Screen name="AccountSettings" component={AccountSettingsScreen} />
+      <Tab.Screen
+        name="AccountSettings"
+        component={AccountSettingsNavigator}
+        options={{
+          title: "Account Settings",
+        }}
+      />
       <Tab.Screen name="Profile" component={ProfileScreen} />
       <Tab.Screen
         name="SecretDetail"
