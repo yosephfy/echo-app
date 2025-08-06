@@ -193,7 +193,7 @@ export function SettingsRow<T extends RowType>({
           {icon && <IconSvg icon={icon} size={20} state="default" />}
           <Text style={styles.label}>{label}</Text>
           <Text style={styles.value}>{date.toLocaleDateString()}</Text>
-          <IconSvg icon="calendar" size={20} state="default" />
+          <IconSvg icon="calendar-day" size={20} state="default" />
         </TouchableOpacity>
       );
     }

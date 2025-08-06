@@ -127,15 +127,14 @@ export default function SettingsHomeScreen({ navigation }: Props) {
       },
     } as SettingsRowProps<"button">,
     {
-      type: "navigation",
+      type: "button",
       label: "App Version",
       options: {
         onPress: () => {}, // disabled, so user can’t press
-        route: "EditProfile",
-        navigation,
+        buttonText: "1.0.0",
       },
       disabled: true,
-    } as SettingsRowProps<"navigation">,
+    } as SettingsRowProps<"button">,
   ];
 
   return (

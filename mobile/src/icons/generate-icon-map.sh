@@ -18,9 +18,17 @@ for FILE in "$ICON_DIR"/*.svg; do
   MAP+="  \"$BASENAME\": $IMPORT_NAME,\n"
 done
 
-MAP+="};\n\nexport type IconName = keyof typeof iconMap;\n\nexport default iconMap;\n"
+MAP+="} as const;\n\n"
 
+ICON_TYPE="export type IconName = "
+
+for FILE in "$ICON_DIR"/*.svg; do
+  BASENAME=$(basename "$FILE" .svg)                         # e.g., myicon-outlined
+  ICON_TYPE+="| \"$BASENAME\""
+done
+
+ICON_TYPE+="\n\nexport default iconMap;\n"
 # Combine imports and map
-echo -e "$IMPORTS\n$MAP" >> "$OUTPUT_FILE"
+echo -e "$IMPORTS\n$MAP\n$ICON_TYPE" >> "$OUTPUT_FILE"
 
 echo "✅ Generated icon map at $OUTPUT_FILE"

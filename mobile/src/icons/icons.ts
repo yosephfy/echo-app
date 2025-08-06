@@ -4,9 +4,13 @@ import bell from '../../assets/icons/bell.svg';
 import bookmark_fill from '../../assets/icons/bookmark-fill.svg';
 import bookmark from '../../assets/icons/bookmark.svg';
 import bookmarks from '../../assets/icons/bookmarks.svg';
+import calendar_day from '../../assets/icons/calendar-day.svg';
 import cap from '../../assets/icons/cap.svg';
 import cards from '../../assets/icons/cards.svg';
+import chevron_down from '../../assets/icons/chevron-down.svg';
 import chevron_left from '../../assets/icons/chevron-left.svg';
+import chevron_right from '../../assets/icons/chevron-right.svg';
+import chevron_up from '../../assets/icons/chevron-up.svg';
 import circle_user from '../../assets/icons/circle-user.svg';
 import color_palette from '../../assets/icons/color-palette.svg';
 import comment from '../../assets/icons/comment.svg';
@@ -41,9 +45,13 @@ const iconMap: Record<string, React.FC<SvgProps>> = {
   "bookmark-fill": bookmark_fill,
   "bookmark": bookmark,
   "bookmarks": bookmarks,
+  "calendar-day": calendar_day,
   "cap": cap,
   "cards": cards,
+  "chevron-down": chevron_down,
   "chevron-left": chevron_left,
+  "chevron-right": chevron_right,
+  "chevron-up": chevron_up,
   "circle-user": circle_user,
   "color-palette": color_palette,
   "comment": comment,
@@ -72,9 +80,10 @@ const iconMap: Record<string, React.FC<SvgProps>> = {
   "shield-lock": shield_lock,
   "thumbs-up": thumbs_up,
   "trash": trash,
-};
+} as const;
 
-export type IconName = keyof typeof iconMap;
+
+export type IconName =  | "bell" | "bookmark-fill" | "bookmark" | "bookmarks" | "calendar-day" | "cap" | "cards" | "chevron-down" | "chevron-left" | "chevron-right" | "chevron-up" | "circle-user" | "color-palette" | "comment" | "email" | "eye-off" | "face-screaming-in-fear" | "face-with-tears-of-joy" | "file-document" | "fire" | "heart-alt" | "heart-full" | "heart" | "help" | "home" | "laugh-emoji" | "lock" | "logout" | "more-horizontal" | "more-vertical" | "pouting-face" | "profile-round" | "sad-but-relieved-face" | "search-alt" | "settings" | "share" | "shield-lock" | "thumbs-up" | "trash"
 
 export default iconMap;
 
