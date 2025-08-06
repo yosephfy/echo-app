@@ -1,34 +1,46 @@
 #!/bin/bash
 
-ICON_DIR="../../assets/icons"
-OUTPUT_FILE="./icons.ts"
+# Directory containing source SVGs and target TypeScript file
+SVG_SOURCE_DIR="../../assets/icons"
+TS_OUTPUT_PATH="./icons.ts"
 
-mkdir -p "$(dirname "$OUTPUT_FILE")"
+# Ensure output directory exists
+mkdir -p "$(dirname "$TS_OUTPUT_PATH")"
 
-echo "// AUTO-GENERATED FILE. DO NOT EDIT MANUALLY." > "$OUTPUT_FILE"
-echo "import { SvgProps } from 'react-native-svg';" >> "$OUTPUT_FILE"
+# Write file header
+{
+  echo "// AUTO-GENERATED FILE. DO NOT EDIT MANUALLY."
+  echo "import { SvgProps } from 'react-native-svg';"
+} > "$TS_OUTPUT_PATH"
 
-IMPORTS=""
-MAP="const iconMap: Record<string, React.FC<SvgProps>> = {\n"
+# Prepare accumulators for import statements and the icon map body
+imports_section=""
+icon_map_body="const iconMap: Record<IconName, React.FC<SvgProps>> = {\n"
 
-for FILE in "$ICON_DIR"/*.svg; do
-  BASENAME=$(basename "$FILE" .svg)                         # e.g., myicon-outlined
-  IMPORT_NAME=$(echo "$BASENAME" | sed 's/[^a-zA-Z0-9]/_/g') # myicon_outlined
-  IMPORTS+="import $IMPORT_NAME from '../../assets/icons/$BASENAME.svg';\n"
-  MAP+="  \"$BASENAME\": $IMPORT_NAME,\n"
+# Loop through each SVG file, build import and map entries
+for svg_file in "$SVG_SOURCE_DIR"/*.svg; do
+  file_basename=$(basename "$svg_file" .svg)                           # e.g., myicon-outlined
+  sanitized_name=$(echo "$file_basename" | sed 's/[^a-zA-Z0-9]/_/g')   # e.g., myicon_outlined
+
+  imports_section+="import $sanitized_name from '$SVG_SOURCE_DIR/$file_basename.svg';\n"
+  icon_map_body+="  \"$file_basename\": $sanitized_name,\n"
 done
 
-MAP+="} as const;\n\n"
+icon_map_body+="} as const;\n\n"
 
-ICON_TYPE="export type IconName = "
-
-for FILE in "$ICON_DIR"/*.svg; do
-  BASENAME=$(basename "$FILE" .svg)                         # e.g., myicon-outlined
-  ICON_TYPE+="| \"$BASENAME\""
+# Build the union type for icon names
+type_definition="export type IconName ="
+for svg_file in "$SVG_SOURCE_DIR"/*.svg; do
+  file_basename=$(basename "$svg_file" .svg)
+  type_definition+=" | \"$file_basename\""
 done
+type_definition+="\n\nexport default iconMap;\n"
 
-ICON_TYPE+="\n\nexport default iconMap;\n"
-# Combine imports and map
-echo -e "$IMPORTS\n$MAP\n$ICON_TYPE" >> "$OUTPUT_FILE"
+# Combine all parts into the output file
+{
+  echo -e "$imports_section"
+  echo -e "$icon_map_body"
+  echo -e "$type_definition"
+} >> "$TS_OUTPUT_PATH"
 
-echo "✅ Generated icon map at $OUTPUT_FILE"
+echo "✅ Generated icon map at $TS_OUTPUT_PATH"

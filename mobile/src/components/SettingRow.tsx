@@ -1,23 +1,25 @@
 // mobile/src/components/SettingsRow.tsx
-import React from "react";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
   StyleSheet,
   Switch,
+  Text,
   TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import DropDownPicker from "react-native-dropdown-picker";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { IconSvg } from "../icons/IconSvg";
 import { IconName } from "../icons/icons";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { AccountSettingsStackParamList } from "../navigation/AccountScreenNavigator";
 
 type Props = NativeStackScreenProps<
   AccountSettingsStackParamList,
   "SettingsHome"
 >;
+
 // 1) Define the kinds of rows we support
 export type RowType =
   | "navigation"
@@ -47,17 +49,18 @@ interface SwitchOptions {
 interface InputOptions {
   value: string;
   placeholder?: string;
-  onChangeText: (t: string) => void;
+  onSubmit: (t: string) => void;
 }
 
 interface DropdownOptions {
-  options: { label: string; value: string }[];
+  items: { label: string; value: string }[];
   selected: string;
   onSelect: (item: string) => void;
 }
 
 interface DateOptions {
   date: Date;
+  type?: "time" | "date"; // default is "date"
   onChange: (d: Date) => void;
 }
 
@@ -81,6 +84,231 @@ export type SettingsRowProps<T extends RowType> = {
   options: OptionsMap[T];
 };
 
+// --- Sub-components for each row type ---
+
+function NavigationRow({
+  label,
+  icon,
+  disabled,
+  onPress,
+  navigation,
+  route,
+  params,
+}: {
+  label: string;
+  icon?: IconName;
+  disabled: boolean;
+} & NavigationOptions) {
+  const rowStyle = [styles.row, disabled && styles.disabledRow];
+  const onPressHandler = () => {
+    onPress?.();
+    navigation.navigate(route, params as any);
+  };
+  return (
+    <TouchableOpacity
+      style={rowStyle}
+      onPress={onPressHandler}
+      disabled={disabled}
+    >
+      {icon && <IconSvg icon={icon} size={20} state="default" />}
+      <Text style={styles.label}>{label}</Text>
+      <IconSvg icon="chevron-right" size={20} state="default" />
+    </TouchableOpacity>
+  );
+}
+
+function ButtonRow({
+  label,
+  icon,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  icon?: IconName;
+  disabled: boolean;
+} & ButtonOptions) {
+  const rowStyle = [styles.row, disabled && styles.disabledRow];
+  return (
+    <TouchableOpacity style={rowStyle} onPress={onPress} disabled={disabled}>
+      {icon && <IconSvg icon={icon} size={20} state="default" />}
+      <Text style={styles.label}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function SwitchRow({
+  label,
+  icon,
+  disabled,
+  value,
+  onValueChange,
+}: {
+  label: string;
+  icon?: IconName;
+  disabled: boolean;
+} & SwitchOptions) {
+  const rowStyle = [styles.row, disabled && styles.disabledRow];
+  const [valueState, setValueState] = useState(value);
+  const onValueChangeHandler = (newValue: boolean) => {
+    setValueState(newValue);
+    onValueChange(newValue);
+  };
+  return (
+    <View style={rowStyle}>
+      {icon && <IconSvg icon={icon} size={20} state="default" />}
+      <Text style={styles.label}>{label}</Text>
+      <Switch
+        value={valueState}
+        onValueChange={onValueChangeHandler}
+        disabled={disabled}
+      />
+    </View>
+  );
+}
+
+function InputRow({
+  label,
+  icon,
+  disabled,
+  value,
+  placeholder,
+  onSubmit,
+}: {
+  label: string;
+  icon?: IconName;
+  disabled: boolean;
+} & InputOptions) {
+  const rowStyle = [styles.row, disabled && styles.disabledRow];
+  const [inputValue, setInputValue] = useState(value);
+  const [editing, setEditing] = useState(false);
+  const onSubmitHandler = () => {
+    if (inputValue.trim() !== "") {
+      onSubmit(inputValue);
+      setEditing(false);
+    }
+  };
+  return (
+    <View style={rowStyle}>
+      {icon && <IconSvg icon={icon} size={20} state="default" />}
+      <Text style={styles.label}>{label}</Text>
+      <TextInput
+        style={styles.input}
+        value={inputValue}
+        placeholder={placeholder}
+        onChangeText={setInputValue}
+        editable={!disabled && editing}
+      />
+      {!editing ? (
+        <TouchableOpacity onPress={() => setEditing(true)} disabled={disabled}>
+          <IconSvg icon="pencil" size={20} state="default" />
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity onPress={onSubmitHandler} disabled={disabled}>
+          <IconSvg icon="check-circle" size={20} state="default" />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+function DropdownRow({
+  label,
+  icon,
+  disabled,
+  items,
+  selected,
+  onSelect,
+}: {
+  label: string;
+  icon?: IconName;
+  disabled: boolean;
+} & DropdownOptions) {
+  const rowStyle = [styles.row, disabled && styles.disabledRow];
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(selected);
+  const [itemsList, setItemsList] = useState(items);
+  return (
+    <TouchableOpacity style={rowStyle} disabled={disabled}>
+      {icon && <IconSvg icon={icon} size={20} state="default" />}
+      <Text style={styles.label}>{label}</Text>
+      <View style={{}}>
+        <DropDownPicker
+          open={open}
+          value={value}
+          items={itemsList}
+          setOpen={setOpen}
+          setValue={setValue}
+          setItems={setItemsList}
+          placeholder="Select an option"
+          listMode="MODAL"
+          style={{
+            maxWidth: 200,
+            minWidth: 100,
+            backgroundColor: "#fff",
+          }}
+          onChangeValue={(item) => onSelect(item as string)}
+          dropDownContainerStyle={{ backgroundColor: "#fff" }}
+        />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function DateRow({
+  label,
+  icon,
+  disabled,
+  date,
+  type = "date",
+  onChange,
+}: {
+  label: string;
+  icon?: IconName;
+  disabled: boolean;
+} & DateOptions) {
+  const rowStyle = [styles.row, disabled && styles.disabledRow];
+  const [value, setValue] = useState(date);
+  const [tempValue, setTempValue] = useState(date);
+  const [open, setOpen] = useState(false);
+  return (
+    <TouchableOpacity
+      style={rowStyle}
+      onPress={() => {
+        setOpen(true);
+      }}
+      disabled={disabled}
+    >
+      {icon && <IconSvg icon={icon} size={20} state="default" />}
+      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.value}>
+        {type == "date"
+          ? value.toLocaleDateString()
+          : value.toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "numeric",
+              hour12: true,
+            })}
+      </Text>
+      <IconSvg icon="calendar-day" size={20} state="default" />
+      <DateTimePickerModal
+        isVisible={open}
+        mode={type}
+        onConfirm={() => {
+          setOpen(false);
+          setValue(tempValue);
+          onChange(tempValue);
+        }}
+        onCancel={() => {
+          setOpen(false);
+        }}
+        onChange={(date: Date) => {
+          setTempValue(date);
+        }}
+      />
+    </TouchableOpacity>
+  );
+}
+
 // 5) The component
 export function SettingsRow<T extends RowType>({
   type,
@@ -89,115 +317,61 @@ export function SettingsRow<T extends RowType>({
   options,
   icon,
 }: SettingsRowProps<T>) {
-  //const { navigation } = useNavigation<Props>();
-
-  // shared styles
-  const rowStyle = [styles.row, disabled && styles.disabledRow];
-
   switch (type) {
-    case "navigation": {
-      const { onPress, route, params, navigation } =
-        options as NavigationOptions;
-      const onPressHandler = () => {
-        onPress?.();
-        navigation.navigate(route, params as any);
-      };
+    case "navigation":
       return (
-        <TouchableOpacity
-          style={rowStyle}
-          onPress={onPressHandler}
+        <NavigationRow
+          label={label}
+          icon={icon}
           disabled={disabled}
-        >
-          {icon && <IconSvg icon={icon} size={20} state="default" />}
-          <Text style={styles.label}>{label}</Text>
-          <IconSvg icon="chevron-right" size={20} state="default" />
-        </TouchableOpacity>
+          {...(options as NavigationOptions)}
+        />
       );
-    }
-
-    case "button": {
-      const { onPress } = options as ButtonOptions;
+    case "button":
       return (
-        <TouchableOpacity
-          style={rowStyle}
-          onPress={onPress}
+        <ButtonRow
+          label={label}
+          icon={icon}
           disabled={disabled}
-        >
-          {icon && <IconSvg icon={icon} size={20} state="default" />}
-          <Text style={styles.label}>{label}</Text>
-        </TouchableOpacity>
+          {...(options as ButtonOptions)}
+        />
       );
-    }
-
-    case "switch": {
-      const { value, onValueChange } = options as SwitchOptions;
+    case "switch":
       return (
-        <View style={rowStyle}>
-          {icon && <IconSvg icon={icon} size={20} state="default" />}
-
-          <Text style={styles.label}>{label}</Text>
-          <Switch
-            value={value}
-            onValueChange={onValueChange}
-            disabled={disabled}
-          />
-        </View>
-      );
-    }
-
-    case "input": {
-      const { value, placeholder, onChangeText } = options as InputOptions;
-      return (
-        <View style={rowStyle}>
-          {icon && <IconSvg icon={icon} size={20} state="default" />}
-          <Text style={styles.label}>{label}</Text>
-          <TextInput
-            style={styles.input}
-            value={value}
-            placeholder={placeholder}
-            onChangeText={onChangeText}
-            editable={!disabled}
-          />
-        </View>
-      );
-    }
-
-    case "dropdown": {
-      const { options: items, selected, onSelect } = options as DropdownOptions;
-      return (
-        <TouchableOpacity
-          style={rowStyle}
-          onPress={() => {
-            /* you’d show a modal or ActionSheet here */
-          }}
+        <SwitchRow
+          label={label}
+          icon={icon}
           disabled={disabled}
-        >
-          {icon && <IconSvg icon={icon} size={20} state="default" />}
-          <Text style={styles.label}>{label}</Text>
-          <Text style={styles.value}>{selected}</Text>
-          <IconSvg icon="chevron-down" size={20} state="default" />
-        </TouchableOpacity>
+          {...(options as SwitchOptions)}
+        />
       );
-    }
-
-    case "date": {
-      const { date, onChange } = options as DateOptions;
+    case "input":
       return (
-        <TouchableOpacity
-          style={rowStyle}
-          onPress={() => {
-            /* open date picker and call onChange */
-          }}
+        <InputRow
+          label={label}
+          icon={icon}
           disabled={disabled}
-        >
-          {icon && <IconSvg icon={icon} size={20} state="default" />}
-          <Text style={styles.label}>{label}</Text>
-          <Text style={styles.value}>{date.toLocaleDateString()}</Text>
-          <IconSvg icon="calendar-day" size={20} state="default" />
-        </TouchableOpacity>
+          {...(options as InputOptions)}
+        />
       );
-    }
-
+    case "dropdown":
+      return (
+        <DropdownRow
+          label={label}
+          icon={icon}
+          disabled={disabled}
+          {...(options as DropdownOptions)}
+        />
+      );
+    case "date":
+      return (
+        <DateRow
+          label={label}
+          icon={icon}
+          disabled={disabled}
+          {...(options as DateOptions)}
+        />
+      );
     default:
       return null;
   }
@@ -221,9 +395,17 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   input: {
-    borderBottomWidth: 1,
+    //borderBottomWidth: 1,
     flex: 1,
-    textAlign: "right",
+    maxWidth: 150,
+    //textAlign: "right",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#ccc",
+    borderRadius: 4,
+    padding: 8,
+    marginHorizontal: 8,
+    color: "#333",
+    backgroundColor: "#fff",
   },
   value: {
     fontSize: 16,

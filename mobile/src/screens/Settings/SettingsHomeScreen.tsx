@@ -58,13 +58,13 @@ export default function SettingsHomeScreen({ navigation }: Props) {
       icon: "color-palette",
       label: "Appearance",
       options: {
-        options: [
+        items: [
           { label: "Light", value: "light" },
           { label: "Dark", value: "dark" },
           { label: "System", value: "system" },
         ],
         selected: "system",
-        onSelect: (item: any) => {},
+        onSelect: (item: string) => {},
       },
     } as SettingsRowProps<"dropdown">,
 

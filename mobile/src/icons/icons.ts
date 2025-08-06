@@ -7,6 +7,7 @@ import bookmarks from '../../assets/icons/bookmarks.svg';
 import calendar_day from '../../assets/icons/calendar-day.svg';
 import cap from '../../assets/icons/cap.svg';
 import cards from '../../assets/icons/cards.svg';
+import check_circle from '../../assets/icons/check-circle.svg';
 import chevron_down from '../../assets/icons/chevron-down.svg';
 import chevron_left from '../../assets/icons/chevron-left.svg';
 import chevron_right from '../../assets/icons/chevron-right.svg';
@@ -30,6 +31,7 @@ import lock from '../../assets/icons/lock.svg';
 import logout from '../../assets/icons/logout.svg';
 import more_horizontal from '../../assets/icons/more-horizontal.svg';
 import more_vertical from '../../assets/icons/more-vertical.svg';
+import pencil from '../../assets/icons/pencil.svg';
 import pouting_face from '../../assets/icons/pouting-face.svg';
 import profile_round from '../../assets/icons/profile-round.svg';
 import sad_but_relieved_face from '../../assets/icons/sad-but-relieved-face.svg';
@@ -40,7 +42,7 @@ import shield_lock from '../../assets/icons/shield-lock.svg';
 import thumbs_up from '../../assets/icons/thumbs-up.svg';
 import trash from '../../assets/icons/trash.svg';
 
-const iconMap: Record<string, React.FC<SvgProps>> = {
+const iconMap: Record<IconName, React.FC<SvgProps>> = {
   "bell": bell,
   "bookmark-fill": bookmark_fill,
   "bookmark": bookmark,
@@ -48,6 +50,7 @@ const iconMap: Record<string, React.FC<SvgProps>> = {
   "calendar-day": calendar_day,
   "cap": cap,
   "cards": cards,
+  "check-circle": check_circle,
   "chevron-down": chevron_down,
   "chevron-left": chevron_left,
   "chevron-right": chevron_right,
@@ -71,6 +74,7 @@ const iconMap: Record<string, React.FC<SvgProps>> = {
   "logout": logout,
   "more-horizontal": more_horizontal,
   "more-vertical": more_vertical,
+  "pencil": pencil,
   "pouting-face": pouting_face,
   "profile-round": profile_round,
   "sad-but-relieved-face": sad_but_relieved_face,
@@ -83,7 +87,7 @@ const iconMap: Record<string, React.FC<SvgProps>> = {
 } as const;
 
 
-export type IconName =  | "bell" | "bookmark-fill" | "bookmark" | "bookmarks" | "calendar-day" | "cap" | "cards" | "chevron-down" | "chevron-left" | "chevron-right" | "chevron-up" | "circle-user" | "color-palette" | "comment" | "email" | "eye-off" | "face-screaming-in-fear" | "face-with-tears-of-joy" | "file-document" | "fire" | "heart-alt" | "heart-full" | "heart" | "help" | "home" | "laugh-emoji" | "lock" | "logout" | "more-horizontal" | "more-vertical" | "pouting-face" | "profile-round" | "sad-but-relieved-face" | "search-alt" | "settings" | "share" | "shield-lock" | "thumbs-up" | "trash"
+export type IconName = | "bell" | "bookmark-fill" | "bookmark" | "bookmarks" | "calendar-day" | "cap" | "cards" | "check-circle" | "chevron-down" | "chevron-left" | "chevron-right" | "chevron-up" | "circle-user" | "color-palette" | "comment" | "email" | "eye-off" | "face-screaming-in-fear" | "face-with-tears-of-joy" | "file-document" | "fire" | "heart-alt" | "heart-full" | "heart" | "help" | "home" | "laugh-emoji" | "lock" | "logout" | "more-horizontal" | "more-vertical" | "pencil" | "pouting-face" | "profile-round" | "sad-but-relieved-face" | "search-alt" | "settings" | "share" | "shield-lock" | "thumbs-up" | "trash"
 
 export default iconMap;
 
