@@ -15,6 +15,8 @@ import {
 import { useTheme } from "../theme/ThemeContext";
 import { api } from "../api/client";
 import { CircularProgress } from "./CircularProgressComponent";
+import useCooldown from "../hooks/useCooldown";
+import { Socket } from "socket.io-client";
 
 const MAX_CHARS = 2000;
 const MOODS = ["happy", "sad", "angry", "relieved"] as const;
@@ -29,7 +31,7 @@ interface Props {
 
 export default function ComposerModal({ visible, onClose, onPosted }: Props) {
   const { colors, spacing, fontSizes, radii } = useTheme();
-
+  const { refresh } = useCooldown();
   const [text, setText] = useState("");
   const [mood, setMood] = useState<Mood | undefined>(undefined);
   const [panic, setPanic] = useState(false);
@@ -47,10 +49,13 @@ export default function ComposerModal({ visible, onClose, onPosted }: Props) {
       setPanic(false);
       onPosted();
       onClose();
+      // Reset cooldown after posting
+      refresh();
     } catch (err: any) {
       alert(err.message);
     } finally {
       setLoading(false);
+      refresh();
     }
   };
 

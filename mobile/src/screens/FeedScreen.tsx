@@ -11,34 +11,46 @@ import {
 import ComposeButton from "../components/ComposeButtonComponent";
 import ComposerModal from "../components/ComposerModal";
 import SecretItem, { SecretItemProps } from "../components/SecretItem";
-import usePaginatedData from "../hooks/usePaginatedData";
+import { useFeed } from "../hooks/useFeed";
 import useSocket from "../hooks/useSocket";
 import { AppStackParamList } from "../navigation/AppNavigator";
 import { useAuthStore } from "../store/authStore";
 import { useTheme } from "../theme/ThemeContext";
+import useCooldown from "../hooks/useCooldown";
 
 type Props = NativeStackScreenProps<AppStackParamList, "Feed">;
 
 export default function FeedScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const token = useAuthStore((s) => s.token);
-  const { data, loading, loadFirstPage, loadNextPage, isAtEnd } =
-    usePaginatedData<SecretItemProps>("/secrets/feed");
-  // const { remaining, duration, refresh } = useCooldown();
+  const {
+    items,
+    loading,
+    loadMore,
+    loadPage,
+    hasMore,
+    limit,
+    page,
+    refresh,
+    refreshing,
+    total,
+  } = useFeed(20, token);
+  const { remaining, duration, refresh: refreshCooldown } = useCooldown();
 
   const [composerActive, setComposerActive] = useState(false);
   // real-time updates
-  useSocket("secretCreated", (newItem: SecretItemProps) =>
-    loadFirstPage((prev) => [newItem, ...prev])
-  );
+  useSocket("secretCreated", (newItem: SecretItemProps) => {
+    loadPage(1, true);
+    refreshCooldown();
+  });
 
   useEffect(() => {
-    if (token) loadFirstPage();
+    if (token) loadPage(1, true);
   }, [token]);
 
   if (!token) return null;
   useEffect(() => {
-    //refresh();
+    refreshCooldown();
   }, [composerActive]);
 
   return (
@@ -57,21 +69,24 @@ export default function FeedScreen({ navigation }: Props) {
       <View style={[styles.headerContainer, { borderColor: colors.border }]}>
         <Text style={styles.headerTitle}>Echo</Text>
       </View>
-      {loading && data.length === 0 ? (
+      {loading && items.length === 0 ? (
         <ActivityIndicator size="large" color={colors.primary} />
       ) : (
         <FlatList
-          data={data}
+          data={items}
           style={{ flex: 1 }}
           contentContainerStyle={{}}
           showsVerticalScrollIndicator={false}
           refreshing={loading}
-          onRefresh={() => loadFirstPage()}
+          onRefresh={() => loadPage(1, true)}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <SecretItem secret={item} navigation={navigation} />
           )}
-          onEndReached={() => !isAtEnd && loadNextPage()}
+          onEndReached={() => {
+            console.log("End reached");
+            loadMore();
+          }}
           onEndReachedThreshold={0.5}
           ListFooterComponent={
             loading ? <ActivityIndicator style={{ margin: 20 }} /> : null

@@ -1,5 +1,5 @@
 // mobile/src/components/ComposeButton.tsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { use, useEffect, useRef, useState } from "react";
 import {
   TouchableOpacity,
   View,
@@ -21,7 +21,7 @@ interface ComposeButtonProps {
 }
 
 export default function ComposeButton({
-  composerActive = false,
+  composerActive,
   onPress,
   size = 84,
 }: ComposeButtonProps) {
@@ -48,6 +48,11 @@ export default function ComposeButton({
       useNativeDriver: true,
     }).start();
   }, [cooldown, totalCooldown]);
+
+  useEffect(() => {
+    // Reset cooldown when composer is active
+    refresh();
+  }, [composerActive]);
 
   const strokeDashoffset = progress.interpolate({
     inputRange: [0, 1],

@@ -1,6 +1,20 @@
 // mobile/src/hooks/useBookmark.ts
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "../api/client";
+import { SecretItemProps } from "../components/SecretItem";
+
+export interface PaginatedHooksResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+  loading: boolean;
+  refreshing: boolean;
+  hasMore: boolean;
+  loadPage: (page?: number, replace?: boolean) => Promise<void>;
+  refresh: () => Promise<void> | void;
+  loadMore: () => void;
+}
 
 interface ToggleResponse {
   added?: boolean;
@@ -66,4 +80,70 @@ export default function useBookmark(secretId: string) {
   }, [secretId]);
 
   return { count, bookmarked, loading, toggle, refresh };
+}
+
+/**
+ * Hook to fetch paginated list of user's bookmarked secrets.
+ *
+ * @param pageSize number of items per page
+ */
+export function useBookmarks(
+  pageSize: number = 20
+): PaginatedHooksResponse<SecretItemProps> {
+  const [items, setItems] = useState<SecretItemProps[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadPage = useCallback(
+    async (pageNumber: number = 1, replace: boolean = false) => {
+      if (pageNumber === 1) setRefreshing(true);
+      else setLoading(true);
+      try {
+        const res = await api.get<{ items: SecretItemProps[]; total: number }>(
+          "/bookmarks",
+          {
+            page: pageNumber,
+            limit: pageSize,
+          }
+        );
+        setItems((prev) =>
+          replace || pageNumber === 1 ? res.items : [...prev, ...res.items]
+        );
+        setTotal(res.total);
+        setPage(pageNumber);
+      } catch (err) {
+        console.error("useBookmarks.loadPage error", err);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [pageSize]
+  );
+
+  const refresh = useCallback(() => loadPage(1, true), [loadPage]);
+  const loadMore = useCallback(() => {
+    if (!loading && items.length !== 0) {
+      loadPage(page + 1);
+    }
+  }, [loading, items.length, total, page, loadPage]);
+
+  useEffect(() => {
+    loadPage(1, true);
+  }, [loadPage]);
+
+  return {
+    items,
+    total,
+    page,
+    limit: pageSize,
+    loading,
+    refreshing,
+    hasMore: items.length !== 0,
+    loadPage,
+    refresh,
+    loadMore,
+  };
 }

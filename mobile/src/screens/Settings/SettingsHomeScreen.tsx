@@ -1,9 +1,14 @@
 // mobile/src/screens/Settings/SettingsHomeScreen.tsx
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import * as SecureStore from "expo-secure-store";
 import React from "react";
-import { FlatList, SafeAreaView, StyleSheet, View } from "react-native";
+import { Alert, FlatList, SafeAreaView, StyleSheet, View } from "react-native";
+import { api } from "../../api/client";
 import { SettingsRow, SettingsRowProps } from "../../components/SettingRow";
+import useAsyncAction from "../../hooks/useAsyncAction";
+import useOnboard from "../../hooks/useOnboard";
 import { AccountSettingsStackParamList } from "../../navigation/AccountScreenNavigator";
+import { useAuthStore } from "../../store/authStore";
 import { useTheme } from "../../theme/ThemeContext";
 
 type Props = NativeStackScreenProps<
@@ -13,13 +18,41 @@ type Props = NativeStackScreenProps<
 
 export default function SettingsHomeScreen({ navigation }: Props) {
   const { colors } = useTheme();
+  const { logout } = useOnboard();
+  const { token, setToken } = useAuthStore((s) => s);
+  const [signOut, { loading }] = useAsyncAction(
+    async () => await logout(),
+    (e) => alert("Sign Out Failed: " + e.message)
+  );
+
+  const deleteAccount = async () => {
+    Alert.alert(
+      "Delete Account",
+      "Are you sure you want to delete your account? This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.del("/users/me");
+              await SecureStore.deleteItemAsync("jwt");
+              setToken(null);
+            } catch (err: any) {
+              Alert.alert("Error", err.message);
+            }
+          },
+        },
+      ]
+    );
+  };
   const MENU_ITEMS: SettingsRowProps<any>[] = [
     {
       type: "navigation",
       label: "Edit Profile",
       icon: "circle-user",
       options: {
-        onPress: () => {},
         route: "EditProfile",
         navigation,
       },
@@ -29,7 +62,6 @@ export default function SettingsHomeScreen({ navigation }: Props) {
       icon: "email",
       label: "Change Email",
       options: {
-        onPress: () => {},
         route: "ChangeEmail",
         navigation,
       },
@@ -39,7 +71,6 @@ export default function SettingsHomeScreen({ navigation }: Props) {
       icon: "lock",
       label: "Change Password",
       options: {
-        onPress: () => {},
         route: "ChangePassword",
         navigation,
       },
@@ -73,7 +104,6 @@ export default function SettingsHomeScreen({ navigation }: Props) {
       icon: "eye-off",
       label: "Privacy",
       options: {
-        onPress: () => {},
         route: "Privacy",
         navigation,
       },
@@ -83,7 +113,6 @@ export default function SettingsHomeScreen({ navigation }: Props) {
       icon: "shield-lock",
       label: "Security",
       options: {
-        onPress: () => {},
         route: "Security",
         navigation,
       },
@@ -93,7 +122,6 @@ export default function SettingsHomeScreen({ navigation }: Props) {
       icon: "file-document",
       label: "About & Terms",
       options: {
-        onPress: () => {},
         route: "About",
         navigation,
       },
@@ -103,7 +131,6 @@ export default function SettingsHomeScreen({ navigation }: Props) {
       icon: "help",
       label: "Help & FAQs",
       options: {
-        onPress: () => {},
         route: "Help",
         navigation,
       },
@@ -114,7 +141,7 @@ export default function SettingsHomeScreen({ navigation }: Props) {
       label: "Delete Account",
       options: {
         buttonText: "Delete",
-        onPress: () => {},
+        onPress: deleteAccount,
       },
     } as SettingsRowProps<"button">,
     {
@@ -122,7 +149,7 @@ export default function SettingsHomeScreen({ navigation }: Props) {
       icon: "logout",
       label: "Sign Out",
       options: {
-        onPress: () => {},
+        onPress: signOut,
         buttonText: "Sign Out",
       },
     } as SettingsRowProps<"button">,

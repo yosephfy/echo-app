@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     position: "relative",
     marginBottom: 12,
   },
-  condensedBodyContainer: { maxHeight: 60 },
+  condensedBodyContainer: { maxHeight: 60, minWidth: 220 },
   bodyText: { fontSize: 16, lineHeight: 22, minHeight: 20, maxHeight: 180 },
   condensedBodyText: { fontSize: 14, lineHeight: 18, maxHeight: 60 },
   fadeOverlay: {

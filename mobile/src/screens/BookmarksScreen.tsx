@@ -1,21 +1,24 @@
-import React, { useEffect, useState } from "react";
-import { View, FlatList, Text, StyleSheet, SafeAreaView } from "react-native";
-import { api } from "../api/client";
-import { useTheme } from "../theme/ThemeContext";
-import usePaginatedData from "../hooks/usePaginatedData";
+import React from "react";
+import { FlatList, SafeAreaView, StyleSheet } from "react-native";
 import SecretItem, { SecretItemProps } from "../components/SecretItem";
+import { useBookmarks } from "../hooks/useBookmarks";
+import { useTheme } from "../theme/ThemeContext";
 
-export default function BookmarksScreen() {
+export default function BookmarksScreen({ navigation }: any) {
   const theme = useTheme();
   type Bookmark = SecretItemProps;
-  const [items, setItems] = useState<Bookmark[]>([]);
-  const { data, loading, page, total, isAtEnd, loadFirstPage, loadNextPage } =
-    usePaginatedData<Bookmark>("/bookmarks", { limit: 20 });
-
-  useEffect(() => {
-    //api.get("/bookmarks").then((res: any) => setItems(res.data));
-    setItems(data);
-  }, [data, loadFirstPage]);
+  const {
+    items,
+    loading,
+    page,
+    limit,
+    loadMore,
+    loadPage,
+    hasMore,
+    refresh,
+    refreshing,
+    total,
+  } = useBookmarks(10);
 
   return (
     <SafeAreaView
@@ -26,11 +29,13 @@ export default function BookmarksScreen() {
         style={{ flex: 1, padding: 12 }}
         contentContainerStyle={{ paddingBottom: 12 }}
         keyExtractor={(i) => i.id}
-        onEndReached={loadNextPage}
+        onEndReached={loadMore}
         onEndReachedThreshold={0.5}
         refreshing={loading}
-        onRefresh={loadFirstPage}
-        renderItem={({ item }) => <SecretItem secret={item} />}
+        onRefresh={() => loadPage(1, true)}
+        renderItem={({ item }) => (
+          <SecretItem secret={item} navigation={navigation} />
+        )}
       />
     </SafeAreaView>
   );

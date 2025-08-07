@@ -12,6 +12,7 @@ import AboutScreen from "../screens/Settings/AboutScreen";
 import NotificationsScreen from "../screens/Settings/NotificationsScreen";
 import PrivacyScreen from "../screens/Settings/PrivacyScreen";
 import SecurityScreen from "../screens/Settings/SecurityScreen";
+import BackButton from "../components/BackButtonComponent";
 
 export type AccountSettingsStackParamList = {
   SettingsHome: undefined;
@@ -39,6 +40,7 @@ export default function AccountSettingsNavigator() {
         component={SettingsHomeScreen}
         options={{
           title: "Settings",
+          headerLeft: () => <BackButton />,
         }}
       />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />

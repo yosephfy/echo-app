@@ -1,6 +1,7 @@
 // mobile/src/hooks/useReplies.ts
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
+import { PaginatedHooksResponse } from "./types";
 import useSocket from "./useSocket";
 
 export interface Reply {
@@ -17,10 +18,14 @@ interface RepliesResponse {
   limit: number;
 }
 
+type ReplyHooksResponse = PaginatedHooksResponse<Reply> & {
+  add: (text: string) => Promise<void>;
+};
+
 /**
  * Hook for paginated, real-time replies under a secret
  */
-export function useReplies(secretId: string, pageSize = 20) {
+export function useReplies(secretId: string, limit = 20): ReplyHooksResponse {
   const [replies, setReplies] = useState<Reply[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -38,7 +43,7 @@ export function useReplies(secretId: string, pageSize = 20) {
       try {
         const res = await api.get<RepliesResponse>(
           `/secrets/${secretId}/replies`,
-          { page: pageToLoad, limit: pageSize }
+          { page: pageToLoad, limit: limit }
         );
         if (!mounted.current) return;
         setTotal(res.total);
@@ -58,7 +63,7 @@ export function useReplies(secretId: string, pageSize = 20) {
         }
       }
     },
-    [secretId, pageSize]
+    [secretId, limit]
   );
 
   const refresh = useCallback(async () => {
@@ -108,7 +113,7 @@ export function useReplies(secretId: string, pageSize = 20) {
   }, [loadPage]);
 
   return {
-    replies,
+    items: replies,
     loading,
     refreshing,
     hasMore,
@@ -117,6 +122,7 @@ export function useReplies(secretId: string, pageSize = 20) {
     add,
     total,
     page,
-    pageSize,
+    limit,
+    loadPage,
   };
 }

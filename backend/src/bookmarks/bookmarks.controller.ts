@@ -53,7 +53,7 @@ export class BookmarksController {
       }),
     );
 
-    const total = bookmarks.length;
+    const total = items.length;
     return { items, total, page: pageNum, limit: limitNum };
   }
 

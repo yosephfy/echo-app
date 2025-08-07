@@ -1,8 +1,9 @@
+// mobile/src/hooks/useProfile.ts
 // mobile/src/hooks/useUserStats.ts
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { SecretItemProps } from "../components/SecretItem";
-import usePaginatedData from "./usePaginatedData";
+import { PaginatedHooksResponse } from "./types";
 
 export interface UserStats {
   postsCount: number;
@@ -32,29 +33,10 @@ export function useUserStats() {
 
 // mobile/src/hooks/useRecentSecrets.ts
 
-export function useRecentSecrets(limit: number = 10) {
-  /*   const [items, setItems] = useState<SecretItemProps[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(() => {
-    setLoading(true);
-    api
-      .get<{ items: SecretItemProps[] }>(`/secrets/secretslist/me`, { limit })
-      .then((res) => setItems(res.items))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [limit]);
-
-  useEffect(() => {
-    load();
-  }, [load]); */
-
-  const { data, loadFirstPage, loadNextPage, loading, page, total, isAtEnd } =
-    usePaginatedData<SecretItemProps>("/secrets/secretslist/me", { limit });
-  useEffect(() => {
-    loadFirstPage();
-  }, [limit]);
-  return { items: data, loading, refresh: loadFirstPage };
+export function useRecentSecrets(
+  limit: number = 10
+): PaginatedHooksResponse<SecretItemProps> {
+  return useUserContent("secrets", limit);
 }
 
 // mobile/src/hooks/useUserContent.ts
@@ -68,7 +50,10 @@ interface Paginated<T> {
   limit: number;
 }
 
-export function useUserContent(type: ContentType, pageSize = 20) {
+export function useUserContent(
+  type: ContentType,
+  pageSize = 20
+): PaginatedHooksResponse<SecretItemProps> {
   const [items, setItems] = useState<SecretItemProps[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -76,7 +61,7 @@ export function useUserContent(type: ContentType, pageSize = 20) {
   const [refreshing, setRefreshing] = useState(false);
   const loadingRef = useRef(false);
 
-  const buildUrl = (pageNum: number) => {
+  const buildUrl = () => {
     switch (type) {
       case "secrets":
         return `/secrets/secretslist/me`;
@@ -90,15 +75,16 @@ export function useUserContent(type: ContentType, pageSize = 20) {
   };
 
   const loadPage = useCallback(
-    async (pageNum: number, replace = false) => {
+    async (pageNum?: number, replace = false) => {
       if (loadingRef.current) return;
       loadingRef.current = true;
       setLoading(true);
+      const actualPage = pageNum ?? 1;
       try {
-        const res = await api.get<Paginated<SecretItemProps>>(
-          buildUrl(pageNum),
-          { limit: pageSize, page: pageNum }
-        );
+        const res = await api.get<Paginated<SecretItemProps>>(buildUrl(), {
+          limit: pageSize,
+          page: actualPage,
+        });
         setTotal(res.total);
         setPage(res.page);
         setItems((prev) => (replace ? res.items : [...prev, ...res.items]));
@@ -128,5 +114,16 @@ export function useUserContent(type: ContentType, pageSize = 20) {
     loadPage(1, true);
   }, [type]);
 
-  return { items, loading, refreshing, loadMore, refresh };
+  return {
+    items,
+    total,
+    page,
+    limit: pageSize,
+    loading,
+    refreshing,
+    hasMore: items.length < total,
+    loadPage,
+    refresh,
+    loadMore,
+  };
 }

@@ -31,7 +31,6 @@ export type RowType =
 
 // 2) Define the options each row type requires
 interface NavigationOptions {
-  onPress?: () => void;
   navigation: any; // optional navigation prop, can be used for custom logic
   route: keyof AccountSettingsStackParamList; // route name for navigation
   params?: Record<string, any>; // optional params for navigation
@@ -90,7 +89,6 @@ function NavigationRow({
   label,
   icon,
   disabled,
-  onPress,
   navigation,
   route,
   params,
@@ -101,7 +99,7 @@ function NavigationRow({
 } & NavigationOptions) {
   const rowStyle = [styles.row, disabled && styles.disabledRow];
   const onPressHandler = () => {
-    onPress?.();
+    //onPress?.();
     navigation.navigate(route, params as any);
   };
   return (

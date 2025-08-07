@@ -141,6 +141,11 @@ function RecentCarousel({ navigation }: { navigation?: any }) {
       refreshControl={
         <RefreshControl refreshing={loading} onRefresh={refresh} />
       }
+      ListEmptyComponent={() => (
+        <Text style={{ color: colors.text, padding: 16 }}>
+          No recent activity
+        </Text>
+      )}
       contentContainerStyle={[
         styles.carouselContainer,
         { backgroundColor: colors.background },
@@ -161,7 +166,8 @@ export default function ProfileScreen({ navigation }: { navigation?: any }) {
     loadFirstPage: loadTab,
     loadNextPage: loadMore,
   } = usePaginatedData<SecretItemProps>(
-    TAB_CONFIG.find((t) => t.key === activeTab)!.path
+    TAB_CONFIG.find((t) => t.key === activeTab)!.path,
+    { limit: 2 }
   );
 
   // Refresh when tab changes
@@ -284,8 +290,16 @@ export default function ProfileScreen({ navigation }: { navigation?: any }) {
                       onRefresh={() => loadTab()}
                     />
                   }
+                  ListEmptyComponent={() => (
+                    <Text style={{ color: colors.text, padding: 16 }}>
+                      No {TAB_CONFIG.find((t) => t.key === activeTab)?.title}{" "}
+                      found
+                    </Text>
+                  )}
                   onEndReached={loadMore}
                   onEndReachedThreshold={0.5}
+                  refreshing={tabLoading}
+                  onRefresh={loadTab}
                 />
               )}
             </View>
