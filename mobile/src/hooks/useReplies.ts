@@ -31,52 +31,43 @@ export function useReplies(secretId: string, limit = 20): ReplyHooksResponse {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
   const mounted = useRef(true);
   const loadingRef = useRef(false);
 
   const loadPage = useCallback(
-    async (pageToLoad = 1, replace = false) => {
-      if (loadingRef.current) return;
-      loadingRef.current = true;
-      setLoading(true);
+    async (pageNumber: number = 1, replace: boolean = false) => {
+      if (pageNumber === 1) setRefreshing(true);
+      else setLoading(true);
       try {
         const res = await api.get<RepliesResponse>(
           `/secrets/${secretId}/replies`,
-          { page: pageToLoad, limit: limit }
+          {
+            page: pageNumber,
+            limit: limit,
+          }
         );
-        if (!mounted.current) return;
+        setReplies((prev) =>
+          replace || pageNumber === 1 ? res.items : [...prev, ...res.items]
+        );
         setTotal(res.total);
-        setPage(res.page);
-        setHasMore(
-          replace
-            ? res.items.length < res.total
-            : replies.length + res.items.length < res.total
-        );
-        setReplies((prev) => (replace ? res.items : [...prev, ...res.items]));
+        setPage(pageNumber);
       } catch (err) {
-        console.error("useReplies loadPage error", err);
+        console.error("useReplies.loadPage error", err);
       } finally {
-        if (mounted.current) {
-          setLoading(false);
-          loadingRef.current = false;
-        }
+        setLoading(false);
+        setRefreshing(false);
       }
     },
-    [secretId, limit]
+    [limit, secretId]
   );
 
-  const refresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadPage(1, true);
-    if (mounted.current) setRefreshing(false);
-  }, [loadPage]);
+  const refresh = useCallback(() => loadPage(1, true), [loadPage]);
 
   const loadMore = useCallback(() => {
-    if (hasMore && !loadingRef.current) {
+    if (!loading && replies.length !== 0) {
       loadPage(page + 1);
     }
-  }, [hasMore, loadPage, page]);
+  }, [loading, replies.length, total, page, loadPage]);
 
   const add = useCallback(
     async (text: string) => {
@@ -105,18 +96,14 @@ export function useReplies(secretId: string, limit = 20): ReplyHooksResponse {
   });
 
   useEffect(() => {
-    mounted.current = true;
     loadPage(1, true);
-    return () => {
-      mounted.current = false;
-    };
   }, [loadPage]);
 
   return {
     items: replies,
     loading,
     refreshing,
-    hasMore,
+    hasMore: replies.length !== 0,
     loadMore,
     refresh,
     add,

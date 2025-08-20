@@ -166,8 +166,7 @@ export default function ProfileScreen({ navigation }: { navigation?: any }) {
     loadFirstPage: loadTab,
     loadNextPage: loadMore,
   } = usePaginatedData<SecretItemProps>(
-    TAB_CONFIG.find((t) => t.key === activeTab)!.path,
-    { limit: 2 }
+    TAB_CONFIG.find((t) => t.key === activeTab)!.path
   );
 
   // Refresh when tab changes

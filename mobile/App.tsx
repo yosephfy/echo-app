@@ -13,7 +13,7 @@ import { ThemeProvider } from "./src/theme/ThemeContext";
 import { registerForPushNotificationsAsync } from "./src/utils/pushNotifications";
 
 export default function App() {
-  const { token, loading, onboarded } = useAuthStore();
+  const { token, loading, onboarded, restoreToken } = useAuthStore();
 
   useEffect(() => {
     (async () => {
@@ -28,6 +28,10 @@ export default function App() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    restoreToken();
+  }, [restoreToken]);
 
   if (loading) {
     return <SplashScreen />;

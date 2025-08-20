@@ -23,7 +23,7 @@ export default function SecretDetailScreen({ route }: Props) {
   const { colors } = useTheme();
   const [secret, setSecret] = useState<SecretItemProps>();
   const [loadingSecret, setLoadingSecret] = useState(true);
-  const { replies, loading, refreshing, hasMore, loadMore, refresh, add } =
+  const { items, loading, refreshing, hasMore, loadMore, refresh, add } =
     useReplies(secretId);
   const [text, setText] = useState("");
 
@@ -64,7 +64,7 @@ export default function SecretDetailScreen({ route }: Props) {
       style={[styles.container, { backgroundColor: colors.background }]}
     >
       <FlatList
-        data={replies}
+        data={items}
         keyExtractor={(r) => r.id}
         ListHeaderComponent={() =>
           secret && <SecretItem secret={secret} display="expanded" />

@@ -2,13 +2,17 @@
 import * as SecureStore from "expo-secure-store";
 
 const BASE_URL = "http://localhost:3000";
+// const BASE_URL = "https://grub-splendid-abnormally.ngrok-free.app";
 
 interface ClientOptions {
   headers?: Record<string, string>;
-  /** Will be merged into `body` for POST/PATCH */
   body?: any;
-  /** Query params for GET/DELETE */
   params?: Record<string, string | number>;
+}
+
+let onUnauthorized: (() => void) | null = null;
+export function setUnauthorizedHandler(fn: (() => void) | null) {
+  onUnauthorized = fn;
 }
 
 async function getToken(): Promise<string | null> {
@@ -39,19 +43,21 @@ async function request<T>(
   };
 
   const init: RequestInit = { method, headers };
-
-  if (options.body != null) {
-    init.body = JSON.stringify(options.body);
-  }
+  if (options.body != null) init.body = JSON.stringify(options.body);
 
   const res = await fetch(buildUrl(path, options.params), init);
+
+  // Handle unauthorized globally
+  if (res.status === 401) {
+    // Let the app clear auth state & navigate away from protected screens
+    onUnauthorized?.();
+  }
 
   const text = await res.text();
   let data: any = null;
   try {
     data = text ? JSON.parse(text) : null;
   } catch {
-    // Non-JSON response
     data = text;
   }
 
@@ -66,13 +72,10 @@ async function request<T>(
 export const api = {
   get: <T>(path: string, params?: ClientOptions["params"]) =>
     request<T>("GET", path, { params }),
-
   post: <T>(path: string, body?: ClientOptions["body"]) =>
     request<T>("POST", path, { body }),
-
   patch: <T>(path: string, body?: ClientOptions["body"]) =>
     request<T>("PATCH", path, { body }),
-
   del: <T>(path: string, params?: ClientOptions["params"]) =>
     request<T>("DELETE", path, { params }),
 };

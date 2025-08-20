@@ -59,7 +59,7 @@ export default function AuthForm({
       {header && (
         <Text style={[styles.header, { color: colors.text }]}>{header}</Text>
       )}
-      {fields.map((f) => (
+      {fields.map((f, idx) => (
         <TextInput
           key={f.key}
           style={[
@@ -76,6 +76,13 @@ export default function AuthForm({
           textContentType={f.textContentType}
           clearButtonMode="while-editing"
           autoCapitalize="none"
+          returnKeyType={idx === fields.length - 1 ? "done" : "next"}
+          onSubmitEditing={() => {
+            if (idx === fields.length - 1) {
+              handleSubmit(); // last field -> submit
+            }
+          }}
+          blurOnSubmit={idx === fields.length - 1}
         />
       ))}
       <TouchableOpacity
