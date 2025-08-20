@@ -13,10 +13,10 @@ import ReplyInput from "../components/ReplyInputComponent";
 import ReplyItem from "../components/ReplyItem";
 import SecretItem, { SecretItemProps } from "../components/SecretItem";
 import { useReplies } from "../hooks/useReplies";
-import { AppStackParamList } from "../navigation/AppNavigator";
+import { RootStackParamList } from "../navigation/AppNavigator";
 import { useTheme } from "../theme/ThemeContext";
 
-type Props = { route: RouteProp<AppStackParamList, "SecretDetail"> };
+type Props = { route: RouteProp<RootStackParamList, "SecretDetail"> };
 
 export default function SecretDetailScreen({ route }: Props) {
   const { secretId }: any = route.params;

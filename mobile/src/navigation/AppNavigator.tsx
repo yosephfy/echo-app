@@ -1,36 +1,40 @@
-import { MaterialIcons } from "@expo/vector-icons";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import React from "react";
-import BookmarksScreen from "../screens/BookmarksScreen";
-import DiscoverScreen from "../screens/DiscoverScreen";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+
 import FeedScreen from "../screens/FeedScreen";
+import DiscoverScreen from "../screens/DiscoverScreen";
+import BookmarksScreen from "../screens/BookmarksScreen";
 import ProfileScreen from "../screens/ProfileScreen";
-import { useTheme } from "../theme/ThemeContext";
-import AccountSettingsScreen from "../screens/AccountSettingsScreen";
-import AdminPanelScreen from "../screens/AdminPannelScreen";
-import { IconSvg } from "../icons/IconSvg";
-import { IconName } from "../icons/icons";
+
 import SecretDetailScreen from "../screens/SecretDetailScreen";
-import BackButton from "../components/BackButtonComponent";
+import AdminPanelScreen from "../screens/AdminPannelScreen";
 import AccountSettingsNavigator from "./AccountScreenNavigator";
 
-export type AppStackParamList = {
-  Home: undefined;
-  Profile: any;
-  AccountSettings: any;
-  Preferences: undefined;
-  Help: undefined;
-  About: undefined;
-  Feed: any;
+import BackButton from "../components/BackButtonComponent";
+import { IconSvg } from "../icons/IconSvg";
+import { IconName } from "../icons/icons";
+import { useTheme } from "../theme/ThemeContext";
+
+// --- Types ---
+export type TabParamList = {
+  Feed: undefined;
   Discover: undefined;
   Bookmarks: undefined;
-  Admin: undefined;
-  Tab: undefined;
-  SecretDetail: any;
+  Profile: undefined;
 };
-const Tab = createBottomTabNavigator();
 
-export default function TabsNavigator() {
+export type RootStackParamList = {
+  Tabs: undefined;
+  SecretDetail: any;
+  AccountSettings: any;
+  Admin: undefined;
+};
+
+const Tab = createBottomTabNavigator<TabParamList>();
+const RootStack = createNativeStackNavigator<RootStackParamList>();
+
+function MainTabs() {
   const { colors } = useTheme();
 
   return (
@@ -41,9 +45,8 @@ export default function TabsNavigator() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.text,
         tabBarStyle: { backgroundColor: colors.background },
-        tabBarIcon: ({ color, size, focused }) => {
+        tabBarIcon: ({ size, focused }) => {
           let iconName: IconName = "home";
-
           if (route.name === "Feed") iconName = "home";
           else if (route.name === "Discover") iconName = "search-alt";
           else if (route.name === "Bookmarks") iconName = "bookmarks";
@@ -56,23 +59,25 @@ export default function TabsNavigator() {
               state={focused ? "pressed" : "default"}
             />
           );
-          //return <MaterialIcons name={iconName} size={size} color={color} />;
         },
       })}
     >
       <Tab.Screen name="Feed" component={FeedScreen} />
       <Tab.Screen name="Discover" component={DiscoverScreen} />
       <Tab.Screen name="Bookmarks" component={BookmarksScreen} />
-      <Tab.Screen name="Admin" component={AdminPanelScreen} />
-      <Tab.Screen
-        name="AccountSettings"
-        component={AccountSettingsNavigator}
-        options={{
-          title: "Account Settings",
-        }}
-      />
       <Tab.Screen name="Profile" component={ProfileScreen} />
-      <Tab.Screen
+    </Tab.Navigator>
+  );
+}
+
+export default function AppNavigator() {
+  return (
+    <RootStack.Navigator screenOptions={{ headerShown: false }}>
+      {/* Bottom tabs (only the four you want visible) */}
+      <RootStack.Screen name="Tabs" component={MainTabs} />
+
+      {/* Stack-only screens (hidden from tab bar, still navigable) */}
+      <RootStack.Screen
         name="SecretDetail"
         component={SecretDetailScreen}
         options={{
@@ -81,6 +86,16 @@ export default function TabsNavigator() {
           headerLeft: () => <BackButton />,
         }}
       />
-    </Tab.Navigator>
+      <RootStack.Screen
+        name="AccountSettings"
+        component={AccountSettingsNavigator}
+        options={{ headerShown: false }}
+      />
+      <RootStack.Screen
+        name="Admin"
+        component={AdminPanelScreen}
+        options={{ headerShown: false }}
+      />
+    </RootStack.Navigator>
   );
 }
