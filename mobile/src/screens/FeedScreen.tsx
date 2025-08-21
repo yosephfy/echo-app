@@ -13,12 +13,12 @@ import ComposerModal from "../components/ComposerModal";
 import SecretItem, { SecretItemProps } from "../components/SecretItem";
 import { useFeed } from "../hooks/useFeed";
 import useSocket from "../hooks/useSocket";
-import { AppStackParamList } from "../navigation/AppNavigator";
+import { TabParamList } from "../navigation/AppNavigator";
 import { useAuthStore } from "../store/authStore";
 import { useTheme } from "../theme/ThemeContext";
 import useCooldown from "../hooks/useCooldown";
 
-type Props = NativeStackScreenProps<AppStackParamList, "Feed">;
+type Props = NativeStackScreenProps<TabParamList, "Feed">;
 
 export default function FeedScreen({ navigation }: Props) {
   const { colors } = useTheme();

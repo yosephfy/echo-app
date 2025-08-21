@@ -11,10 +11,10 @@ import SplashScreen from "./src/screens/SplashScreen";
 import { useAuthStore } from "./src/store/authStore";
 import { ThemeProvider } from "./src/theme/ThemeContext";
 import { registerForPushNotificationsAsync } from "./src/utils/pushNotifications";
+import { useSettingsStore } from "./src/store/settingsStore";
 
 export default function App() {
   const { token, loading, onboarded, restoreToken } = useAuthStore();
-
   useEffect(() => {
     (async () => {
       const token = await registerForPushNotificationsAsync();
@@ -33,6 +33,15 @@ export default function App() {
     restoreToken();
   }, [restoreToken]);
 
+  // App.tsx (after restoreToken completes)
+  useEffect(() => {
+    if (token) {
+      // hydrated settings for logged-in user
+      useSettingsStore.getState().hydrate();
+    } else {
+      useSettingsStore.getState().clear();
+    }
+  }, [token]);
   if (loading) {
     return <SplashScreen />;
   }

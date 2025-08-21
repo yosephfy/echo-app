@@ -51,73 +51,42 @@ export default function SettingsHomeScreen({ navigation }: Props) {
   const MENU_ITEMS: SettingsRowProps<any>[] = [
     {
       type: "navigation",
-      label: "Edit Profile",
       icon: "circle-user",
+      label: "Account",
       options: {
-        route: "EditProfile",
+        route: "Account",
         navigation,
       },
     } as SettingsRowProps<"navigation">,
     {
       type: "navigation",
-      icon: "email",
-      label: "Change Email",
-      options: {
-        route: "ChangeEmail",
-        navigation,
-      },
-    } as SettingsRowProps<"navigation">,
-    {
-      type: "navigation",
-      icon: "lock",
-      label: "Change Password",
-      options: {
-        route: "ChangePassword",
-        navigation,
-      },
-    } as SettingsRowProps<"navigation">,
-    {
-      type: "switch",
       icon: "bell",
-      label: "Enable Notifications",
+      label: "Notifications",
       options: {
-        value: false,
-        onValueChange: () => {},
+        route: "Notifications",
+        navigation,
       },
-    } as SettingsRowProps<"switch">,
+    } as SettingsRowProps<"navigation">,
     {
-      type: "dropdown",
-      icon: "color-palette",
-      label: "Appearance",
+      type: "navigation",
+      icon: "screen-smartphone",
+      label: "Display",
       options: {
-        items: [
-          { label: "Light", value: "light" },
-          { label: "Dark", value: "dark" },
-          { label: "System", value: "system" },
-        ],
-        selected: "system",
-        onSelect: (item: string) => {},
+        route: "Display",
+        navigation,
       },
-    } as SettingsRowProps<"dropdown">,
+    } as SettingsRowProps<"navigation">,
 
     {
       type: "navigation",
-      icon: "eye-off",
-      label: "Privacy",
+      icon: "lock",
+      label: "Privacy & Security",
       options: {
         route: "Privacy",
         navigation,
       },
     } as SettingsRowProps<"navigation">,
-    {
-      type: "navigation",
-      icon: "shield-lock",
-      label: "Security",
-      options: {
-        route: "Security",
-        navigation,
-      },
-    } as SettingsRowProps<"navigation">,
+
     {
       type: "navigation",
       icon: "file-document",
@@ -130,21 +99,12 @@ export default function SettingsHomeScreen({ navigation }: Props) {
     {
       type: "navigation",
       icon: "help",
-      label: "Help & FAQs",
+      label: "Help",
       options: {
         route: "Help",
         navigation,
       },
     } as SettingsRowProps<"navigation">,
-    {
-      type: "button",
-      icon: "trash",
-      label: "Delete Account",
-      options: {
-        buttonText: "Delete",
-        onPress: deleteAccount,
-      },
-    } as SettingsRowProps<"button">,
     {
       type: "button",
       icon: "logout",
@@ -155,19 +115,19 @@ export default function SettingsHomeScreen({ navigation }: Props) {
       },
     } as SettingsRowProps<"button">,
     {
-      type: "button",
+      type: "info",
       label: "App Version",
       options: {
-        onPress: () => {}, // disabled, so user can’t press
-        buttonText: "1.0.0",
+        value: "1.0.0",
       },
       disabled: true,
-    } as SettingsRowProps<"button">,
-    {
+    } as SettingsRowProps<"info">,
+
+    /*  {
       type: "button",
       label: "seed",
       options: { onPress: () => seedSettingsDefinitions() },
-    } as SettingsRowProps<"button">,
+    } as SettingsRowProps<"button">, */
   ];
 
   return (

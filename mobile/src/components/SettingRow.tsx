@@ -1,5 +1,4 @@
 // mobile/src/components/SettingsRow.tsx
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React, { useState } from "react";
 import {
   StyleSheet,
@@ -15,11 +14,6 @@ import { IconSvg } from "../icons/IconSvg";
 import { IconName } from "../icons/icons";
 import { AccountSettingsStackParamList } from "../navigation/AccountScreenNavigator";
 
-type Props = NativeStackScreenProps<
-  AccountSettingsStackParamList,
-  "SettingsHome"
->;
-
 // 1) Define the kinds of rows we support
 export type RowType =
   | "navigation"
@@ -27,7 +21,8 @@ export type RowType =
   | "switch"
   | "input"
   | "dropdown"
-  | "date";
+  | "date"
+  | "info";
 
 // 2) Define the options each row type requires
 interface NavigationOptions {
@@ -62,7 +57,9 @@ interface DateOptions {
   type?: "time" | "date"; // default is "date"
   onChange: (d: Date) => void;
 }
-
+interface InfoOptions {
+  value: string;
+}
 // 3) Map each `RowType` to its `options` interface
 type OptionsMap = {
   navigation: NavigationOptions;
@@ -71,6 +68,7 @@ type OptionsMap = {
   input: InputOptions;
   dropdown: DropdownOptions;
   date: DateOptions;
+  info: InfoOptions;
 };
 
 // 4) The generic props type
@@ -209,6 +207,26 @@ function InputRow({
   );
 }
 
+function InfoRow({
+  label,
+  icon,
+  disabled,
+  value,
+}: {
+  label: string;
+  icon?: IconName;
+  disabled: boolean;
+} & InfoOptions) {
+  const rowStyle = [styles.row, disabled && styles.disabledRow];
+  return (
+    <View style={rowStyle}>
+      {icon && <IconSvg icon={icon} size={20} state="default" />}
+      <Text style={styles.label}>{label}</Text>
+      <Text>{value}</Text>
+    </View>
+  );
+}
+
 function DropdownRow({
   label,
   icon,
@@ -240,8 +258,8 @@ function DropdownRow({
           placeholder="Select an option"
           listMode="MODAL"
           style={{
-            maxWidth: 200,
-            minWidth: 100,
+            maxWidth: 400,
+            minWidth: 150,
             backgroundColor: "#fff",
           }}
           onChangeValue={(item) => onSelect(item as string)}
@@ -370,6 +388,14 @@ export function SettingsRow<T extends RowType>({
           {...(options as DateOptions)}
         />
       );
+    case "info":
+      return (
+        <InfoRow
+          label={label}
+          disabled={disabled}
+          {...(options as InfoOptions)}
+        />
+      );
     default:
       return null;
   }
@@ -381,7 +407,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 12,
+    paddingVertical: 16,
     paddingHorizontal: 16,
   },
   disabledRow: {

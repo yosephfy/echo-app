@@ -1,85 +1,21 @@
 // mobile/src/scripts/seedSettings.ts
+
 import { api } from "../api/client";
 
-/**
- * Helper to stringify default values according to type.
- * - boolean/integer => string form
- * - enum/string     => string as-is
- * - json            => JSON.stringify(value)
- */
-function serializeDefault(
-  type: "boolean" | "string" | "integer" | "json" | "enum",
-  value: any
-): string | undefined {
+type SettingType = "boolean" | "string" | "integer" | "json" | "enum";
+
+function serializeDefault(type: SettingType, value: any): string | undefined {
   if (value === undefined) return undefined;
   if (type === "json") return JSON.stringify(value);
   if (type === "boolean") return value ? "true" : "false";
   if (type === "integer") return String(Number(value));
-  // string/enum pass through
   return String(value);
 }
 
-/**
- * Seeds/Upserts all setting definitions your app needs.
- * Run once (or anytime you add new definitions).
- */
 export async function seedSettingsDefinitions() {
-  // --- NOTIFICATIONS ---
-  const notifications = [
-    {
-      key: "notifications.push.enabled",
-      section: "notifications",
-      type: "boolean" as const,
-      defaultValue: true,
-      metadata: {
-        label: "Enable Notifications",
-        description: "Receive push notifications from Echo.",
-      },
-    },
-    {
-      key: "notifications.push.replies",
-      section: "notifications",
-      type: "boolean" as const,
-      defaultValue: true,
-      metadata: {
-        label: "Replies to my secret",
-        description: "Alert me when someone replies to my posts.",
-      },
-    },
-    {
-      key: "notifications.push.mentions",
-      section: "notifications",
-      type: "boolean" as const,
-      defaultValue: true,
-      metadata: {
-        label: "Mentions",
-        description: "Notify me when I’m mentioned.",
-      },
-    },
-    {
-      key: "notifications.push.weeklyDigest",
-      section: "notifications",
-      type: "boolean" as const,
-      defaultValue: false,
-      metadata: {
-        label: "Weekly digest",
-        description: "Get a weekly summary.",
-      },
-    },
-    {
-      key: "notifications.quietHours",
-      section: "notifications",
-      type: "json" as const,
-      defaultValue: { start: "22:00", end: "07:00", enabled: false },
-      metadata: {
-        label: "Quiet hours",
-        description: "Mute notifications during a time range.",
-        schema: { start: "HH:mm", end: "HH:mm", enabled: "boolean" },
-      },
-    },
-  ];
-
-  // --- APPEARANCE ---
+  // -------------------------
+  // APPEARANCE (AppearanceScreen)
+  // -------------------------
   const appearance = [
     {
       key: "appearance.theme",
@@ -87,7 +23,8 @@ export async function seedSettingsDefinitions() {
       type: "enum" as const,
       defaultValue: "system",
       metadata: {
-        label: "Theme",
+        label: "Appearance",
+        description: "Choose the app’s color theme.",
         options: [
           { value: "light", label: "Light" },
           { value: "dark", label: "Dark" },
@@ -101,7 +38,8 @@ export async function seedSettingsDefinitions() {
       type: "enum" as const,
       defaultValue: "medium",
       metadata: {
-        label: "Font size",
+        label: "Text Size",
+        description: "Adjust the base font size.",
         options: [
           { value: "small", label: "Small" },
           { value: "medium", label: "Medium" },
@@ -110,34 +48,39 @@ export async function seedSettingsDefinitions() {
       },
     },
     {
-      key: "appearance.contrast",
+      key: "appearance.reduceMotion",
       section: "appearance",
-      type: "enum" as const,
-      defaultValue: "normal",
+      type: "boolean" as const,
+      defaultValue: false,
       metadata: {
-        label: "Contrast",
-        options: [
-          { value: "normal", label: "Normal" },
-          { value: "high", label: "High" },
-        ],
+        label: "Reduce Animation",
+        description: "Minimize animations and motion effects.",
       },
     },
   ];
 
-  // --- PRIVACY ---
+  // -------------------------
+  // PRIVACY (PrivacyScreen)
+  // -------------------------
   const privacy = [
     {
-      key: "privacy.profileVisibility",
+      key: "privacy.showInDiscover",
       section: "privacy",
-      type: "enum" as const,
-      defaultValue: "public",
+      type: "boolean" as const,
+      defaultValue: true,
       metadata: {
-        label: "Profile visibility",
-        options: [
-          { value: "public", label: "Public" },
-          { value: "followers", label: "Followers" },
-          { value: "private", label: "Private" },
-        ],
+        label: "Show in Discover",
+        description: "Allow your profile to appear in Discover.",
+      },
+    },
+    {
+      key: "privacy.showActivity",
+      section: "privacy",
+      type: "boolean" as const,
+      defaultValue: false,
+      metadata: {
+        label: "Show activity on profile",
+        description: "Show when you were last active.",
       },
     },
     {
@@ -147,6 +90,7 @@ export async function seedSettingsDefinitions() {
       defaultValue: "everyone",
       metadata: {
         label: "Who can reply",
+        description: "Set who can reply to your posts.",
         options: [
           { value: "everyone", label: "Everyone" },
           { value: "followers", label: "Followers" },
@@ -155,128 +99,87 @@ export async function seedSettingsDefinitions() {
       },
     },
     {
-      key: "privacy.allowMentions",
+      key: "privacy.showReactionCounts",
       section: "privacy",
       type: "boolean" as const,
       defaultValue: true,
       metadata: {
-        label: "Allow mentions",
+        label: "Show reaction counts",
+        description: "Display total reactions on posts.",
       },
     },
     {
-      key: "privacy.showActivity",
+      key: "privacy.blurSensitive",
       section: "privacy",
       type: "boolean" as const,
-      defaultValue: false,
+      defaultValue: true,
       metadata: {
-        label: "Show activity",
-        description: "Allow others to see when you are active.",
+        label: "Blur sensitive content",
+        description: "Blur content that may be sensitive by default.",
+      },
+    },
+    // UI shows a navigation page, but store it as JSON string to back that UI
+    {
+      key: "privacy.mutedKeywords",
+      section: "privacy",
+      type: "json" as const,
+      defaultValue: [],
+      metadata: {
+        label: "Muted keywords",
+        description: "List of muted words/phrases to filter from your feed.",
+        schema: { type: "array", items: "string" },
+        placeholder: "Add words or phrases…",
       },
     },
   ];
 
-  // --- SECURITY ---
-  const security = [
+  // -------------------------
+  // NOTIFICATIONS (NotificationsScreen)
+  // -------------------------
+  const notifications = [
     {
-      key: "security.loginAlerts",
-      section: "security",
+      key: "notifications.push.enabled",
+      section: "notifications",
       type: "boolean" as const,
       defaultValue: true,
       metadata: {
-        label: "Login alerts",
-        description: "Notify on new device sign-ins.",
+        label: "Enable Push Notifications",
+        description: "Receive push notifications from Echo.",
       },
     },
     {
-      key: "security.twoFactor",
-      section: "security",
-      type: "boolean" as const,
-      defaultValue: false,
-      metadata: {
-        label: "Two-factor authentication",
-        description: "Require a second factor when logging in.",
-      },
-    },
-    {
-      key: "security.requireBiometric",
-      section: "security",
-      type: "boolean" as const,
-      defaultValue: false,
-      metadata: {
-        label: "Require biometrics",
-        description: "Use Face/Touch ID for sensitive actions.",
-      },
-    },
-  ];
-
-  // --- CONTENT (feed & filters) ---
-  const content = [
-    {
-      key: "content.feed.moodFilter",
-      section: "content",
-      type: "enum" as const,
-      defaultValue: "any",
-      metadata: {
-        label: "Mood filter",
-        options: [
-          { value: "any", label: "Any" },
-          { value: "happy", label: "Happy" },
-          { value: "sad", label: "Sad" },
-          { value: "angry", label: "Angry" },
-          { value: "relieved", label: "Relieved" },
-        ],
-      },
-    },
-    {
-      key: "content.feed.hideSensitive",
-      section: "content",
+      key: "notifications.push.posts",
+      section: "notifications",
       type: "boolean" as const,
       defaultValue: true,
       metadata: {
-        label: "Hide sensitive content",
+        label: "Notifications about my Posts",
+        description: "Get notified when there is activity on your posts.",
       },
     },
     {
-      key: "content.autoplayMedia",
-      section: "content",
+      key: "notifications.push.comments",
+      section: "notifications",
+      type: "boolean" as const,
+      defaultValue: true,
+      metadata: {
+        label: "Notifications about my Comments",
+        description: "Get notified when someone replies to your comments.",
+      },
+    },
+    {
+      key: "notifications.dailyReminder",
+      section: "notifications",
       type: "boolean" as const,
       defaultValue: false,
       metadata: {
-        label: "Autoplay media",
+        label: "Daily Reminder",
+        description: "Send a daily reminder to check in.",
       },
     },
   ];
 
-  // --- ACCESSIBILITY ---
-  const accessibility = [
-    {
-      key: "accessibility.reduceMotion",
-      section: "accessibility",
-      type: "boolean" as const,
-      defaultValue: false,
-      metadata: {
-        label: "Reduce motion",
-      },
-    },
-    {
-      key: "accessibility.reduceTransparency",
-      section: "accessibility",
-      type: "boolean" as const,
-      defaultValue: false,
-      metadata: {
-        label: "Reduce transparency",
-      },
-    },
-  ];
-
-  const all = [
-    ...notifications,
-    ...appearance,
-    ...privacy,
-    ...security,
-    ...content,
-    ...accessibility,
-  ];
+  const all = [...appearance, ...privacy, ...notifications];
 
   for (const def of all) {
     const payload = {

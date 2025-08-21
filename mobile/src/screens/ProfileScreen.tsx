@@ -1,3 +1,4 @@
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -15,6 +16,7 @@ import SecretItem, { SecretItemProps } from "../components/SecretItem";
 import usePaginatedData from "../hooks/usePaginatedData";
 import { useRecentSecrets, useUserStats } from "../hooks/useProfile";
 import { IconSvg } from "../icons/IconSvg";
+import { TabParamList } from "../navigation/AppNavigator";
 import { useTheme } from "../theme/ThemeContext";
 
 type ContentType = "secrets" | "bookmarks" | "reactions" | "caps";
@@ -35,13 +37,13 @@ function TopBar({ navigation }: { navigation?: any }) {
       <View style={styles.leftPlaceholder} />
       <View style={styles.rightIcons}>
         <TouchableOpacity
-          onPress={() => navigation.navigate("AccountSettings", {})}
+          onPress={() => navigation.navigate("AccountSettings")}
           style={styles.iconButton}
         >
           <IconSvg icon="help" size={24} state="default" />
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => navigation.navigate("AccountSettings", {})}
+          onPress={() => navigation.navigate("AccountSettings")}
           style={styles.iconButton}
         >
           <IconSvg icon="settings" size={24} state="default" />
@@ -65,7 +67,11 @@ function ProfileHeader({
     <View
       style={[styles.profileHeader, { backgroundColor: colors.background }]}
     >
-      <TouchableOpacity onPress={() => navigation.navigate("ProfileEdit")}>
+      <TouchableOpacity
+        onPress={() =>
+          navigation.navigate("AccountSettings", { screen: "EditProfile" })
+        }
+      >
         <Avatar url={avatarUrl} handle={handle} size={80} />
       </TouchableOpacity>
       <View style={styles.handleRow}>
@@ -73,7 +79,9 @@ function ProfileHeader({
           @{handle}
         </Text>
         <TouchableOpacity
-          onPress={() => navigation.navigate("ProfileEdit")}
+          onPress={() =>
+            navigation.navigate("AccountSettings", { screen: "EditProfile" })
+          }
           style={styles.editButton}
         >
           <Text style={[styles.editText, { color: colors.primary }]}>Edit</Text>
@@ -153,8 +161,8 @@ function RecentCarousel({ navigation }: { navigation?: any }) {
     />
   );
 }
-
-export default function ProfileScreen({ navigation }: { navigation?: any }) {
+type Props = NativeStackScreenProps<TabParamList, "Profile">;
+export default function ProfileScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const { stats, loading: statsLoading } = useUserStats();
   const [activeTab, setActiveTab] = useState<ContentType>(TAB_CONFIG[0].key);

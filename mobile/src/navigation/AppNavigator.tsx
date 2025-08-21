@@ -9,7 +9,9 @@ import ProfileScreen from "../screens/ProfileScreen";
 
 import SecretDetailScreen from "../screens/SecretDetailScreen";
 import AdminPanelScreen from "../screens/AdminPannelScreen";
-import AccountSettingsNavigator from "./AccountScreenNavigator";
+import AccountSettingsNavigator, {
+  AccountSettingsStackParamList,
+} from "./AccountScreenNavigator";
 
 import BackButton from "../components/BackButtonComponent";
 import { IconSvg } from "../icons/IconSvg";
@@ -25,9 +27,9 @@ export type TabParamList = {
 };
 
 export type RootStackParamList = {
-  Tabs: undefined;
+  Tabs: TabParamList;
   SecretDetail: any;
-  AccountSettings: any;
+  AccountSettings: AccountSettingsStackParamList;
   Admin: undefined;
 };
 
