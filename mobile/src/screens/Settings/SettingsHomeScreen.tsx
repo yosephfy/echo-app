@@ -10,6 +10,7 @@ import useOnboard from "../../hooks/useOnboard";
 import { AccountSettingsStackParamList } from "../../navigation/AccountScreenNavigator";
 import { useAuthStore } from "../../store/authStore";
 import { useTheme } from "../../theme/ThemeContext";
+import { seedSettingsDefinitions } from "../../scripts/seed-setting-defs";
 
 type Props = NativeStackScreenProps<
   AccountSettingsStackParamList,
@@ -161,6 +162,11 @@ export default function SettingsHomeScreen({ navigation }: Props) {
         buttonText: "1.0.0",
       },
       disabled: true,
+    } as SettingsRowProps<"button">,
+    {
+      type: "button",
+      label: "seed",
+      options: { onPress: () => seedSettingsDefinitions() },
     } as SettingsRowProps<"button">,
   ];
 

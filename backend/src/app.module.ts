@@ -17,6 +17,7 @@ import { StreaksModule } from './streaks/streaks.module';
 import { UsersModule } from './users/users.module';
 import { RepliesModule } from './replies/replies.module';
 import { ReplyReactionsModule } from './reply-reactions/reply-reactions.module';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   providers: [
@@ -47,6 +48,7 @@ import { ReplyReactionsModule } from './reply-reactions/reply-reactions.module';
     BookmarksModule,
     RepliesModule,
     ReplyReactionsModule,
+    SettingsModule,
     // ... your feature modules (Users, Auth) go here
   ],
 })
