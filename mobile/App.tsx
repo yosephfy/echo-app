@@ -12,6 +12,7 @@ import { useAuthStore } from "./src/store/authStore";
 import { ThemeProvider } from "./src/theme/ThemeContext";
 import { registerForPushNotificationsAsync } from "./src/utils/pushNotifications";
 import { useSettingsStore } from "./src/store/settingsStore";
+import { ensureFirebaseSignedIn } from "./src/lib/firebase";
 
 export default function App() {
   const { token, loading, onboarded, restoreToken } = useAuthStore();
@@ -38,6 +39,9 @@ export default function App() {
     if (token) {
       // hydrated settings for logged-in user
       useSettingsStore.getState().hydrate();
+      ensureFirebaseSignedIn().catch((e) =>
+        console.warn("Firebase sign-in failed:", e?.message || e)
+      );
     } else {
       useSettingsStore.getState().clear();
     }

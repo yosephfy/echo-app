@@ -19,6 +19,10 @@ import {
 } from "../../utils/sanitize";
 import { SettingsRow } from "../../components/SettingRow";
 import Avatar from "../../components/Avatar";
+import { StorageKind, uploadFile } from "../../utils/storage";
+import { useUserStats } from "../../hooks/useProfile";
+import { useAuthStore } from "../../store/authStore";
+import { getAuth } from "firebase/auth";
 
 type UserSettings = {
   showReactionCounts?: boolean;
@@ -37,7 +41,7 @@ export default function EditProfileScreen() {
   const { colors } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
+  const { user } = useAuthStore((s) => s);
   // Profile state
   const [handle, setHandle] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -102,7 +106,7 @@ export default function EditProfileScreen() {
 
     try {
       setSaving(true);
-      const uploadedUrl = await uploadAvatarToBackend(uri);
+      const uploadedUrl = await uploadAvatarToBackend(uri, user?.id);
       // Persist new avatar URL
       await api.patch("/users/me/avatar", { avatarUrl: uploadedUrl });
       setAvatarUrl(uploadedUrl);
@@ -300,29 +304,28 @@ export default function EditProfileScreen() {
 /**
  * Example avatar upload using multipart/form-data.
  * Replace the endpoint with your backend upload route,
- * then PATCH the returned URL to /users/me/avatar.
+ * then PATCH the returned URL to /users/{uid}/avatar.jpg.
  */
-async function uploadAvatarToBackend(localUri: string): Promise<string> {
-  // Create form data
-  const filename = localUri.split("/").pop() || `avatar_${Date.now()}.jpg`;
-  const match = /\.(\w+)$/.exec(filename || "");
-  const type = match ? `image/${match[1]}` : `image`;
-
-  const form = new FormData();
-  form.append("file", {
-    uri: localUri,
-    name: filename,
-    type,
-  } as any);
-
-  const res = await api.post<{ url?: string }>("/uploads/avatar", {
-    form,
+async function uploadAvatarToBackend(
+  localUri: string,
+  userId?: string
+): Promise<string> {
+  const { currentUser } = getAuth();
+  console.log("Uploading avatar...", currentUser?.uid);
+  const { url } = await uploadFile(
+    { localUri: localUri },
+    {
+      kind: StorageKind.AVATAR,
+      overwrite: true,
+      ids: { userId },
+      transform: { quality: 0.5 },
+    } // deterministic path
+  );
+  console.log("Avatar uploaded to:", url);
+  api.patch("/users/me/avatar", { avatarUrl: url }).catch((e) => {
+    console.warn("Failed to persist avatar URL", e);
   });
-
-  const json = res as { url?: string };
-  // Expect { url: "https://..." }
-  if (!json?.url) throw new Error("Invalid upload response");
-  return json.url as string;
+  return url;
 }
 
 const styles = StyleSheet.create({

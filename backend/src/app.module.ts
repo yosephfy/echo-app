@@ -18,6 +18,7 @@ import { UsersModule } from './users/users.module';
 import { RepliesModule } from './replies/replies.module';
 import { ReplyReactionsModule } from './reply-reactions/reply-reactions.module';
 import { SettingsModule } from './settings/settings.module';
+import { FirebaseModule } from './firebase/firebase.module';
 
 @Module({
   providers: [
@@ -49,6 +50,7 @@ import { SettingsModule } from './settings/settings.module';
     RepliesModule,
     ReplyReactionsModule,
     SettingsModule,
+    FirebaseModule,
     // ... your feature modules (Users, Auth) go here
   ],
 })

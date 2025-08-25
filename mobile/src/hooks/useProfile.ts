@@ -28,7 +28,20 @@ export function useUserStats() {
       .finally(() => setLoading(false));
   }, []);
 
-  return { stats, loading, error };
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.get<UserStats>("/users/me/stats");
+      setStats(data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { stats, loading, error, refresh };
 }
 
 // mobile/src/hooks/useRecentSecrets.ts
