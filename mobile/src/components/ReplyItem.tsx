@@ -10,14 +10,17 @@ import useReplyReactions from "../hooks/useReplyReactions";
 import { ReactionType } from "../hooks/useReactions";
 
 interface Props {
-  reply: Reply;
+  reply: Omit<Reply, "id"> | Reply; // reply without id (for pending replies
 }
 
 const ReplyItem: React.FC<Props> = ({ reply }) => {
   const { colors } = useTheme();
   const timestamp = timeAgo(reply.createdAt, "medium");
 
-  const { counts, currentType, toggle } = useReplyReactions(reply.id);
+  const { counts, currentType, react } =
+    "id" in reply
+      ? useReplyReactions(reply.id, reply.secretId)
+      : { counts: {}, currentType: null, react: (type: ReactionType) => {} };
   const totalReactions = Object.values(counts).reduce((sum, c) => sum + c, 0);
 
   return (
@@ -45,7 +48,7 @@ const ReplyItem: React.FC<Props> = ({ reply }) => {
         </View>
         <Reaction
           current={currentType}
-          onReact={(type: ReactionType) => toggle(type)}
+          onReact={(type: ReactionType) => react(type)}
           totalCount={totalReactions}
         />
       </View>

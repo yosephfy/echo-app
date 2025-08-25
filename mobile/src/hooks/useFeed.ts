@@ -1,82 +1,78 @@
-import { useState, useEffect, useCallback } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { api } from "../api/client";
-import { PaginatedHooksResponse } from "./useBookmarks";
-import { SecretItemProps } from "../components/SecretItem";
+import type { SecretItemProps } from "../components/SecretItem";
+import { useEntities } from "../store/entities";
+
+type FeedPage = {
+  items: SecretItemProps[];
+  total: number;
+  page: number;
+  limit: number;
+};
+
+// server call (kept separate for easy testing)
+async function fetchFeed(
+  page: number = 1,
+  limit: number = 20
+): Promise<FeedPage> {
+  return api.get<FeedPage>("/secrets/feed", { page, limit });
+}
 
 /**
- * Shape of a feed item returned by /secrets/feed
+ * React Query + Infinite pagination + normalization.
+ * - Caches pages by (limit) and dedupes requests
+ * - Normalizes authors & secrets into entity store
+ * - Exposes flat items + helpers
  */
+export function useFeed(limit = 20) {
+  const upsertUsers = useEntities((s) => s.upsertUsers);
+  const upsertSecrets = useEntities((s) => s.upsertSecrets);
 
-/**
- * Hook to fetch paginated feed of secrets.
- *
- * @param pageSize number of items per page
- */
-export function useFeed(
-  pageSize: number = 20,
-  token: string | null
-): PaginatedHooksResponse<SecretItemProps> {
-  const [items, setItems] = useState<SecretItemProps[]>([]);
-  const [total, setTotal] = useState<number>(0);
-  const [page, setPage] = useState<number>(1);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [refreshing, setRefreshing] = useState<boolean>(false);
-
-  /**
-   * Load a specific page of feed items. If replace is false, appends to existing items.
-   */
-  const loadPage = useCallback(
-    async (pageNumber: number = 1, replace: boolean = false) => {
-      if (pageNumber === 1) setRefreshing(true);
-      else setLoading(true);
-      try {
-        const res = await api.get<{ items: SecretItemProps[]; total: number }>(
-          "/secrets/feed",
-          {
-            page: pageNumber,
-            limit: pageSize,
-          }
-        );
-        setItems((prev) =>
-          replace || pageNumber === 1 ? res.items : [...prev, ...res.items]
-        );
-        setTotal(res.total);
-        setPage(pageNumber);
-      } catch (err) {
-        console.error("useFeed.loadPage error", err);
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
+  const query = useInfiniteQuery<FeedPage>({
+    queryKey: ["feed", limit],
+    queryFn: async ({ pageParam = 1 }: any) => {
+      const res = await fetchFeed(pageParam, limit);
+      // normalize into entity store (authors + items)
+      upsertUsers(res.items.map((i: any) => i.author).filter(Boolean));
+      upsertSecrets(res.items);
+      return res;
     },
-    [pageSize]
+    // tell RQ how to find the next page
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.flatMap((p) => p.items).length;
+      return loaded < lastPage.total ? (lastPage.page ?? 1) + 1 : undefined;
+    },
+    staleTime: 30_000,
+    initialPageParam: 1,
+  });
+
+  // flatten items across pages for easy consumption
+  const items = useMemo(
+    () => (query.data ? query.data.pages.flatMap((p) => p.items) : []),
+    [query.data]
   );
 
-  /** Refreshes the feed by reloading the first page */
-  const refresh = useCallback(() => loadPage(1, true), [loadPage]);
-
-  /** Loads the next page if available */
-  const loadMore = useCallback(() => {
-    if (!loading && items.length !== 0) {
-      loadPage(page + 1);
-    }
-  }, [loading, items.length, total, page, loadPage]);
-
-  // Initial load
-  useEffect(() => {
-    loadPage(1, true);
-  }, [loadPage]);
+  const total = query.data?.pages.at(-1)?.total ?? 0;
+  const page = query.data?.pages.at(-1)?.page ?? 1;
 
   return {
+    // data
     items,
     total,
     page,
-    limit: pageSize,
-    loading,
-    refreshing,
-    hasMore: items.length < total,
-    loadPage,
-    refresh,
-    loadMore,
+    limit,
+
+    // status
+    loading: query.isLoading || (query.isFetching && !query.isFetchingNextPage),
+    refreshing: query.isRefetching,
+    fetchingMore: query.isFetchingNextPage,
+    hasMore: !!query.hasNextPage,
+
+    // actions
+    refresh: () => query.refetch(), // pulls from page 1 internally
+    loadMore: () => query.fetchNextPage(), // fetch next if hasNextPage
+    // expose raw query if needed
+    query,
   };
 }

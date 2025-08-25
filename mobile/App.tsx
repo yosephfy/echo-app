@@ -13,9 +13,13 @@ import { ThemeProvider } from "./src/theme/ThemeContext";
 import { registerForPushNotificationsAsync } from "./src/utils/pushNotifications";
 import { useSettingsStore } from "./src/store/settingsStore";
 import { ensureFirebaseSignedIn } from "./src/lib/firebase";
+import { QueryProvider } from "./src/query/client";
 
 export default function App() {
-  const { token, loading, onboarded, restoreToken } = useAuthStore();
+  const token = useAuthStore((s) => s.token);
+  const loading = useAuthStore((s) => s.loading);
+  const onboarded = useAuthStore((s) => s.onboarded);
+  const restoreToken = useAuthStore((s) => s.restoreToken);
   useEffect(() => {
     (async () => {
       const token = await registerForPushNotificationsAsync();
@@ -32,7 +36,7 @@ export default function App() {
 
   useEffect(() => {
     restoreToken();
-  }, [restoreToken]);
+  }, []);
 
   // App.tsx (after restoreToken completes)
   useEffect(() => {
@@ -53,15 +57,17 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <NavigationContainer>
-          {!token ? (
-            <AuthNavigator />
-          ) : !onboarded ? (
-            <OnboardingNavigator />
-          ) : (
-            <AppNavigator />
-          )}
-        </NavigationContainer>
+        <QueryProvider>
+          <NavigationContainer>
+            {!token ? (
+              <AuthNavigator />
+            ) : !onboarded ? (
+              <OnboardingNavigator />
+            ) : (
+              <AppNavigator />
+            )}
+          </NavigationContainer>
+        </QueryProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

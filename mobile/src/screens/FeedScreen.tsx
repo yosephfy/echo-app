@@ -23,32 +23,30 @@ type Props = NativeStackScreenProps<TabParamList, "Feed">;
 export default function FeedScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const token = useAuthStore((s) => s.token);
+
+  // New useFeed API
   const {
     items,
     loading,
-    loadMore,
-    loadPage,
-    hasMore,
-    limit,
-    page,
-    refresh,
     refreshing,
-    total,
-  } = useFeed(20, token);
-  const { remaining, duration, refresh: refreshCooldown } = useCooldown();
+    fetchingMore,
+    hasMore,
+    loadMore,
+    refresh,
+  } = useFeed(10);
 
+  const { remaining, duration, refresh: refreshCooldown } = useCooldown();
   const [composerActive, setComposerActive] = useState(false);
-  // real-time updates
-  useSocket("secretCreated", (newItem: SecretItemProps) => {
-    loadPage(1, true);
+
+  // Real-time: on new secret, refresh feed + cooldown
+  useSocket("secretCreated", (_newItem: SecretItemProps) => {
+    refresh();
     refreshCooldown();
   });
 
-  useEffect(() => {
-    if (token) loadPage(1, true);
-  }, [token]);
-
+  // Gate rendering if not authenticated
   if (!token) return null;
+
   useEffect(() => {
     refreshCooldown();
   }, [composerActive]);
@@ -69,27 +67,28 @@ export default function FeedScreen({ navigation }: Props) {
       <View style={[styles.headerContainer, { borderColor: colors.border }]}>
         <Text style={styles.headerTitle}>Echo</Text>
       </View>
+
       {loading && items.length === 0 ? (
         <ActivityIndicator size="large" color={colors.primary} />
       ) : (
         <FlatList
           data={items}
           style={{ flex: 1 }}
-          contentContainerStyle={{}}
           showsVerticalScrollIndicator={false}
-          refreshing={loading}
-          onRefresh={() => loadPage(1, true)}
+          refreshing={refreshing}
+          onRefresh={refresh}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <SecretItem secret={item} navigation={navigation} />
           )}
           onEndReached={() => {
-            console.log("End reached");
-            loadMore();
+            if (hasMore) {
+              loadMore();
+            }
           }}
           onEndReachedThreshold={0.5}
           ListFooterComponent={
-            loading ? <ActivityIndicator style={{ margin: 20 }} /> : null
+            fetchingMore ? <ActivityIndicator style={{ margin: 20 }} /> : null
           }
         />
       )}

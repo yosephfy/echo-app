@@ -1,149 +1,169 @@
 // mobile/src/hooks/useBookmark.ts
-import { useCallback, useEffect, useState } from "react";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useMemo } from "react";
 import { api } from "../api/client";
-import { SecretItemProps } from "../components/SecretItem";
+import { useEntities } from "../store/entities";
+import type { SecretItemProps } from "../components/SecretItem";
+import { FeedPage } from "./types";
 
-export interface PaginatedHooksResponse<T> {
-  items: T[];
+/** ---------------------------
+ * Types (server responses)
+ * --------------------------- */
+
+type BookmarkStatusResponse = { bookmarked: boolean };
+type BookmarkCountResponse = { secretId: string; count: number };
+type ToggleResponse = { added?: boolean; removed?: boolean; count: number };
+
+type BookmarksPage = {
+  items: SecretItemProps[];
   total: number;
   page: number;
   limit: number;
-  loading: boolean;
-  refreshing: boolean;
-  hasMore: boolean;
-  loadPage: (page?: number, replace?: boolean) => Promise<void>;
-  refresh: () => Promise<void> | void;
-  loadMore: () => void;
-}
+};
 
-interface ToggleResponse {
-  added?: boolean;
-  removed?: boolean;
-  count: number;
-}
+/** ---------------------------
+ * Queries
+ * --------------------------- */
 
-interface CountResponse {
-  secretId: string;
-  count: number;
-}
-
-interface MeResponse {
-  bookmarked: boolean;
+/**
+ * Combined status/count fetch for a specific secret bookmark.
+ * Uses a single queryFn to execute both endpoints in parallel.
+ */
+function fetchBookmarkStatusAndCount(secretId: string) {
+  return Promise.all([
+    api.get<BookmarkStatusResponse>(`/bookmarks/${secretId}/me`),
+    api.get<BookmarkCountResponse>(`/bookmarks/secret/${secretId}/count`),
+  ]).then(([me, count]) => ({
+    bookmarked: me.bookmarked,
+    count: count.count,
+  }));
 }
 
 /**
- * Hook to manage bookmarking a single secret.
- *
- * @param secretId the id of the secret to bookmark/unbookmark
+ * Hook: bookmark status + count for a secret.
+ * Provides `toggle()` mutation that updates the cache optimistically.
  */
-export default function useBookmark(secretId: string) {
-  const [count, setCount] = useState<number>(0);
-  const [bookmarked, setBookmarked] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
+export function useBookmark(secretId: string) {
+  const qc = useQueryClient();
 
-  // Fetch count and bookmarked status
-  const refresh = useCallback(async () => {
-    try {
-      const [{ count }, { bookmarked }] = await Promise.all([
-        api.get<CountResponse>(`/bookmarks/secret/${secretId}/count`),
-        api.get<MeResponse>(`/bookmarks/${secretId}/me`),
+  const query = useQuery({
+    queryKey: ["bookmark", "status", secretId],
+    queryFn: () => fetchBookmarkStatusAndCount(secretId),
+    staleTime: 60_000,
+    enabled: Boolean(secretId),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async () => api.post<ToggleResponse>(`/bookmarks/${secretId}`),
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ["bookmark", "status", secretId] });
+      const prev = qc.getQueryData<{ bookmarked: boolean; count: number }>([
+        "bookmark",
+        "status",
+        secretId,
       ]);
-      setCount(count);
-      setBookmarked(bookmarked);
-    } catch (err) {
-      console.error("useBookmark.refresh error", err);
-    }
-  }, [secretId]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  /** Toggle the bookmark state */
-  const toggle = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.post<ToggleResponse>(`/bookmarks/${secretId}`);
-      // update count directly
-      setCount(res.count);
-      // set bookmarked based on added/removed flags
-      if (res.added !== undefined) {
-        setBookmarked(true);
-      } else if (res.removed !== undefined) {
-        setBookmarked(false);
+      if (prev) {
+        // naive optimistic flip (server returns final count; we’ll reconcile on success)
+        const next = {
+          bookmarked: !prev.bookmarked,
+          count: prev.bookmarked ? Math.max(0, prev.count - 1) : prev.count + 1,
+        };
+        qc.setQueryData(["bookmark", "status", secretId], next);
       }
-    } catch (err) {
-      console.error("useBookmark.toggle error", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [secretId]);
+      return { prev };
+    },
+    onSuccess: (res) => {
+      // Reconcile with server truth
+      const final = {
+        bookmarked: Boolean(res.added)
+          ? true
+          : Boolean(res.removed)
+            ? false
+            : undefined,
+        count: res.count,
+      };
+      qc.setQueryData(["bookmark", "status", secretId], (old: any) => ({
+        bookmarked: final.bookmarked ?? old?.bookmarked ?? false,
+        count: final.count,
+      }));
 
-  return { count, bookmarked, loading, toggle, refresh };
-}
-
-/**
- * Hook to fetch paginated list of user's bookmarked secrets.
- *
- * @param pageSize number of items per page
- */
-export function useBookmarks(
-  pageSize: number = 20
-): PaginatedHooksResponse<SecretItemProps> {
-  const [items, setItems] = useState<SecretItemProps[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const loadPage = useCallback(
-    async (pageNumber: number = 1, replace: boolean = false) => {
-      if (pageNumber === 1) setRefreshing(true);
-      else setLoading(true);
-      try {
-        const res = await api.get<{ items: SecretItemProps[]; total: number }>(
-          "/bookmarks",
-          {
-            page: pageNumber,
-            limit: pageSize,
-          }
-        );
-        setItems((prev) =>
-          replace || pageNumber === 1 ? res.items : [...prev, ...res.items]
-        );
-        setTotal(res.total);
-        setPage(pageNumber);
-      } catch (err) {
-        console.error("useBookmarks.loadPage error", err);
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
+      // Lightly invalidate bookmarks list because its membership may have changed
+      qc.invalidateQueries({ queryKey: ["bookmarks"] });
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) {
+        qc.setQueryData(["bookmark", "status", secretId], ctx.prev);
       }
     },
-    [pageSize]
+  });
+
+  return {
+    count: query.data?.count ?? 0,
+    bookmarked: query.data?.bookmarked ?? false,
+    loading: query.isLoading,
+    refreshing: query.isRefetching,
+    toggle: toggleMutation.mutateAsync,
+    refetch: query.refetch,
+  };
+}
+
+/**
+ * Fetch a page of bookmarks.
+ */
+async function fetchBookmarks(page = 1, limit = 20): Promise<BookmarksPage> {
+  return api.get<BookmarksPage>("/bookmarks", { page, limit });
+}
+
+/**
+ * Hook: paginated list of the user's bookmarked secrets.
+ * - Infinite, cached pages
+ * - Normalizes authors + secrets into the entity store
+ */
+export function useBookmarks(limit = 20) {
+  const upsertUsers = useEntities((s) => s.upsertUsers);
+  const upsertSecrets = useEntities((s) => s.upsertSecrets);
+
+  const query = useInfiniteQuery<FeedPage>({
+    queryKey: ["bookmarks", limit],
+    queryFn: async ({ pageParam = 1 }: any) => {
+      const res = await fetchBookmarks(pageParam, limit);
+      // normalize entities
+      upsertUsers(res.items.map((i: any) => i.author).filter(Boolean));
+      upsertSecrets(res.items);
+      return res;
+    },
+    getNextPageParam: (last, all) => {
+      const loaded = all.flatMap((p) => p.items).length;
+      return loaded < last.total ? (last.page ?? 1) + 1 : undefined;
+    },
+    staleTime: 30_000,
+    initialPageParam: 1,
+  });
+
+  const items = useMemo(
+    () => (query.data ? query.data.pages.flatMap((p) => p.items) : []),
+    [query.data]
   );
 
-  const refresh = useCallback(() => loadPage(1, true), [loadPage]);
-  const loadMore = useCallback(() => {
-    if (!loading && items.length !== 0) {
-      loadPage(page + 1);
-    }
-  }, [loading, items.length, total, page, loadPage]);
-
-  useEffect(() => {
-    loadPage(1, true);
-  }, [loadPage]);
+  const total = query.data?.pages.at(-1)?.total ?? 0;
+  const page = query.data?.pages.at(-1)?.page ?? 1;
 
   return {
     items,
     total,
     page,
-    limit: pageSize,
-    loading,
-    refreshing,
-    hasMore: items.length !== 0,
-    loadPage,
-    refresh,
-    loadMore,
+    limit,
+    loading: query.isLoading || (query.isFetching && !query.isFetchingNextPage),
+    refreshing: query.isRefetching,
+    fetchingMore: query.isFetchingNextPage,
+    hasMore: !!query.hasNextPage,
+    refresh: () => query.refetch(),
+    loadMore: () => query.fetchNextPage(),
+    query,
   };
 }

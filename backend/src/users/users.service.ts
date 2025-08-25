@@ -7,15 +7,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as argon2 from 'argon2';
 import { UpdateAvatarDto } from 'src/auth/dto/update-avatar.dto';
 import { UpdateCredentialsDto } from 'src/auth/dto/update-credentials.dto';
-import { In, Repository } from 'typeorm';
+import { Cap } from 'src/caps/cap.entity';
+import { Reaction } from 'src/reactions/reaction.entity';
+import { Repository } from 'typeorm';
 import { RegisterDto } from '../auth/dto/register.dto';
 import { Bookmark } from '../bookmarks/bookmark.entity';
 import { Secret } from '../secrets/secret.entity';
 import { Streak } from '../streaks/streak.entity'; // if you have a Streak entity
-import { User } from './user.entity';
 import { HandleService } from './handle.service';
-import { Reaction } from 'src/reactions/reaction.entity';
-import { Cap } from 'src/caps/cap.entity';
+import { User } from './user.entity';
 
 @Injectable()
 export class UsersService {
@@ -127,7 +127,31 @@ export class UsersService {
     const user = await this.usersRepo.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 
-    (user as any).avatarUrl = dto.avatarUrl;
+    user.avatarUrl = dto.avatarUrl;
+    return this.usersRepo.save(user);
+  }
+
+  async updateProfile(
+    userId: string,
+    {
+      bio,
+      avatarUrl,
+      handle,
+    }: {
+      bio?: string;
+      avatarUrl?: string;
+      handle?: string;
+    },
+  ) {
+    const user = await this.usersRepo.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+    if (handle && handle !== user.handle) {
+      const exists = await this.usersRepo.findOne({ where: { handle } });
+      if (exists) throw new ConflictException('Handle already in use');
+      user.handle = handle;
+    }
+    if (avatarUrl) user.avatarUrl = avatarUrl;
+    if (bio) user.bio = bio;
     return this.usersRepo.save(user);
   }
 
@@ -148,11 +172,6 @@ export class UsersService {
       currentStreak: streak?.days || 0,
       totalReactions: totalReactions, // implement if you have reactions
       totalCaps: totalCaps, // implement if you have caps
-      handle:
-        (await this.usersRepo.findOne({ where: { id: userId } }))?.handle || '',
-      avatarUrl:
-        (await this.usersRepo.findOne({ where: { id: userId } }))?.avatarUrl ||
-        '',
     };
   }
 }

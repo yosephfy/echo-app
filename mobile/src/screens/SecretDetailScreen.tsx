@@ -65,12 +65,14 @@ export default function SecretDetailScreen({ route }: Props) {
     >
       <FlatList
         data={items}
-        keyExtractor={(r) => r.id}
+        keyExtractor={(item) =>
+          item.kind === "pending" ? `pending:${item.clientKey}` : item.reply.id
+        }
         ListHeaderComponent={() =>
           secret && <SecretItem secret={secret} display="expanded" />
         }
         ListHeaderComponentStyle={styles.secretItem}
-        renderItem={({ item }) => <ReplyItem reply={item} />}
+        renderItem={({ item }) => <ReplyItem reply={item.reply} />}
         ListEmptyComponent={() => (
           <Text style={[styles.empty, { color: colors.muted }]}>
             No replies yet
