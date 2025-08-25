@@ -52,6 +52,7 @@ export class RepliesService {
   ): Promise<{
     items: Array<{
       id: string;
+      secretId: string;
       text: string;
       createdAt: Date;
       author: { id: string; handle: string; avatarUrl?: string };
@@ -60,15 +61,15 @@ export class RepliesService {
     page: number;
     limit: number;
   }> {
-    const [rows, total] = await this.repo.findAndCount({
+    const rows = await this.repo.find({
       where: { secretId },
       relations: ['author'],
-      order: { createdAt: 'ASC' },
+      order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
     });
 
-    const items = rows.map((r) => ({
+    /* const items = rows.map((r) => ({
       id: r.id,
       text: r.text,
       createdAt: r.createdAt,
@@ -77,8 +78,9 @@ export class RepliesService {
         handle: r.author.handle,
         avatarUrl: r.author.avatarUrl,
       },
-    }));
-
+    })); */
+    const items = rows.map((r) => ({ ...r, secretId }));
+    const total = await this.repo.count({ where: { secretId } });
     return { items, total, page, limit };
   }
 }

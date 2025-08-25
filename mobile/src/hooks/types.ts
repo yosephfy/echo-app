@@ -10,3 +10,10 @@ export interface PaginatedHooksResponse<T> {
   refresh: () => Promise<void> | void;
   loadMore: () => void;
 }
+
+export interface FeedPage {
+  items: any[];
+  total: number;
+  page: number;
+  limit: number;
+}

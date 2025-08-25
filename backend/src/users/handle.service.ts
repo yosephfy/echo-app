@@ -6,9 +6,9 @@ const NOUNS = ['Fox', 'Wolf', 'Eagle', 'Lion', 'Otter', 'Hawk'];
 const MAX_SUFFIX = 99;
 
 const AVATAR_POOL = [
-  'https://www.placeholder.co/40x40/random.png',
-  'https://www.placeholder.co/40x40/random.png',
-  'https://www.placeholder.co/40x40/random.png',
+  'https://www.placehold.co/40x40.png',
+  'https://www.placehold.co/40x40.png',
+  'https://www.placehold.co/40x40.png',
 
   // …add as many as you like…
 ];

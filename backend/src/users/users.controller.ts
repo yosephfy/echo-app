@@ -16,6 +16,12 @@ type RefreshDto = {
   handle?: boolean;
   avatar?: boolean;
 };
+
+type UpdateProfileDto = {
+  avatarUrl?: string;
+  bio?: string;
+  handle?: string;
+};
 @UseGuards(JwtAuthGuard)
 @Controller('users')
 export class UsersController {
@@ -32,9 +38,9 @@ export class UsersController {
     return this.usersService.updateCredentials(req.user.userId, dto);
   }
 
-  @Patch('me/avatar')
-  updateAvatar(@Request() req, @Body() dto: UpdateAvatarDto) {
-    return this.usersService.updateAvatar(req.user.userId, dto);
+  @Patch('me/profile')
+  updateAvatar(@Request() req, @Body() dto: UpdateProfileDto) {
+    return this.usersService.updateProfile(req.user.userId, dto);
   }
 
   @Get('me/stats')

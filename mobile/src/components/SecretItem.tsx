@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import { LinearGradient } from "expo-linear-gradient";
+import React from "react";
 import {
   LayoutAnimation,
   Pressable,
@@ -6,20 +7,17 @@ import {
   Text,
   View,
 } from "react-native";
+import { useBookmark } from "../hooks/useBookmarks"; // ✅ was from useBookmarks
 import useCap from "../hooks/useCap";
 import useReactions, { ReactionType } from "../hooks/useReactions";
+import { useReplies } from "../hooks/useReplies";
 import { useReport } from "../hooks/useReport";
 import { useShare } from "../hooks/useShare";
 import { useTheme } from "../theme/ThemeContext";
+import { timeAgo } from "../utils/timeAgo";
 import ActionButton from "./ActionButton";
 import Avatar from "./Avatar";
-import { timeAgo } from "../utils/timeAgo";
-import { LinearGradient } from "expo-linear-gradient";
 import Reaction from "./Reaction";
-import useBookmark from "../hooks/useBookmarks";
-import { useReplies } from "../hooks/useReplies";
-import { useNavigation } from "@react-navigation/native";
-import { AppStackParamList } from "../navigation/AppNavigator";
 
 export interface SecretItemProps {
   id: string;
@@ -27,7 +25,7 @@ export interface SecretItemProps {
   mood?: string;
   status: string;
   createdAt: string;
-  author: { handle: string; avatarUrl: string };
+  author: { id: string; handle: string; avatarUrl: string };
 }
 
 export type DisplayMode = "normal" | "expanded" | "condensed";
@@ -43,15 +41,35 @@ export default function SecretItem({
 }) {
   const { id, text, mood, createdAt, author } = secret;
   const { colors } = useTheme();
-  const { currentType, counts: reactionCounts, react } = useReactions(id);
-  const { hasCapped, count: capCount, toggle: toggleCap } = useCap(id);
+
+  // Reactions
+  const {
+    currentType,
+    counts: reactionCounts,
+    react,
+    loading: reacting,
+  } = useReactions(id);
+
+  // Cap
+  const {
+    hasCapped,
+    count: capCount,
+    toggle: toggleCap,
+    loading: capping,
+  } = useCap(id);
+
+  // Bookmark
   const {
     bookmarked,
     count: bookmarkCount,
-    loading: bookmarkLoading,
+    loading: bookmarking,
     toggle: toggleBookmark,
   } = useBookmark(id);
+
+  // Replies (we only need total)
   const { total: countReplies } = useReplies(id);
+
+  // Report & Share
   const { report, ReportModal } = useReport(id);
   const { share, ShareModal } = useShare(id);
 
@@ -65,9 +83,9 @@ export default function SecretItem({
   );
 
   const onReply = () => {
-    display != "expanded"
-      ? navigation.navigate("SecretDetail", { secretId: id })
-      : undefined;
+    if (display !== "expanded") {
+      navigation?.navigate?.("SecretDetail", { secretId: id });
+    }
   };
 
   // animation trigger on mode change
@@ -97,10 +115,10 @@ export default function SecretItem({
                 @{author.handle}
               </Text>
               <Text style={[styles.timestamp, { color: colors.muted }]}>
-                {" "}
-                {timeAgo(createdAt, "long")}{" "}
+                {timeAgo(createdAt, "long")}
               </Text>
             </View>
+
             {mood && (
               <View style={[styles.moodPill, { borderColor: colors.primary }]}>
                 <Text style={[styles.moodText, { color: colors.primary }]}>
@@ -108,12 +126,14 @@ export default function SecretItem({
                 </Text>
               </View>
             )}
+
             <View style={styles.headerRightButtons}>
               <ActionButton
                 icon="cap"
-                onPress={toggleCap}
-                label={capCount > 0 ? capCount.toString() : undefined}
+                onPress={() => !capping && toggleCap()}
+                label={capCount > 0 ? String(capCount) : undefined}
                 active={hasCapped}
+                disabled={capping}
               />
               <ActionButton
                 icon="more-vertical"
@@ -165,8 +185,9 @@ export default function SecretItem({
           <View style={styles.leftActions}>
             <Reaction
               current={currentType}
-              onReact={react}
+              onReact={(t: ReactionType) => !reacting && react(t)}
               totalCount={totalReactions}
+              disabled={reacting}
             />
             <ActionButton
               icon="comment"
@@ -178,9 +199,10 @@ export default function SecretItem({
           <View style={styles.rightActions}>
             <ActionButton
               icon={bookmarked ? "bookmark-fill" : "bookmark"}
-              onPress={toggleBookmark}
+              onPress={() => !bookmarking && toggleBookmark()}
               active={bookmarked}
               label={bookmarkCount > 0 ? bookmarkCount : undefined}
+              disabled={bookmarking}
             />
           </View>
         </View>
@@ -198,7 +220,6 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    //flex: 1,
     margin: 10,
     borderWidth: 1,
   },

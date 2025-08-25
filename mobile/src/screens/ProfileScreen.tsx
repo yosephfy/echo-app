@@ -13,8 +13,9 @@ import {
 } from "react-native";
 import Avatar from "../components/Avatar";
 import SecretItem, { SecretItemProps } from "../components/SecretItem";
+import useMe from "../hooks/useMe";
 import usePaginatedData from "../hooks/usePaginatedData";
-import { useRecentSecrets, useUserStats } from "../hooks/useProfile";
+import { useUserStats } from "../hooks/useUserStats";
 import { IconSvg } from "../icons/IconSvg";
 import { TabParamList } from "../navigation/AppNavigator";
 import { useTheme } from "../theme/ThemeContext";
@@ -56,10 +57,12 @@ function TopBar({ navigation }: { navigation?: any }) {
 function ProfileHeader({
   handle,
   avatarUrl,
+  bio,
   navigation,
 }: {
   handle: string;
   avatarUrl: string;
+  bio?: string;
   navigation?: any;
 }) {
   const { colors } = useTheme();
@@ -86,6 +89,9 @@ function ProfileHeader({
         >
           <Text style={[styles.editText, { color: colors.primary }]}>Edit</Text>
         </TouchableOpacity>
+      </View>
+      <View style={styles.bioRow}>
+        <Text style={[styles.bioText, { color: colors.muted }]}>{bio}</Text>
       </View>
     </View>
   );
@@ -126,45 +132,11 @@ function StatsRow({ stats }: { stats: Record<string, number> }) {
   );
 }
 
-function RecentCarousel({ navigation }: { navigation?: any }) {
-  const { items, loading, refresh } = useRecentSecrets();
-  const { colors } = useTheme();
-  if (loading && items.length === 0) {
-    return (
-      <ActivityIndicator
-        style={{ marginVertical: 16 }}
-        color={colors.primary}
-      />
-    );
-  }
-  return (
-    <FlatList
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      data={items}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <SecretItem secret={item} display="condensed" navigation={navigation} />
-      )}
-      refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={refresh} />
-      }
-      ListEmptyComponent={() => (
-        <Text style={{ color: colors.text, padding: 16 }}>
-          No recent activity
-        </Text>
-      )}
-      contentContainerStyle={[
-        styles.carouselContainer,
-        { backgroundColor: colors.background },
-      ]}
-    />
-  );
-}
 type Props = NativeStackScreenProps<TabParamList, "Profile">;
 export default function ProfileScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const { stats, loading: statsLoading } = useUserStats();
+  const { user } = useMe(); // ensure me is loaded for handle/avatar
   const [activeTab, setActiveTab] = useState<ContentType>(TAB_CONFIG[0].key);
 
   // Paginated data for active tab
@@ -210,7 +182,7 @@ export default function ProfileScreen({ navigation }: Props) {
           }}
           sections={[
             { key: "top", data: [0] },
-            { key: "carousel", data: [0] },
+            //{ key: "carousel", data: [0] },
             { key: "tabs", data: [0] },
           ]}
           keyExtractor={(_, i) => String(i)}
@@ -221,8 +193,9 @@ export default function ProfileScreen({ navigation }: Props) {
                   <>
                     <TopBar navigation={navigation} />
                     <ProfileHeader
-                      handle={stats.handle}
-                      avatarUrl={stats.avatarUrl}
+                      handle={user?.handle ?? ""}
+                      avatarUrl={user?.avatarUrl ?? ""}
+                      bio={user?.bio ?? ""}
                       navigation={navigation}
                     />
                     <StatsRow stats={statsMap} />
@@ -271,10 +244,11 @@ export default function ProfileScreen({ navigation }: Props) {
                 return null;
             }
           }}
-          renderItem={({ section }) =>
-            section.key === "carousel" ? (
+          renderItem={
+            ({ section }) => null
+            /* section.key === "carousel" ? (
               <RecentCarousel navigation={navigation} />
-            ) : null
+            ) : null */
           }
           // Render content below tabs
           ListFooterComponent={() => (
@@ -332,14 +306,21 @@ const styles = StyleSheet.create({
   iconButton: { marginLeft: 16 },
   profileHeader: { alignItems: "center", paddingVertical: 20 },
   handleRow: { flexDirection: "row", alignItems: "center", marginTop: 8 },
+  bioRow: { flexDirection: "row", alignItems: "center", marginTop: 8 },
   handleText: { fontSize: 20, fontWeight: "600" },
+  bioText: {
+    fontSize: 14,
+    textAlign: "center",
+    maxWidth: "80%",
+    flexWrap: "wrap",
+  },
   editButton: { marginLeft: 8 },
   editText: { fontSize: 14 },
   statsRow: {
     flex: 1,
     flexDirection: "row",
     justifyContent: "space-around",
-    paddingVertical: 12,
+    paddingVertical: 8,
     marginHorizontal: "10%",
   },
   statCard: {

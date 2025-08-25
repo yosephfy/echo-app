@@ -1,5 +1,5 @@
 import { Injectable, Inject, ForbiddenException, Logger } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Secret, SecretStatus } from './secret.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import Redis from 'ioredis';
@@ -113,8 +113,14 @@ export class SecretsService {
     if (mood) {
       q.andWhere('s.mood = :mood', { mood });
     }
+    const total = await this.secretsRepo.count({
+      where: {
+        status: In([SecretStatus.PUBLISHED, SecretStatus.UNDER_REVIEW]),
+        ...(mood ? { mood } : {}),
+      },
+    });
 
-    const [items, total] = await q.getManyAndCount();
+    const items = await q.getMany();
 
     // OPTION A: Filter out secrets with no author
     const filtered = items.filter((s) => s.author !== null);
@@ -132,7 +138,7 @@ export class SecretsService {
           avatarUrl: s.author.avatarUrl,
         },
       })),
-      total: filtered.length,
+      total,
       page,
       limit,
     };

@@ -1,5 +1,6 @@
 // src/api/client.ts
 import * as SecureStore from "expo-secure-store";
+import { deduped } from "./dedupe";
 
 const BASE_URL = "http://localhost:3000";
 // const BASE_URL = "https://grub-splendid-abnormally.ngrok-free.app";
@@ -71,7 +72,9 @@ async function request<T>(
 
 export const api = {
   get: <T>(path: string, params?: ClientOptions["params"]) =>
-    request<T>("GET", path, { params }),
+    deduped(`${path}?${JSON.stringify(params || {})}`, () =>
+      request<T>("GET", path, { params })
+    ),
   post: <T>(path: string, body?: ClientOptions["body"]) =>
     request<T>("POST", path, { body }),
   patch: <T>(path: string, body?: ClientOptions["body"]) =>

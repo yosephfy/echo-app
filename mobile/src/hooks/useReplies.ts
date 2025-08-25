@@ -1,115 +1,179 @@
-// mobile/src/hooks/useReplies.ts
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { api } from "../api/client";
-import { PaginatedHooksResponse } from "./types";
 import useSocket from "./useSocket";
+import { useEntities } from "../store/entities";
 
+/** ----- API Types ----- */
 export interface Reply {
-  id: string;
+  id: string; // UUID from server
+  secretId: string;
   text: string;
   createdAt: string;
   author: { id: string; handle: string; avatarUrl?: string };
 }
-
-interface RepliesResponse {
+interface RepliesPage {
   items: Reply[];
   total: number;
   page: number;
   limit: number;
 }
 
-type ReplyHooksResponse = PaginatedHooksResponse<Reply> & {
-  add: (text: string) => Promise<void>;
-};
-
-/**
- * Hook for paginated, real-time replies under a secret
- */
-export function useReplies(secretId: string, limit = 20): ReplyHooksResponse {
-  const [replies, setReplies] = useState<Reply[]>([]);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const mounted = useRef(true);
-  const loadingRef = useRef(false);
-
-  const loadPage = useCallback(
-    async (pageNumber: number = 1, replace: boolean = false) => {
-      if (pageNumber === 1) setRefreshing(true);
-      else setLoading(true);
-      try {
-        const res = await api.get<RepliesResponse>(
-          `/secrets/${secretId}/replies`,
-          {
-            page: pageNumber,
-            limit: limit,
-          }
-        );
-        setReplies((prev) =>
-          replace || pageNumber === 1 ? res.items : [...prev, ...res.items]
-        );
-        setTotal(res.total);
-        setPage(pageNumber);
-      } catch (err) {
-        console.error("useReplies.loadPage error", err);
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [limit, secretId]
-  );
-
-  const refresh = useCallback(() => loadPage(1, true), [loadPage]);
-
-  const loadMore = useCallback(() => {
-    if (!loading && replies.length !== 0) {
-      loadPage(page + 1);
+/** ----- UI Types (discriminated) ----- */
+export type UIReply =
+  | {
+      kind: "pending";
+      clientKey: string;
+      reply: Omit<Reply, "id">; // no id yet
     }
-  }, [loading, replies.length, total, page, loadPage]);
+  | { kind: "server"; reply: Reply };
 
-  const add = useCallback(
-    async (text: string) => {
-      setLoading(true);
-      try {
-        const saved = await api.post<Reply>(`/secrets/${secretId}/replies`, {
-          text,
-        });
-        // prepend the newly created reply
-        setReplies((prev) => [saved, ...prev]);
-        setTotal((t) => t + 1);
-      } catch (err) {
-        console.error("useReplies add error", err);
-        throw err;
-      } finally {
-        if (mounted.current) setLoading(false);
-      }
+function fetchReplies(secretId: string, page = 1, limit = 20) {
+  return api.get<RepliesPage>(`/secrets/${secretId}/replies`, { page, limit });
+}
+
+function uniqueById(items: Reply[]): Reply[] {
+  const seen = new Set<string>();
+  const out: Reply[] = [];
+  for (const r of items)
+    if (!seen.has(r.id)) {
+      seen.add(r.id);
+      out.push(r);
+    }
+  return out;
+}
+
+export function useReplies(secretId: string, limit = 10) {
+  const qc = useQueryClient();
+  const upsertUsers = useEntities((s) => s.upsertUsers);
+
+  // purely local placeholders (never sent to server, never mixed into cache)
+  const [pending, setPending] = useState<UIReply[]>([]);
+
+  const query = useInfiniteQuery<RepliesPage>({
+    queryKey: ["replies", secretId, limit],
+    enabled: !!secretId,
+    staleTime: 30_000,
+    queryFn: async ({ pageParam = 1 }: any) => {
+      const res = await fetchReplies(secretId, pageParam, limit);
+      upsertUsers(res.items.map((r) => r.author));
+      return res;
     },
-    [secretId]
-  );
-
-  // Real-time listener
-  useSocket(`replyCreated:${secretId}`, (reply: Reply) => {
-    setReplies((prev) => [reply, ...prev]);
-    setTotal((t) => t + 1);
+    getNextPageParam: (last, all) => {
+      const loaded = all.flatMap((p) => p.items).length;
+      return loaded < last.total ? (last.page ?? 1) + 1 : undefined;
+    },
+    initialPageParam: 1,
   });
 
-  useEffect(() => {
-    loadPage(1, true);
-  }, [loadPage]);
+  const serverItems = useMemo(
+    () =>
+      query.data ? uniqueById(query.data.pages.flatMap((p) => p.items)) : [],
+    [query.data]
+  );
+
+  // Final list to render: pending (top) + server (below), BUT pending are tagged and have no id
+  const items: UIReply[] = useMemo(
+    () => [
+      ...pending,
+      ...serverItems.map<UIReply>((r) => ({ kind: "server", reply: r })),
+    ],
+    [pending, serverItems]
+  );
+
+  const total = query.data?.pages.at(-1)?.total ?? 0;
+  const page = query.data?.pages.at(-1)?.page ?? 1;
+
+  // Create reply: add local pending; on success remove by clientKey and prepend real reply into cache
+  const addMutation = useMutation({
+    mutationFn: (text: string) =>
+      api.post<Reply>(`/secrets/${secretId}/replies`, { text }),
+    onMutate: async (text: string) => {
+      const clientKey = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const placeholder: UIReply = {
+        kind: "pending",
+        clientKey,
+        reply: {
+          text,
+          createdAt: new Date().toISOString(),
+          secretId,
+          author: { id: "me", handle: "me" }, // swap with your "me" store if available
+        },
+      };
+      setPending((prev) => [placeholder, ...prev]);
+      await qc.cancelQueries({ queryKey: ["replies", secretId, limit] });
+      return { clientKey };
+    },
+    onSuccess: (saved, _vars, ctx) => {
+      // remove the placeholder
+      setPending((prev) =>
+        prev.filter(
+          (p) => p.kind !== "pending" || p.clientKey !== ctx?.clientKey
+        )
+      );
+      // normalize and prepend actual reply to page 1 in cache
+      upsertUsers([saved.author]);
+      qc.setQueryData(["replies", secretId, limit], (old: any) => {
+        if (!old) return old;
+        const first = old.pages?.[0];
+        if (!first) return old;
+        const newFirst = {
+          ...first,
+          items: uniqueById([saved, ...first.items]),
+          total: (first.total ?? 0) + 1,
+        };
+        return { ...old, pages: [newFirst, ...old.pages.slice(1)] };
+      });
+      // optionally bump secret detail counter
+      qc.setQueryData(["secret", secretId], (old: any) =>
+        old ? { ...old, replyCount: (old.replyCount ?? 0) + 1 } : old
+      );
+    },
+    onError: (_e, _vars, ctx) => {
+      // remove the placeholder (failure)
+      setPending((prev) =>
+        prev.filter(
+          (p) => p.kind !== "pending" || p.clientKey !== ctx?.clientKey
+        )
+      );
+      // show toast if desired
+    },
+  });
+
+  // Real-time: only prepend **server replies** to cache (no pending involved)
+  useSocket(`replyCreated:${secretId}`, (reply: Reply) => {
+    upsertUsers([reply.author]);
+    qc.setQueryData(["replies", secretId, limit], (old: any) => {
+      if (!old) return old;
+      const first = old.pages?.[0];
+      if (!first) return old;
+      const newFirst = {
+        ...first,
+        items: uniqueById([reply, ...first.items]),
+        total: (first.total ?? 0) + 1,
+      };
+      return { ...old, pages: [newFirst, ...old.pages.slice(1)] };
+    });
+    qc.setQueryData(["secret", secretId], (old: any) =>
+      old ? { ...old, replyCount: (old.replyCount ?? 0) + 1 } : old
+    );
+  });
 
   return {
-    items: replies,
-    loading,
-    refreshing,
-    hasMore: replies.length !== 0,
-    loadMore,
-    refresh,
-    add,
+    items, // discriminated: pending/server
     total,
     page,
     limit,
-    loadPage,
+    loading: query.isLoading || (query.isFetching && !query.isFetchingNextPage),
+    refreshing: query.isRefetching,
+    fetchingMore: query.isFetchingNextPage,
+    hasMore: !!query.hasNextPage,
+    refresh: () => query.refetch(),
+    loadMore: () => query.fetchNextPage(),
+    add: (text: string) => addMutation.mutateAsync(text),
   };
 }

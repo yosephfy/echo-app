@@ -35,6 +35,9 @@ export class User {
   @Column({ nullable: true })
   avatarUrl?: string;
 
+  @Column({ nullable: true })
+  bio?: string;
+
   @OneToMany(() => Secret, (secret) => secret.author)
   secrets: Secret[];
 
