@@ -17,6 +17,9 @@ import BackButton from "../components/BackButtonComponent";
 import { IconSvg } from "../icons/IconSvg";
 import { IconName } from "../icons/icons";
 import { useTheme } from "../theme/ThemeContext";
+import useMe from "../hooks/useMe";
+import { TouchableOpacity, View } from "react-native";
+import { NavigationProp, useNavigation } from "@react-navigation/native";
 
 // --- Types ---
 export type TabParamList = {
@@ -27,9 +30,9 @@ export type TabParamList = {
 };
 
 export type RootStackParamList = {
-  Tabs: TabParamList;
+  Tabs: any;
   SecretDetail: any;
-  AccountSettings: AccountSettingsStackParamList;
+  AccountSettings: any;
   Admin: undefined;
 };
 
@@ -38,6 +41,9 @@ const RootStack = createNativeStackNavigator<RootStackParamList>();
 
 function MainTabs() {
   const { colors } = useTheme();
+  const { user } = useMe();
+  const nav =
+    useNavigation<NavigationProp<RootStackParamList, "AccountSettings">>();
 
   return (
     <Tab.Navigator
@@ -67,7 +73,22 @@ function MainTabs() {
       <Tab.Screen name="Feed" component={FeedScreen} />
       <Tab.Screen name="Discover" component={DiscoverScreen} />
       <Tab.Screen name="Bookmarks" component={BookmarksScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          headerShown: true,
+          headerTitle: user?.handle ?? "My Profile",
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => nav.navigate("AccountSettings")}
+              style={{ marginHorizontal: 20 }}
+            >
+              <IconSvg icon="settings" />
+            </TouchableOpacity>
+          ),
+        }}
+      />
     </Tab.Navigator>
   );
 }

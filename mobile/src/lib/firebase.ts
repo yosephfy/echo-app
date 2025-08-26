@@ -23,7 +23,7 @@ export const fbStorage = getStorage(app);
 export async function ensureFirebaseSignedIn() {
   // Ask backend for a Firebase custom token based on current JWT
   const { token } = await api.post<{ token: string }>("/firebase/custom-token");
-  console.log("fauth", fbAuth);
-  console.log("Firebase auth initialized", fbAuth);
+  //console.log("fauth", fbAuth);
+  //console.log("Firebase auth initialized", fbAuth);
   await signInWithCustomToken(fbAuth, token);
 }
