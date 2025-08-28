@@ -1,27 +1,25 @@
 // app/screens/ProfileScreen.tsx
+import { NavigationProp, useNavigation } from "@react-navigation/native";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React, { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
-  SafeAreaView,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { Tabs, Tab, MaterialTabBar } from "react-native-collapsible-tab-view";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
-
+import { MaterialTabBar, Tabs } from "react-native-collapsible-tab-view";
 import Avatar from "../components/Avatar";
 import SecretItem, { SecretItemProps } from "../components/SecretItem";
 import useMe from "../hooks/useMe";
-import usePaginatedData from "../hooks/usePaginatedData";
-import { useUserStats } from "../hooks/useUserStats";
+import { useUserContent } from "../hooks/useUserContent";
+import { UserStats, useUserStats } from "../hooks/useUserStats";
+import { IconName } from "../icons/icons";
 import { IconSvg } from "../icons/IconSvg";
 import { RootStackParamList, TabParamList } from "../navigation/AppNavigator";
 import { useTheme } from "../theme/ThemeContext";
-import { useUserContent } from "../hooks/useUserContent";
-import { NavigationProp, useNavigation } from "@react-navigation/native";
-import { IconName } from "../icons/icons";
 
 type ContentType = "secrets" | "bookmarks" | "reactions" | "caps";
 
@@ -74,107 +72,53 @@ export default function ProfileScreen({ navigation }: Props) {
 
   const Header = useCallback(() => {
     return (
-      <View style={{ backgroundColor: colors.background, width: "100%" }}>
-        {/* Top bar */}
-        {/* <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            padding: 12,
-            alignItems: "center",
-          }}
-        >
-          <View style={{ width: 24 }} />
-          <View style={{ flexDirection: "row" }}>
-            <IconButton
-              onPress={() =>
-                nav.navigate("AccountSettings", { screen: "Help" })
-              }
-              icon="help"
-            />
-            <IconButton
-              onPress={() => nav.navigate("AccountSettings")}
-              icon="settings"
-            />
-          </View>
-        </View> */}
-
-        {/* Profile header */}
-        <View style={{ alignItems: "center", paddingVertical: 20 }}>
-          <Avatar
-            url={user?.avatarUrl ?? ""}
-            handle={user?.handle ?? ""}
-            size={80}
-          />
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginTop: 8,
-              zIndex: 10,
-            }}
-          >
-            {/* <Text
-              style={{ fontSize: 20, fontWeight: "600", color: colors.text }}
-            >
-              @{user?.handle ?? ""}
-            </Text> */}
-            <Text
-              onPress={() =>
-                nav.navigate("AccountSettings", {
-                  screen: "EditProfile",
-                })
-              }
-              style={{ marginLeft: 8, fontSize: 14, color: colors.primary }}
-            >
-              Edit
-            </Text>
-          </View>
-          {!!user?.bio && (
-            <Text
-              style={{
-                fontSize: 14,
-                textAlign: "center",
-                color: colors.muted,
-                marginTop: 8,
-                maxWidth: "80%",
+      <View style={[styles.headerWrap, { backgroundColor: colors.background }]}>
+        <View style={styles.headerRow}>
+          <View style={styles.profileHeader}>
+            <Avatar
+              url={user?.avatarUrl ?? ""}
+              handle={user?.handle ?? ""}
+              size={120}
+              badge={<IconSvg icon="pencil" size={20} state="default" />}
+              badgePosition="top-right"
+              badgeOffset={0}
+              badgeContainerStyle={{
+                backgroundColor: colors.background,
+                borderRadius: 999,
+                padding: 6,
+                elevation: 1,
               }}
-            >
-              {user.bio}
-            </Text>
-          )}
+              onPress={() =>
+                nav.navigate("AccountSettings", { screen: "EditProfile" })
+              }
+            />
+
+            {!!user?.bio && (
+              <Text style={[styles.bioText, { color: colors.muted }]}>
+                {user.bio}
+              </Text>
+            )}
+          </View>
+
+          <StatArea items={stats} />
         </View>
 
-        {/* Stats row */}
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-around",
-            paddingBottom: 18,
-          }}
-        >
-          {Object.entries(statsMap).map(([label, value]) => (
-            <View key={label} style={{ alignItems: "center" }}>
-              <Text style={{ color: colors.muted, fontWeight: "500" }}>
-                {value}
-              </Text>
-              <Text style={{ color: colors.muted, fontSize: 12 }}>{label}</Text>
-            </View>
-          ))}
-        </View>
+        <View style={[styles.separator, { backgroundColor: colors.border }]} />
+
+        <BioArea
+          bio={user?.bio}
+          onPress={() =>
+            nav.navigate("AccountSettings", { screen: "EditProfile" })
+          }
+        />
       </View>
     );
-  }, [colors, navigation, statsMap, user?.avatarUrl, user?.bio, user?.handle]);
+  }, [colors, nav, stats, user?.avatarUrl, user?.bio, user?.handle]);
 
   if (statsLoading || !stats) {
     return (
       <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: colors.background,
-        }}
+        style={[styles.loadingWrap, { backgroundColor: colors.background }]}
       >
         <ActivityIndicator color={colors.primary} size="large" />
       </View>
@@ -182,24 +126,20 @@ export default function ProfileScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.flex1}>
       <Tabs.Container
         renderHeader={Header}
-        // headerHeight is optional; omit to let the lib measure automatically.
-        // If you prefer a fixed value:
-        //headerHeight={280}
-        lazy={false} // keep scenes mounted so switching tabs doesn't reload
+        lazy={false}
         containerStyle={{ backgroundColor: colors.background }}
-        // You can also pass TabBar props with a custom component if needed.
         renderTabBar={(props) => (
           <MaterialTabBar
             {...props}
-            labelStyle={{ textTransform: "capitalize", fontSize: 14 }}
+            labelStyle={styles.tabLabel}
             activeColor={colors.primary}
             inactiveColor={colors.muted}
             indicatorStyle={{ backgroundColor: colors.primary }}
             style={{ backgroundColor: colors.background, elevation: 0 }}
-            tabStyle={{ width: "auto", paddingHorizontal: 0 }}
+            tabStyle={styles.tabStyle}
           />
         )}
       >
@@ -207,10 +147,16 @@ export default function ProfileScreen({ navigation }: Props) {
           <Tabs.Tab
             name={tab.title}
             key={tab.key}
-            label={({}) => (
+            label={({ index }) => (
               <IconSvg
                 icon={tab.icon}
-                stateStyles={{ default: { color: colors.primary } }}
+                stateStyles={{
+                  default: { color: colors.muted },
+                  pressed: { color: colors.primary },
+                }}
+                state={
+                  TAB_CONFIG[index].key === tab.key ? "pressed" : "default"
+                }
               />
             )}
           >
@@ -222,23 +168,16 @@ export default function ProfileScreen({ navigation }: Props) {
   );
 }
 
+/** Renders the list in each tab with pull-to-refresh + infinite scroll */
 function TabList({ path, type }: { path: string; type: ContentType }) {
   const { colors } = useTheme();
-
-  const {
-    items: data,
-    loading,
-    refresh,
-    loadMore,
-    // If your hook exposes these, great; otherwise loading covers it.
-  } = useUserContent(type);
+  const { items: data, loading, refresh, loadMore } = useUserContent(type);
 
   const keyExtractor = useCallback((item: SecretItemProps) => item.id, []);
   const renderItem = useCallback(
     ({ item }: { item: SecretItemProps }) => <SecretItem secret={item} />,
     []
   );
-
   const onEndReached = useCallback(() => {
     if (!loading) loadMore();
   }, [loadMore, loading]);
@@ -260,7 +199,7 @@ function TabList({ path, type }: { path: string; type: ContentType }) {
       ListEmptyComponent={
         !loading
           ? () => (
-              <Text style={{ color: colors.text, padding: 16 }}>
+              <Text style={[styles.emptyText, { color: colors.text }]}>
                 No items found
               </Text>
             )
@@ -269,7 +208,7 @@ function TabList({ path, type }: { path: string; type: ContentType }) {
       ListFooterComponent={
         loading && data.length > 0
           ? () => (
-              <View style={{ paddingVertical: 24 }}>
+              <View style={styles.footerLoading}>
                 <ActivityIndicator color={colors.primary} />
               </View>
             )
@@ -280,16 +219,149 @@ function TabList({ path, type }: { path: string; type: ContentType }) {
   );
 }
 
-function IconButton({
-  onPress,
-  icon,
-}: {
-  onPress?: () => void;
-  icon: Parameters<typeof IconSvg>[0]["icon"];
-}) {
+function SingleStatBox({ item }: { item: any }) {
+  const { colors } = useTheme();
   return (
-    <Text onPress={onPress} style={{ marginLeft: 16 }}>
-      <IconSvg icon={icon} size={24} state="default" />
-    </Text>
+    <View style={[styles.statBox, { borderColor: colors.border }]}>
+      <Text
+        onPress={item.onPress}
+        style={[styles.statValue, { color: colors.text }]}
+      >
+        {item.value}
+      </Text>
+      <IconSvg
+        icon={item.icon}
+        size={24}
+        state="default"
+        stateStyles={{ default: { color: colors.muted } }}
+      />
+    </View>
   );
 }
+
+function StatArea({ items }: { items: UserStats | null }) {
+  const objs = Object.entries(items ?? {}).map(
+    ([name, value]) =>
+      ({ name, value }) as { name: keyof UserStats; value: number }
+  );
+
+  const ICON_MAP_STATS: Record<keyof UserStats, string> = {
+    postsCount: "cards",
+    bookmarksCount: "bookmarks",
+    currentStreak: "fire",
+    totalReactions: "heart-alt",
+    totalCaps: "cap",
+  };
+
+  const statItems = objs.map((i) => ({ ...i, icon: ICON_MAP_STATS[i.name] }));
+
+  return (
+    <View style={styles.statAreaWrap}>
+      <View style={styles.statGrid}>
+        {statItems.map((item) => (
+          <SingleStatBox key={item.name} item={item} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const BioArea = ({
+  bio,
+  onPress,
+}: {
+  bio?: string | null;
+  onPress?: () => void;
+}) => {
+  const { colors } = useTheme();
+  const [showMore, setShowMore] = React.useState(false);
+  const toggleShowMore = () => setShowMore((s) => !s);
+
+  const bioText = bio
+    ? showMore
+      ? bio
+      : bio.slice(0, 100) + (bio.length > 100 ? "..." : "")
+    : null;
+
+  // If there is bio text, tap toggles expand; otherwise navigate to edit.
+  const onPressBio = bioText ? toggleShowMore : (onPress ?? (() => {}));
+
+  return (
+    <TouchableOpacity onPress={onPressBio} style={styles.bioWrap}>
+      <Text style={[styles.bioCtaText, { color: colors.muted }]}>
+        {bioText ?? " No bio yet. Tap to add one!"}
+      </Text>
+    </TouchableOpacity>
+  );
+};
+
+/* =========================
+   Styles
+   ========================= */
+const styles = StyleSheet.create({
+  flex1: { flex: 1 },
+  loadingWrap: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerWrap: {
+    width: "100%",
+  },
+  headerRow: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    justifyContent: "space-between",
+  },
+  profileHeader: {
+    alignItems: "center",
+    paddingVertical: 20,
+  },
+  bioText: {
+    fontSize: 14,
+    textAlign: "center",
+    marginTop: 8,
+    maxWidth: "80%",
+  },
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    marginBottom: 5,
+    width: "90%",
+    alignSelf: "center",
+  },
+  tabLabel: { textTransform: "capitalize", fontSize: 14 },
+  tabStyle: { width: "auto", paddingHorizontal: 0 },
+  emptyText: { padding: 16 },
+  footerLoading: { paddingVertical: 24 },
+  statBox: {
+    flexDirection: "row",
+    alignContent: "center",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 6,
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 6,
+    elevation: 1,
+  },
+  statValue: { fontWeight: "500" },
+  statAreaWrap: {
+    alignSelf: "center",
+    margin: 10,
+    marginLeft: 30,
+    flex: 1,
+  },
+  statGrid: {
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  bioWrap: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  bioCtaText: {
+    textAlign: "center",
+  },
+});
