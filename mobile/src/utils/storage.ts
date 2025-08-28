@@ -20,6 +20,7 @@ export enum StorageKind {
   REPLY_IMAGE = "REPLY_IMAGE",
   PUBLIC_ASSET = "PUBLIC_ASSET",
   USER_FILE = "USER_FILE",
+  CHAT_IMAGE = "CHAT_IMAGE",
 }
 
 export type UploadSource =
@@ -293,6 +294,14 @@ function _resolvePathCore(
         ? sanitizeName(opts.fileName)
         : `${uuidv4()}.${resolvedExt}`;
       return { path: `users/${uid}/files/${name}`, ext: resolvedExt };
+    }
+    case StorageKind.CHAT_IMAGE: {
+      const uid = ensure(userId, "userId required for CHAT_IMAGE");
+      const resolvedExt = ext || "jpg";
+      const name = opts.fileName
+        ? sanitizeName(opts.fileName)
+        : `${uuidv4()}.${resolvedExt}`;
+      return { path: `chats/${uid}/images/${name}`, ext: resolvedExt };
     }
     default:
       throw new Error("Unsupported StorageKind");
