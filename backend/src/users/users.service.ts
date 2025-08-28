@@ -16,6 +16,7 @@ import { Secret } from '../secrets/secret.entity';
 import { Streak } from '../streaks/streak.entity'; // if you have a Streak entity
 import { HandleService } from './handle.service';
 import { User } from './user.entity';
+import { UserSort } from './dtos/search-users.dto';
 
 @Injectable()
 export class UsersService {
@@ -173,5 +174,47 @@ export class UsersService {
       totalReactions: totalReactions, // implement if you have reactions
       totalCaps: totalCaps, // implement if you have caps
     };
+  }
+
+  async searchUsers(opts: {
+    requesterId?: string;
+    query: string;
+    page: number;
+    limit: number;
+    sort: UserSort;
+  }) {
+    const { requesterId, query, page, limit, sort } = opts;
+    const offset = (page - 1) * limit;
+
+    // Normalize query
+    const q = (query ?? '').trim();
+    const hasQ = q.length > 0;
+
+    // Base QB
+    const qb = this.usersRepo
+      .createQueryBuilder('u')
+      .select(['u.id', 'u.handle', 'u.avatarUrl']);
+
+    // Optional: exclude requester from results
+    if (requesterId) {
+      qb.andWhere('u.id <> :requesterId', { requesterId });
+    }
+
+    // Basic search (prefix/substring, case-insensitive)
+    if (hasQ) {
+      // Use ILIKE for case-insensitive search on Postgres
+      qb.andWhere('u.handle ILIKE :q', { q: `%${q}%` });
+    }
+
+    // Sorts
+    if (sort === 'handle_asc') qb.orderBy('u.handle', 'ASC');
+    else if (sort === 'handle_desc') qb.orderBy('u.handle', 'DESC');
+    else qb.orderBy('u.handle', 'DESC'); // "recent"
+
+    // Pagination
+    qb.take(limit).skip(offset);
+
+    const [items, total] = await qb.getManyAndCount();
+    return { items, total, page, limit };
   }
 }

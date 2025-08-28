@@ -1,3 +1,4 @@
+// mobile/src/screens/ChatListScreen.tsx
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -9,23 +10,21 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useConversations } from "../hooks/chats/useConversation";
 import { useTheme } from "../theme/ThemeContext";
 import Avatar from "../components/Avatar";
 import { timeAgo } from "../utils/timeAgo";
-import { useStartChat } from "../hooks/chats/useStartChat";
-// If you already have a user search screen, navigate there from FAB instead.
+import { useConversations } from "../hooks/chats/useConversation";
+import { useStartChat } from "../hooks/chats/useStartChat"; // ⬅️ import
+import { useNavigation } from "@react-navigation/native";
 
-type Props = { navigation: any };
-
-export default function ChatListScreen({ navigation }: Props) {
+export default function ChatListScreen() {
+  const nav = useNavigation<any>();
   const { colors } = useTheme();
   const { items, loading, hasMore, loadMore, refresh } = useConversations(20);
-  const startChat = useStartChat();
+  const startChat = useStartChat(); // ⬅️ hook
 
   // simple client-side filter
   const [query, setQuery] = useState("");
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return items;
@@ -36,15 +35,13 @@ export default function ChatListScreen({ navigation }: Props) {
     });
   }, [items, query]);
 
-  // UI helpers
   const renderItem = ({ item }: any) => {
     const last = item.lastMessage;
     const preview = last?.attachmentUrl ? "📎 Attachment" : last?.body || "";
     const ts = last?.createdAt ? timeAgo(last.createdAt, "short") : "";
-
     return (
       <Pressable
-        onPress={() => navigation.navigate("ChatThread", { id: item.id })}
+        onPress={() => nav.navigate("ChatThread", { id: item.id })}
         style={[styles.row, { borderColor: colors.border }]}
       >
         <Avatar
@@ -86,32 +83,32 @@ export default function ChatListScreen({ navigation }: Props) {
     );
   };
 
-  const listEmpty = () => {
-    if (loading) {
-      return (
-        <View style={styles.center}>
+  const listEmpty = () => (
+    <View style={styles.center}>
+      {loading ? (
+        <>
           <ActivityIndicator />
           <Text style={{ marginTop: 8, color: colors.muted }}>
             Loading conversations…
           </Text>
-        </View>
-      );
-    }
-    return (
-      <View style={styles.center}>
-        <Text style={[{ color: colors.text }]}>No conversations yet</Text>
-        <Text style={{ color: colors.muted, marginTop: 4 }}>
-          Start a new chat to get the conversation going.
-        </Text>
-      </View>
-    );
-  };
+        </>
+      ) : (
+        <>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            No conversations yet
+          </Text>
+          <Text style={{ color: colors.muted, marginTop: 4 }}>
+            Tap the + button to start a new chat.
+          </Text>
+        </>
+      )}
+    </View>
+  );
 
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
     >
-      {/* Header + Search */}
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Messages</Text>
       </View>
@@ -136,7 +133,6 @@ export default function ChatListScreen({ navigation }: Props) {
       <FlatList
         data={filtered}
         keyExtractor={(c) => c.id}
-        contentContainerStyle={{ paddingBottom: 100 }}
         ItemSeparatorComponent={() => (
           <View
             style={[styles.separator, { backgroundColor: colors.border }]}
@@ -148,23 +144,38 @@ export default function ChatListScreen({ navigation }: Props) {
         onRefresh={refresh}
         onEndReached={() => hasMore && loadMore()}
         onEndReachedThreshold={0.5}
+        contentContainerStyle={{ paddingBottom: 100 }}
       />
 
-      {/* New Chat FAB */}
+      {/* Start New Chat FAB */}
       <Pressable
         accessibilityRole="button"
-        style={[styles.fab, { backgroundColor: colors.primary }]}
-        onPress={async () => {
-          // OPTION A: Navigate to your existing user search:
-          // navigation.navigate("UserSearch", { mode: "startChat" });
-
-          // OPTION B (inline quick demo): start a chat with a hardcoded userId (replace).
-          // const peerUserId = "REPLACE_WITH_SELECTED_USER_ID";
-          // const res = await startChat.mutateAsync(peerUserId);
-          // navigation.navigate("ChatThread", { id: res.conversationId });
-
-          // If you want, wire this to a bottom sheet that picks a user.
-          navigation.navigate("UserSearch", { mode: "startChat" });
+        disabled={startChat.isPending}
+        style={[
+          styles.fab,
+          {
+            backgroundColor: colors.primary,
+            opacity: startChat.isPending ? 0.6 : 1,
+          },
+        ]}
+        onPress={() => {
+          nav.navigate("UserPicker", {
+            mode: "single",
+            title: "Start New Chat",
+            submitText: "Start",
+            onSubmit: async (users: { id: string }[]) => {
+              if (!users?.length) return;
+              const peerUserId = users[0].id;
+              try {
+                const res = await startChat.mutateAsync(peerUserId);
+                // Navigate straight into the new conversation
+                nav.replace("ChatThread", { id: res.conversationId });
+              } catch (e: any) {
+                // Optional: show toast/alert
+                console.log("Failed to start chat:", e?.message);
+              }
+            },
+          });
         }}
       >
         <Text style={styles.fabPlus}>＋</Text>
@@ -175,10 +186,7 @@ export default function ChatListScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
+  header: { paddingHorizontal: 16, paddingVertical: 12 },
   title: { fontSize: 22, fontWeight: "700" },
 
   searchWrap: {
@@ -189,9 +197,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  searchInput: {
-    fontSize: 16,
-  },
+  searchInput: { fontSize: 16 },
 
   row: {
     flexDirection: "row",
@@ -219,6 +225,7 @@ const styles = StyleSheet.create({
   separator: { height: StyleSheet.hairlineWidth, marginLeft: 68 },
 
   center: { paddingTop: 40, alignItems: "center" },
+  emptyTitle: { fontSize: 16, fontWeight: "600" },
 
   fab: {
     position: "absolute",

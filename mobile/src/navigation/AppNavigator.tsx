@@ -21,6 +21,7 @@ import useMe from "../hooks/useMe";
 import { TouchableOpacity, View } from "react-native";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
 import ChatListScreen from "../screens/ChatListScreen";
+import UserPickerScreen from "../screens/UserPickerScreen";
 
 // --- Types ---
 export type TabParamList = {
@@ -35,6 +36,17 @@ export type RootStackParamList = {
   SecretDetail: any;
   AccountSettings: any;
   Admin: undefined;
+  UserPicker:
+    | {
+        mode?: "single" | "multiple";
+        preselectedIds?: string[];
+        title?: string;
+        submitText?: string;
+        onSubmit?: (
+          users: { id: string; handle: string; avatarUrl?: string | null }[]
+        ) => void;
+      }
+    | undefined;
 };
 
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -118,6 +130,11 @@ export default function AppNavigator() {
       <RootStack.Screen
         name="Admin"
         component={AdminPanelScreen}
+        options={{ headerShown: false }}
+      />
+      <RootStack.Screen
+        name="UserPicker"
+        component={UserPickerScreen}
         options={{ headerShown: false }}
       />
     </RootStack.Navigator>
