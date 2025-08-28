@@ -172,10 +172,13 @@ export default function ProfileScreen({ navigation }: Props) {
 function TabList({ path, type }: { path: string; type: ContentType }) {
   const { colors } = useTheme();
   const { items: data, loading, refresh, loadMore } = useUserContent(type);
-
+  const nav =
+    useNavigation<NavigationProp<RootStackParamList, "SecretDetail">>();
   const keyExtractor = useCallback((item: SecretItemProps) => item.id, []);
   const renderItem = useCallback(
-    ({ item }: { item: SecretItemProps }) => <SecretItem secret={item} />,
+    ({ item }: { item: SecretItemProps }) => (
+      <SecretItem secret={item} navigation={nav} />
+    ),
     []
   );
   const onEndReached = useCallback(() => {
