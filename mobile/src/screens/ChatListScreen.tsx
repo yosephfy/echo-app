@@ -22,18 +22,28 @@ export default function ChatListScreen() {
   const { colors } = useTheme();
   const { items, loading, hasMore, loadMore, refresh } = useConversations(20);
   const startChat = useStartChat();
-  console.table(items);
-  console.log(items);
 
   // simple client-side filter
   const [query, setQuery] = useState("");
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((c) => {
-      const h = c.peer?.handle?.toLowerCase() ?? "";
-      const last = c.lastMessage?.body?.toLowerCase() ?? "";
-      return h.includes(q) || last.includes(q);
+    const base = q
+      ? items.filter((c) => {
+          const h = c.peer?.handle?.toLowerCase() ?? "";
+          const last = c.lastMessage?.body?.toLowerCase() ?? "";
+          return h.includes(q) || last.includes(q);
+        })
+      : items;
+
+    // Keep newest first even after filtering
+    return [...base].sort((a, b) => {
+      const ad = a?.lastMessage?.createdAt
+        ? new Date(a.lastMessage.createdAt).getTime()
+        : 0;
+      const bd = b?.lastMessage?.createdAt
+        ? new Date(b.lastMessage.createdAt).getTime()
+        : 0;
+      return bd - ad;
     });
   }, [items, query]);
 

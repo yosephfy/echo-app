@@ -271,8 +271,22 @@ export class ChatService {
 
     // Emit events
     this.gateway.emitMessageNew(conversationId, serialized);
-    this.gateway.emitConversationUpdated(conversationId);
+    const parts = await this.partRepo.find({ where: { conversationId } });
 
+    // Build the base "row" (lastMessage etc.). Do NOT put unreadCount here.
+    const baseRow = {
+      id: conversationId,
+      lastMessage: serialized, // your serializeMessage result
+      updatedAt: serialized.createdAt,
+    };
+
+    // Emit a per-user payload including their own unreadCount
+    for (const p of parts) {
+      this.gateway.emitConversationUpdatedForUser(p.userId, {
+        ...baseRow,
+        unreadCount: p.userId === userId ? 0 : p.unreadCount, // sender stays 0, others bumped
+      });
+    }
     return serialized;
   }
 
@@ -292,10 +306,22 @@ export class ChatService {
 
     await this.partRepo.update(
       { conversationId, userId },
-      { lastReadMessageId, unreadCount: 0, lastReadAt: new Date() },
+      {
+        lastReadMessageId,
+        unreadCount: 0,
+        lastReadAt: new Date(),
+      },
     );
 
-    this.gateway.emitConversationUpdated(conversationId);
+    // Let THIS user’s list clear its badge immediately
+    this.gateway.emitConversationUpdatedForUser(userId, {
+      id: conversationId,
+      lastMessage: await this.msgRepo
+        .findOne({ where: { id: last.id } }) // or serialized
+        .then((m) => this.serializeMessage(m!)),
+      unreadCount: 0,
+      updatedAt: new Date().toISOString(),
+    });
 
     return { ok: true };
   }

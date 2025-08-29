@@ -1,85 +1,66 @@
-import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
-import { Server } from 'socket.io';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
-import { ConversationParticipant } from './conversation-participant.entity';
-import { Conversation } from './conversation.entity';
-import { Message } from './message.entity';
+import {
+  WebSocketGateway,
+  WebSocketServer,
+  OnGatewayConnection,
+  SubscribeMessage,
+  ConnectedSocket,
+  MessageBody,
+} from '@nestjs/websockets';
+import { Server, Socket } from 'socket.io';
+import * as jwt from 'jsonwebtoken';
 
 @WebSocketGateway({ namespace: '/ws', cors: { origin: '*' } })
-export class ChatGateway {
+export class ChatGateway implements OnGatewayConnection {
   @WebSocketServer() server: Server;
 
-  constructor(
-    @InjectRepository(ConversationParticipant)
-    private readonly partRepo: Repository<ConversationParticipant>,
-    @InjectRepository(Conversation)
-    private readonly convRepo: Repository<Conversation>,
-    @InjectRepository(Message) private readonly msgRepo: Repository<Message>,
-  ) {}
+  async handleConnection(client: Socket) {
+    try {
+      const token =
+        client.handshake.auth?.token ||
+        client.handshake.headers?.authorization?.replace(/^Bearer\s+/, '');
+      if (!token) return client.disconnect();
+      const payload: any = jwt.verify(token, process.env.JWT_SECRET!);
+      const userId = payload?.sub || payload?.id;
+      if (!userId) return client.disconnect();
+      (client as any).userId = userId;
+      client.join(`user:${userId}`);
+    } catch {
+      client.disconnect();
+    }
+  }
 
-  // Rooms are `conversation:<id>`
+  @SubscribeMessage('conversation:join')
+  handleJoin(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() { conversationId }: { conversationId: string },
+  ) {
+    client.join(`conversation:${conversationId}`);
+    // ack back so the client can log success
+    client.emit('conversation:joined', { conversationId });
+  }
+
+  @SubscribeMessage('conversation:leave')
+  handleLeave(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() { conversationId }: { conversationId: string },
+  ) {
+    client.leave(`conversation:${conversationId}`);
+  }
+
   emitMessageNew(conversationId: string, message: any) {
     this.server
       .to(`conversation:${conversationId}`)
       .emit('message:new', { conversationId, message });
   }
 
-  async emitConversationUpdated(conversationId: string) {
-    // Load participants to broadcast per-user (or to room for simplicity)
-    const parts = await this.partRepo.find({ where: { conversationId } });
-    const conv = await this.convRepo.findOne({ where: { id: conversationId } });
-    const last = conv?.lastMessageId
-      ? await this.msgRepo.findOne({
-          where: { id: conv.lastMessageId },
-          relations: ['author'],
-        })
-      : null;
-
-    const payload = {
-      id: conversationId,
-      updatedAt: conv?.lastMessageCreatedAt ?? conv?.createdAt,
-      lastMessage: last
-        ? {
-            id: last.id,
-            conversationId: last.conversationId,
-            body: last.body,
-            attachmentUrl: last.attachmentUrl,
-            mimeType: last.mimeType,
-            createdAt: last.createdAt,
-            author: last.author
-              ? {
-                  id: last.author.id,
-                  handle: (last.author as any).handle,
-                  avatarUrl: (last.author as any).avatarUrl,
-                }
-              : null,
-          }
-        : null,
-      // unreadCount is per-user; clients will recompute locally for own row, or you can emit per user:
-    };
-
-    // Option A: broadcast to the room; clients will refetch or patch row
-    this.server
-      .to(`conversation:${conversationId}`)
-      .emit('conversation:updated', payload);
-
-    // Option B (per-user unread): emit to each user's personal room with user-specific unread counts
-    // for (const p of parts) {
-    //   const row = await this.partRepo.findOne({ where: { conversationId, userId: p.userId } });
-    //   this.server.to(`user:${p.userId}`).emit('conversation:updated', { ...payload, unreadCount: row?.unreadCount ?? 0 });
-    // }
+  emitConversationUpdatedForUsers(userIds: string[], payload: any) {
+    for (const uid of userIds) {
+      this.server.to(`user:${uid}`).emit('conversation:updated', payload);
+    }
   }
 
-  // (Optional) handlers for join/leave
-  handleConnection() {}
-  handleDisconnect() {}
-
-  // called by your REST (or use @SubscribeMessage to handle client joins)
-  joinConversation(client: any, conversationId: string) {
-    client.join(`conversation:${conversationId}`);
-  }
-  leaveConversation(client: any, conversationId: string) {
-    client.leave(`conversation:${conversationId}`);
+  // add a per-user emitter
+  emitConversationUpdatedForUser(userId: string, payload: any) {
+    this.server.to(`user:${userId}`).emit('conversation:updated', payload);
   }
 }

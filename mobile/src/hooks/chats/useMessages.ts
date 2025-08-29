@@ -28,8 +28,11 @@ export function useMessages(conversationId: string, pageSize = 30) {
   const my = useAuthStore((s) => s.user);
   const upsertUsers = useEntities((s) => s.upsertUsers);
 
-  // per-conversation seen id set to avoid duplicates from racey sockets
   const seenIdsRef = useRef<Set<string>>(new Set());
+  // Reset seen set when switching conversation
+  useEffect(() => {
+    seenIdsRef.current = new Set();
+  }, [conversationId]);
 
   const query = useInfiniteQuery<Page>({
     queryKey: qk.messages(conversationId, pageSize),
@@ -59,7 +62,7 @@ export function useMessages(conversationId: string, pageSize = 30) {
     return () => leaveConversationRoom(conversationId);
   }, [conversationId]);
 
-  // Live: single-writer model (socket owns the real message)
+  // Robust listener: attach and reattach on connect
   useEffect(() => {
     const s = getChatSocket();
     if (!s) return;
@@ -70,45 +73,42 @@ export function useMessages(conversationId: string, pageSize = 30) {
     }) => {
       if (payload.conversationId !== conversationId) return;
       const msg = payload.message;
-      if (msg.id && seenIdsRef.current.has(msg.id)) return; // already applied
+      if (msg.id && seenIdsRef.current.has(msg.id)) return;
       if (msg.id) seenIdsRef.current.add(msg.id);
 
       qc.setQueryData(qk.messages(conversationId, pageSize), (old: any) => {
         if (!old?.pages) return old;
-
-        // clone shallow
         const pages = old.pages.map((p: any) => ({
           ...p,
           items: [...p.items],
         }));
         const tail = pages[pages.length - 1];
 
-        // If it's my own message, replace/remove one pending first
-        const isMine = msg.author?.id && msg.author.id === my?.id;
+        const isMine = msg.author?.id === my?.id;
         if (isMine) {
-          const pendingIdx = [...tail.items]
+          const pendingIdxRev = [...tail.items]
             .reverse()
-            .findIndex((m: any) => m.__pending); // last pending
-          if (pendingIdx >= 0) {
-            const idx = tail.items.length - 1 - pendingIdx;
-            tail.items.splice(idx, 1); // remove that pending
+            .findIndex((m: any) => m.__pending);
+          if (pendingIdxRev >= 0) {
+            const idx = tail.items.length - 1 - pendingIdxRev;
+            tail.items.splice(idx, 1);
           }
         }
 
-        // De-dupe by id across all pages just in case
         const exists = pages.some((p: any) =>
           p.items.some((m: any) => m.id && msg.id && m.id === msg.id)
         );
-        if (!exists) {
-          tail.items.push(msg); // append to end (ASC)
-        }
+        if (!exists) tail.items.push(msg);
         return { ...old, pages };
       });
     };
 
-    s.on("message:new", onNew);
+    const attach = () => s.on("message:new", onNew);
+    attach();
+    s.on("connect", attach); // re-attach after reconnect
     return () => {
       s.off("message:new", onNew);
+      s.off("connect", attach);
     };
   }, [qc, conversationId, pageSize, my?.id]);
 
@@ -116,12 +116,14 @@ export function useMessages(conversationId: string, pageSize = 30) {
   const send = useMutation({
     mutationFn: async (vars: { body: string; attachmentUrl?: string }) => {
       const clientToken = `${my?.id}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
-      await api.post(`/chats/${conversationId}/messages`, {
-        ...vars,
-        clientToken,
-      });
-      // NO cache writes here: socket will deliver the real message
-      return { clientToken };
+      const res = await api.post<ChatMessage>(
+        `/chats/${conversationId}/messages`,
+        {
+          ...vars,
+          clientToken,
+        }
+      );
+      return { res, clientToken };
     },
     onMutate: async (vars) => {
       await qc.cancelQueries({
@@ -130,8 +132,8 @@ export function useMessages(conversationId: string, pageSize = 30) {
       const snapshot = qc.getQueryData<any>(
         qk.messages(conversationId, pageSize)
       );
-
       const clientToken = `${my?.id}:${Date.now()}:${Math.random().toString(36).slice(2, 6)}`;
+
       const pending: ChatMessage & {
         __pending?: true;
         __clientToken?: string;
@@ -161,11 +163,35 @@ export function useMessages(conversationId: string, pageSize = 30) {
       }
       return { snapshot, clientToken };
     },
-    onSuccess: () => {
-      // NO-OP: socket will append the real message and the handler will remove one pending
+    onSuccess: ({ res, clientToken }) => {
+      // Fallback replacement in case socket hasn’t delivered yet
+      qc.setQueryData(qk.messages(conversationId, pageSize), (old: any) => {
+        if (!old?.pages) return old;
+        const pages = old.pages.map((p: any) => ({
+          ...p,
+          items: [...p.items],
+        }));
+        for (let pi = pages.length - 1; pi >= 0; pi--) {
+          const items = pages[pi].items;
+          const idx = items.findIndex(
+            (m: any) => m.__clientToken === clientToken || m.__pending
+          );
+          if (idx >= 0) {
+            items[idx] = res;
+            if (res.id) seenIdsRef.current.add(res.id); // prevent later duplicate via socket
+            return { ...old, pages };
+          }
+        }
+        // If pending not found (already removed), append if not exists
+        const tail = pages[pages.length - 1];
+        if (!tail.items.some((m: any) => m.id === res.id)) {
+          tail.items.push(res);
+          if (res.id) seenIdsRef.current.add(res.id);
+        }
+        return { ...old, pages };
+      });
     },
     onError: (_e, _vars, ctx) => {
-      // remove pending if request failed
       qc.setQueryData(qk.messages(conversationId, pageSize), (old: any) => {
         if (!old?.pages) return old;
         const pages = old.pages.map((p: any) => ({
@@ -186,7 +212,6 @@ export function useMessages(conversationId: string, pageSize = 30) {
       });
     },
   });
-
   // Helpers
   const items = useMemo(
     () => query.data?.pages.flatMap((p) => p.items) ?? [],
@@ -203,11 +228,29 @@ export function useMessages(conversationId: string, pageSize = 30) {
 
   const markRead = async () => {
     if (!newestNonPendingId) return;
+    // Optimistic: zero out the badge in the conversations list immediately
+    qc.setQueryData(qk.conversations(20 /* or your default */), (old: any) => {
+      if (!old?.pages) return old;
+      const pages = old.pages.map((p: any) => ({ ...p, items: [...p.items] }));
+      for (const pg of pages) {
+        const idx = pg.items.findIndex((c: any) => c.id === conversationId);
+        if (idx >= 0) {
+          pg.items[idx] = { ...pg.items[idx], unreadCount: 0 };
+          break;
+        }
+      }
+      return { ...old, pages };
+    });
+
     try {
       await api.patch(`/chats/${conversationId}/read`, {
         lastReadMessageId: newestNonPendingId,
       });
-    } catch {}
+      // The server will also emit conversation:updated { unreadCount: 0 }, which keeps things consistent.
+    } catch {
+      // (optional) Rollback if you want:
+      // qc.invalidateQueries({ queryKey: chatKeys.conversations(20) });
+    }
   };
 
   return {

@@ -2,7 +2,7 @@
 import * as SecureStore from "expo-secure-store";
 import { deduped } from "./dedupe";
 
-const BASE_URL = "http://localhost:3000";
+export const BASE_URL = "http://localhost:3000";
 // const BASE_URL = "https://grub-splendid-abnormally.ngrok-free.app";
 
 interface ClientOptions {

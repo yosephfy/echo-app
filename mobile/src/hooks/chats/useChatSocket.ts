@@ -1,12 +1,11 @@
-// mobile/src/hooks/chat/useChatSocket.ts
-import { useEffect } from "react";
-import io, { Socket } from "socket.io-client";
+import { io, Socket } from "socket.io-client";
+import { useEffect, useRef } from "react";
 import { useAuthStore } from "../../store/authStore";
+import { BASE_URL } from "../../api/client";
 
-let socket: Socket | null = null;
-
+let sock: Socket | null = null;
 export function getChatSocket() {
-  return socket;
+  return sock;
 }
 
 export default function useChatSocket() {
@@ -14,38 +13,29 @@ export default function useChatSocket() {
 
   useEffect(() => {
     if (!token) return;
-    socket = io(
-      `${__DEV__ ? "http://localhost:3000" : "https://your.api"}/ws`,
-      {
-        transports: ["websocket"],
-        auth: { token },
-      }
-    );
+    // connect with token in auth
+    sock = io(`${BASE_URL}/ws`, { auth: { token } });
+
     return () => {
-      socket?.disconnect();
-      socket = null;
+      sock?.disconnect();
+      sock = null;
     };
   }, [token]);
-
-  return socket;
 }
 
 export function joinConversationRoom(conversationId: string) {
-  socket?.emit("conversation:join", { conversationId });
+  const s = getChatSocket();
+  if (!s) return;
+  s.emit("conversation:join", { conversationId });
+  // optional: listen once for ack to confirm room join
+  const onJoined = (payload: any) => {
+    if (payload?.conversationId === conversationId) {
+      // console.log('[socket] joined', conversationId);
+      s.off("conversation:joined", onJoined);
+    }
+  };
+  s.on("conversation:joined", onJoined);
 }
 export function leaveConversationRoom(conversationId: string) {
-  socket?.emit("conversation:leave", { conversationId });
-}
-export function markMessagesRead(
-  conversationId: string,
-  lastReadMessageId: string
-) {
-  socket?.emit("messages:markRead", { conversationId, lastReadMessageId });
-}
-export function sendMessage(
-  conversationId: string,
-  body: string,
-  attachmentUrl?: string
-) {
-  socket?.emit("message:send", { conversationId, body, attachmentUrl });
+  getChatSocket()?.emit("conversation:leave", { conversationId });
 }
