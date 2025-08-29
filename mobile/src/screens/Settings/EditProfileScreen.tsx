@@ -100,7 +100,7 @@ export default function EditProfileScreen() {
     try {
       setUploading(true);
       // if you have a dedicated endpoint, call it; otherwise server can randomize on patch
-      const updated = await updateProfile({ avatarUrl: undefined as any });
+      const updated = await updateProfile({ avatarUrl: null });
       if (updated?.avatarUrl) setAvatarUrl(updated.avatarUrl);
       Alert.alert("Updated", "New avatar generated.");
     } catch (e: any) {

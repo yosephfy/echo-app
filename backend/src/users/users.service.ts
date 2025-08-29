@@ -128,7 +128,7 @@ export class UsersService {
     const user = await this.usersRepo.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 
-    user.avatarUrl = dto.avatarUrl;
+    user.avatarUrl = !!dto.random ? this.handleSvc.pickAvatar() : dto.avatarUrl;
     return this.usersRepo.save(user);
   }
 
@@ -151,7 +151,9 @@ export class UsersService {
       if (exists) throw new ConflictException('Handle already in use');
       user.handle = handle;
     }
-    if (avatarUrl) user.avatarUrl = avatarUrl;
+    if (avatarUrl !== undefined)
+      if (avatarUrl === null) user.avatarUrl = this.handleSvc.pickAvatar();
+      else user.avatarUrl = avatarUrl;
     if (bio) user.bio = bio;
     return this.usersRepo.save(user);
   }

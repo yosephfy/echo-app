@@ -41,8 +41,16 @@ export class UsersController {
   }
 
   @Patch('me/profile')
-  updateAvatar(@Request() req, @Body() dto: UpdateProfileDto) {
+  updateProfile(@Request() req, @Body() dto: UpdateProfileDto) {
     return this.usersService.updateProfile(req.user.userId, dto);
+  }
+
+  @Patch('me/avatar')
+  updateAvatar(
+    @Request() req,
+    @Body() dto: { random: boolean; avatarUrl: string },
+  ) {
+    return this.usersService.updateAvatar(req.user.userId, dto);
   }
 
   @Get('me/stats')
