@@ -209,7 +209,7 @@ export class UsersService {
     // Sorts
     if (sort === 'handle_asc') qb.orderBy('u.handle', 'ASC');
     else if (sort === 'handle_desc') qb.orderBy('u.handle', 'DESC');
-    else qb.orderBy('u.handle', 'DESC'); // "recent"
+    else qb.orderBy('u.createdAt', 'DESC'); // "recent"
 
     // Pagination
     qb.take(limit).skip(offset);

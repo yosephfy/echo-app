@@ -5,7 +5,6 @@ import React, {
   useMemo,
   useState,
   useCallback,
-  use,
 } from "react";
 import {
   FlatList,
@@ -26,7 +25,6 @@ import { useMessages } from "../hooks/chats/useMessages";
 import { useAuthStore } from "../store/authStore";
 import { pickAndUploadChatImage } from "../hooks/chats/useSendImage";
 import { useIsFocused } from "@react-navigation/native";
-import { list } from "firebase/storage";
 
 type Props = { route: { params: { id: string } } };
 
