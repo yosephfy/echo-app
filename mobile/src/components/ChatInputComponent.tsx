@@ -1,7 +1,8 @@
 import React from "react";
-import { StyleSheet, TouchableOpacity, Text, ViewStyle } from "react-native";
-import MessageComposer, { MessageComposerProps } from "./MessageComposer";
+import { StyleSheet, TouchableOpacity, ViewStyle } from "react-native";
+import { IconSvg } from "../icons/IconSvg";
 import { useTheme } from "../theme/ThemeContext";
+import MessageComposer, { MessageComposerProps } from "./MessageComposer";
 
 export interface ChatInputProps {
   onSend: (text: string) => void | Promise<void>;
@@ -27,8 +28,11 @@ export default function ChatInputComponent({
   const { colors } = useTheme();
 
   const leftAccessory = onPickImage ? (
-    <TouchableOpacity style={styles.iconBtn} onPress={onPickImage}>
-      <Text style={[styles.iconTxt, { color: colors.text }]}>📷</Text>
+    <TouchableOpacity
+      style={[styles.iconBtn, { borderColor: colors.border }]}
+      onPress={onPickImage}
+    >
+      <IconSvg icon="camera" size={24} />
     </TouchableOpacity>
   ) : undefined;
 
@@ -47,6 +51,11 @@ export default function ChatInputComponent({
 }
 
 const styles = StyleSheet.create({
-  iconBtn: { paddingHorizontal: 8, paddingVertical: 6 },
-  iconTxt: { fontSize: 18 },
+  iconBtn: {
+    padding: 8,
+    borderWidth: 1,
+    borderRadius: "50%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
 });

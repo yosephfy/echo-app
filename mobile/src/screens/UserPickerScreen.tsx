@@ -139,7 +139,7 @@ export default function UserPickerScreen({ route, navigation }: Props) {
               },
             ]}
           >
-            {picked && <IconSvg icon="home" size={16} state="pressed" />}
+            {picked && <IconSvg icon="tick-square" size={16} state="pressed" />}
           </View>
         </View>
       </Pressable>
@@ -170,7 +170,7 @@ export default function UserPickerScreen({ route, navigation }: Props) {
           />
           {!!rawQuery && (
             <Pressable onPress={() => setRawQuery("")}>
-              <IconSvg icon="home" size={18} />
+              <IconSvg icon="wrong" size={18} />
             </Pressable>
           )}
         </View>
@@ -203,7 +203,7 @@ export default function UserPickerScreen({ route, navigation }: Props) {
                 @{u.handle}
               </Text>
               <Pressable onPress={() => toggle(u)} style={{ marginLeft: 6 }}>
-                <IconSvg icon="home" size={12} />
+                <IconSvg icon="wrong" size={12} />
               </Pressable>
             </View>
           ))}

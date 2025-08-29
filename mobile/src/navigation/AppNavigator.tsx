@@ -72,7 +72,7 @@ function MainTabs() {
           let iconName: IconName = "home";
           if (route.name === "Feed") iconName = "home";
           else if (route.name === "Discover") iconName = "search-alt";
-          else if (route.name === "Chats") iconName = "comment";
+          else if (route.name === "Chats") iconName = "chat-round-line";
           else if (route.name === "Profile") iconName = "circle-user";
 
           return (

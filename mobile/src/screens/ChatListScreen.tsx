@@ -16,6 +16,7 @@ import { timeAgo } from "../utils/timeAgo";
 import { useConversations } from "../hooks/chats/useConversation";
 import { useStartChat } from "../hooks/chats/useStartChat"; // ⬅️ import
 import { useNavigation } from "@react-navigation/native";
+import { IconSvg } from "../icons/IconSvg";
 
 export default function ChatListScreen() {
   const nav = useNavigation<any>();
@@ -163,13 +164,7 @@ export default function ChatListScreen() {
       <Pressable
         accessibilityRole="button"
         disabled={startChat.isPending}
-        style={[
-          styles.fab,
-          {
-            backgroundColor: colors.primary,
-            opacity: startChat.isPending ? 0.6 : 1,
-          },
-        ]}
+        style={[styles.fab]}
         onPress={() => {
           nav.navigate("UserPicker", {
             mode: "single",
@@ -190,7 +185,11 @@ export default function ChatListScreen() {
           });
         }}
       >
-        <Text style={styles.fabPlus}>＋</Text>
+        <IconSvg
+          icon="add-circle"
+          size={70}
+          stateStyles={{ default: { color: colors.primary } }}
+        />
       </Pressable>
     </SafeAreaView>
   );
