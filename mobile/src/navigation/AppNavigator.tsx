@@ -20,12 +20,15 @@ import { useTheme } from "../theme/ThemeContext";
 import useMe from "../hooks/useMe";
 import { TouchableOpacity, View } from "react-native";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
+import ChatListScreen from "../screens/ChatListScreen";
+import UserPickerScreen from "../screens/UserPickerScreen";
+import ChatThreadScreen from "../screens/ChatThreadScreen";
 
 // --- Types ---
 export type TabParamList = {
   Feed: undefined;
   Discover: undefined;
-  Bookmarks: undefined;
+  Chats: undefined;
   Profile: undefined;
 };
 
@@ -34,6 +37,18 @@ export type RootStackParamList = {
   SecretDetail: any;
   AccountSettings: any;
   Admin: undefined;
+  UserPicker:
+    | {
+        mode?: "single" | "multiple";
+        preselectedIds?: string[];
+        title?: string;
+        submitText?: string;
+        onSubmit?: (
+          users: { id: string; handle: string; avatarUrl?: string | null }[]
+        ) => void;
+      }
+    | undefined;
+  ChatThread: { id: string };
 };
 
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -57,7 +72,7 @@ function MainTabs() {
           let iconName: IconName = "home";
           if (route.name === "Feed") iconName = "home";
           else if (route.name === "Discover") iconName = "search-alt";
-          else if (route.name === "Bookmarks") iconName = "bookmarks";
+          else if (route.name === "Chats") iconName = "comment";
           else if (route.name === "Profile") iconName = "circle-user";
 
           return (
@@ -72,7 +87,7 @@ function MainTabs() {
     >
       <Tab.Screen name="Feed" component={FeedScreen} />
       <Tab.Screen name="Discover" component={DiscoverScreen} />
-      <Tab.Screen name="Bookmarks" component={BookmarksScreen} />
+      <Tab.Screen name="Chats" component={ChatListScreen} />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
@@ -117,6 +132,16 @@ export default function AppNavigator() {
       <RootStack.Screen
         name="Admin"
         component={AdminPanelScreen}
+        options={{ headerShown: false }}
+      />
+      <RootStack.Screen
+        name="UserPicker"
+        component={UserPickerScreen}
+        options={{ headerShown: false }}
+      />
+      <RootStack.Screen
+        name="ChatThread"
+        component={ChatThreadScreen}
         options={{ headerShown: false }}
       />
     </RootStack.Navigator>

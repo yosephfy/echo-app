@@ -6,11 +6,13 @@ import {
   UseGuards,
   Request,
   Post,
+  Query,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UpdateCredentialsDto } from '../auth/dto/update-credentials.dto';
 import { UpdateAvatarDto } from '..//auth/dto/update-avatar.dto';
 import { UsersService } from './users.service';
+import { SearchUsersDto } from './dtos/search-users.dto';
 
 type RefreshDto = {
   handle?: boolean;
@@ -51,5 +53,17 @@ export class UsersController {
   @Post('refresh-profile')
   refresh(@Request() req, @Body() dto: RefreshDto) {
     return this.usersService.refreshProfile(req.user.userId, dto);
+  }
+
+  @Get('search')
+  async search(@Request() req: any, @Query() dto: SearchUsersDto) {
+    // Optionally exclude requester from results by default:
+    return this.usersService.searchUsers({
+      requesterId: req.user?.id,
+      query: dto.query ?? '',
+      page: dto.page ?? 1,
+      limit: dto.limit ?? 20,
+      sort: dto.sort ?? 'handle_asc',
+    });
   }
 }
