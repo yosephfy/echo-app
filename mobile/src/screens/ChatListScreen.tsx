@@ -21,7 +21,9 @@ export default function ChatListScreen() {
   const nav = useNavigation<any>();
   const { colors } = useTheme();
   const { items, loading, hasMore, loadMore, refresh } = useConversations(20);
-  const startChat = useStartChat(); // ⬅️ hook
+  const startChat = useStartChat();
+  console.table(items);
+  console.log(items);
 
   // simple client-side filter
   const [query, setQuery] = useState("");

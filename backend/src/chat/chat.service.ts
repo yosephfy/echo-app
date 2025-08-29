@@ -5,12 +5,14 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan, LessThan } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Conversation } from './conversation.entity';
 import { ConversationParticipant } from './conversation-participant.entity';
 import { Message } from './message.entity';
 import { MessageClientToken } from './message-client-token.entity';
 import { UserBlock } from './user-block.entity';
+import { User } from '../users/user.entity'; // adjust path
+import { ChatGateway } from './chat.gateway'; // <- to emit WS events
 
 @Injectable()
 export class ChatService {
@@ -24,9 +26,10 @@ export class ChatService {
     private readonly tokenRepo: Repository<MessageClientToken>,
     @InjectRepository(UserBlock)
     private readonly blockRepo: Repository<UserBlock>,
+    @InjectRepository(User) private readonly userRepo: Repository<User>,
+    private readonly gateway: ChatGateway,
   ) {}
 
-  /** Ensure user is a participant of the conversation */
   private async assertMember(userId: string, conversationId: string) {
     const exists = await this.partRepo.findOne({
       where: { conversationId, userId },
@@ -34,7 +37,6 @@ export class ChatService {
     if (!exists) throw new ForbiddenException('Not a participant');
   }
 
-  /** Ensure no mutual blocks */
   private async assertNotBlocked(a: string, b: string) {
     const blocked = await this.blockRepo.findOne({
       where: [
@@ -51,7 +53,7 @@ export class ChatService {
       throw new BadRequestException('Cannot chat with yourself');
     await this.assertNotBlocked(myId, peerUserId);
 
-    // Try reuse: find conversation that has exactly these two participants
+    // Try reuse: 2 participants exactly, one is me and one is peer
     const existing = await this.partRepo
       .createQueryBuilder('p')
       .select('p.conversationId', 'conversationId')
@@ -61,7 +63,6 @@ export class ChatService {
       .getRawOne<{ conversationId: string }>();
 
     let conversationId = existing?.conversationId;
-
     if (!conversationId) {
       const conv = await this.convRepo.save(this.convRepo.create({}));
       conversationId = conv.id;
@@ -70,58 +71,111 @@ export class ChatService {
         this.partRepo.create({ conversationId, userId: peerUserId }),
       ]);
     }
-
     return { conversationId };
   }
 
-  /** Faster conversation list using counter cache + lastMessage fields */
+  /** List conversations with peer + lastMessage (author populated) */
   async listConversations(userId: string, page = 1, limit = 20) {
     const offset = (page - 1) * limit;
 
-    // Conversations I participate in (ordered by lastMessageCreatedAt desc, fallback joinedAt)
-    const qb = this.partRepo
-      .createQueryBuilder('p')
-      .leftJoinAndSelect('p.conversation', 'c')
-      .where('p.userId = :userId', { userId })
-      .orderBy('c.lastMessageCreatedAt', 'DESC')
-      .addOrderBy('p.joinedAt', 'DESC')
-      .skip(offset)
-      .take(limit);
+    // fetch my participant rows
+    const parts = await this.partRepo.find({
+      where: { userId },
+      relations: ['conversation'],
+      order: {
+        conversation: { lastMessageCreatedAt: 'DESC' } as any,
+        joinedAt: 'DESC',
+      },
+      skip: offset,
+      take: limit,
+    });
 
-    const parts = await qb.getMany();
     const total = await this.partRepo.count({ where: { userId } });
-
-    // Select lastMessages in one go (map by id)
     const convIds = parts.map((p) => p.conversationId);
-    let lastByConv = new Map<string, Message>();
-    if (convIds.length) {
-      const lastMessages = await this.msgRepo
-        .createQueryBuilder('m')
-        .where(
-          'm.id IN ' +
-            qb
-              .subQuery()
-              .select('DISTINCT ON (c.id) m2.id')
-              .from(Message, 'm2')
-              .innerJoin('m2.conversation', 'c')
-              .where('c.id IN (:...ids)', { ids: convIds })
-              .orderBy('c.id, m2.createdAt', 'DESC')
-              .getQuery(),
-        )
-        .getMany();
-
-      lastByConv = new Map(lastMessages.map((m) => [m.conversationId, m]));
+    if (convIds.length === 0) {
+      return { items: [], total, page, limit };
     }
 
-    const items = parts.map((p) => ({
-      id: p.conversationId,
-      unreadCount: p.unreadCount, // <-- COUNTER CACHE
-      lastMessage: lastByConv.get(p.conversationId) ?? null,
-    }));
+    // load all participants for these convs to determine peer
+    const allParts = await this.partRepo.find({
+      where: { conversationId: In(convIds) },
+    });
+
+    // build convId -> otherUserId
+    const peerByConv = new Map<string, string>();
+    for (const cid of convIds) {
+      const ps = allParts.filter((p) => p.conversationId === cid);
+      // 1:1 expected; pick the one that isn't me
+      const peer = ps.find((p) => p.userId !== userId);
+      if (peer) peerByConv.set(cid, peer.userId);
+    }
+
+    // load peer users
+    const peerIds = Array.from(new Set([...peerByConv.values()]));
+    const peers = peerIds.length
+      ? await this.userRepo.find({
+          where: { id: In(peerIds) },
+          select: ['id', 'handle', 'avatarUrl'],
+        })
+      : [];
+    const peerMap = new Map(peers.map((u) => [u.id, u]));
+
+    // load last messages with author relation populated
+    const lastMessages = await this.msgRepo.find({
+      where: { conversationId: In(convIds) },
+      relations: ['author'],
+      order: { createdAt: 'DESC' },
+      take: convIds.length * 3, // small overfetch then map per conv
+    });
+    const lastByConv = new Map<string, Message>();
+    for (const m of lastMessages) {
+      if (!lastByConv.has(m.conversationId)) {
+        lastByConv.set(m.conversationId, m);
+      }
+    }
+
+    const items = parts.map((p) => {
+      const cid = p.conversationId;
+      const last = lastByConv.get(cid) ?? null;
+      const peerUser = peerByConv.has(cid)
+        ? peerMap.get(peerByConv.get(cid)!)
+        : null;
+
+      return {
+        id: cid,
+        unreadCount: p.unreadCount ?? 0,
+        lastMessage: last
+          ? {
+              id: last.id,
+              conversationId: last.conversationId,
+              body: last.body,
+              attachmentUrl: last.attachmentUrl,
+              mimeType: last.mimeType,
+              createdAt: last.createdAt,
+              author: last.author
+                ? {
+                    id: last.author.id,
+                    handle: (last.author as any).handle,
+                    avatarUrl: (last.author as any).avatarUrl,
+                  }
+                : null,
+            }
+          : null,
+        updatedAt: (p.conversation?.lastMessageCreatedAt ?? p.joinedAt) as Date,
+        peer: peerUser
+          ? {
+              id: peerUser.id,
+              handle: (peerUser as any).handle,
+              avatarUrl: (peerUser as any).avatarUrl,
+            }
+          : null,
+      };
+    });
 
     return { items, total, page, limit };
   }
-  /** Paginated messages, OLDEST -> NEWEST for forward scroll lists */
+
+  /** Messages: OLDEST→NEWEST and author populated */
   async listMessages(
     userId: string,
     conversationId: string,
@@ -130,16 +184,34 @@ export class ChatService {
   ) {
     await this.assertMember(userId, conversationId);
 
-    const [items, total] = await this.msgRepo.findAndCount({
+    const [rows, total] = await this.msgRepo.findAndCount({
       where: { conversationId },
-      order: { createdAt: 'ASC' }, // <-- FLIPPED
+      order: { createdAt: 'ASC' },
+      relations: ['author'],
       take: limit,
       skip: (page - 1) * limit,
     });
 
+    const items = rows.map((m) => ({
+      id: m.id,
+      conversationId: m.conversationId,
+      body: m.body,
+      attachmentUrl: m.attachmentUrl,
+      mimeType: m.mimeType,
+      createdAt: m.createdAt,
+      author: m.author
+        ? {
+            id: m.author.id,
+            handle: (m.author as any).handle,
+            avatarUrl: (m.author as any).avatarUrl,
+          }
+        : null,
+    }));
+
     return { items, total, page, limit };
   }
-  /** Send message with idempotency, update lastMessage*, bump unread counters */
+
+  /** Send message (idempotent), bump unread, emit events */
   async sendMessage(
     userId: string,
     conversationId: string,
@@ -155,8 +227,9 @@ export class ChatService {
     if (tokenHit) {
       const existing = await this.msgRepo.findOne({
         where: { id: tokenHit.messageId },
+        relations: ['author'],
       });
-      if (existing) return existing;
+      if (existing) return this.serializeMessage(existing);
     }
 
     // Create
@@ -170,7 +243,6 @@ export class ChatService {
       }),
     );
 
-    // Persist idempotency key
     await this.tokenRepo.save(
       this.tokenRepo.create({ clientToken, messageId: msg.id }),
     );
@@ -181,7 +253,7 @@ export class ChatService {
       lastMessageCreatedAt: msg.createdAt,
     });
 
-    // Bump unread for ALL other participants
+    // Bump unread for other participants
     await this.partRepo
       .createQueryBuilder()
       .update()
@@ -190,10 +262,21 @@ export class ChatService {
       .andWhere(`"userId" <> :authorId`, { authorId: userId })
       .execute();
 
-    return msg;
+    // Reload author to serialize
+    const withAuthor = await this.msgRepo.findOne({
+      where: { id: msg.id },
+      relations: ['author'],
+    });
+    const serialized = this.serializeMessage(withAuthor!);
+
+    // Emit events
+    this.gateway.emitMessageNew(conversationId, serialized);
+    this.gateway.emitConversationUpdated(conversationId);
+
+    return serialized;
   }
 
-  /** Mark conversation read: set pointer + reset unread counter */
+  /** Mark read → reset unread; emit conversation:updated */
   async markRead(
     userId: string,
     conversationId: string,
@@ -201,7 +284,6 @@ export class ChatService {
   ) {
     await this.assertMember(userId, conversationId);
 
-    // validate message belongs to conversation (optional fast-path)
     const last = await this.msgRepo.findOne({
       where: { id: lastReadMessageId, conversationId },
     });
@@ -210,14 +292,29 @@ export class ChatService {
 
     await this.partRepo.update(
       { conversationId, userId },
-      {
-        lastReadMessageId,
-        lastReadMessage: last, // if you keep relation hydrated
-        unreadCount: 0, // <-- RESET COUNTER
-        lastReadAt: new Date(), // optional
-      },
+      { lastReadMessageId, unreadCount: 0, lastReadAt: new Date() },
     );
 
+    this.gateway.emitConversationUpdated(conversationId);
+
     return { ok: true };
+  }
+
+  private serializeMessage(m: Message) {
+    return {
+      id: m.id,
+      conversationId: m.conversationId,
+      body: m.body,
+      attachmentUrl: m.attachmentUrl,
+      mimeType: m.mimeType,
+      createdAt: m.createdAt,
+      author: m.author
+        ? {
+            id: m.author.id,
+            handle: (m.author as any).handle,
+            avatarUrl: (m.author as any).avatarUrl,
+          }
+        : null,
+    };
   }
 }

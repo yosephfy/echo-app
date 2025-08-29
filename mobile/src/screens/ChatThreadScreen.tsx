@@ -30,7 +30,7 @@ export default function ChatThreadScreen({ route }: any) {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
       <FlatList
         data={items}
-        keyExtractor={(m) => m.id}
+        keyExtractor={(m) => m.id ?? (m as any).__clientToken}
         renderItem={({ item }) => (
           <View
             style={{

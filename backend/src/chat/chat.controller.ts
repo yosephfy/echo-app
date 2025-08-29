@@ -1,77 +1,87 @@
 import {
+  Body,
   Controller,
   Get,
-  Post,
-  Patch,
   Param,
-  Body,
+  Patch,
+  Post,
   Query,
-  UseGuards,
   Req,
+  UseGuards,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ChatService } from './chat.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard'; // adjust path
-import { PaginationDto } from './dto/pagination.dto';
-import { StartChatDto } from './dto/start-chat.dto';
-import { SendMessageDto } from './dto/send-message.dto';
-import { MarkReadDto } from './dto/mark-read.dto';
 
-@Controller('chats')
 @UseGuards(JwtAuthGuard)
+@Controller('chats')
 export class ChatController {
-  constructor(private readonly chat: ChatService) {}
-
-  @Post('start')
-  async start(@Req() req: any, @Body() dto: StartChatDto) {
-    return this.chat.startOneToOne(req.user.id, dto.peerUserId);
-  }
+  constructor(private readonly chats: ChatService) {}
 
   @Get()
   async list(
     @Req() req: any,
-    @Query() { page = 1, limit = 20 }: PaginationDto,
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
   ) {
-    return this.chat.listConversations(req.user.id, page, limit);
+    return this.chats.listConversations(
+      req.user.userId,
+      Number(page),
+      Number(limit),
+    );
   }
 
-  // chat.controller.ts
+  @Post('start')
+  async start(@Req() req: any, @Body('peerUserId') peerUserId: string) {
+    return this.chats.startOneToOne(req.user.userId, peerUserId);
+  }
+
   @Get(':id/messages')
   async messages(
     @Req() req: any,
     @Param('id') conversationId: string,
-    @Query() { page = 1, limit = 30 }: PaginationDto,
+    @Query('page') page = 1,
+    @Query('limit') limit = 30,
   ) {
-    // returns OLDEST -> NEWEST (forward scroll)
-    return this.chat.listMessages(req.user.id, conversationId, page, limit);
+    return this.chats.listMessages(
+      req.user.userId,
+      conversationId,
+      Number(page),
+      Number(limit),
+    );
   }
 
   @Post(':id/messages')
   async send(
     @Req() req: any,
     @Param('id') conversationId: string,
-    @Body() dto: SendMessageDto,
+    @Body()
+    body: {
+      body?: string;
+      clientToken: string;
+      attachmentUrl?: string;
+      mimeType?: string;
+    },
   ) {
-    const msg = await this.chat.sendMessage(
-      req.user.id,
+    return this.chats.sendMessage(
+      req.user.userId,
       conversationId,
-      dto.body,
-      dto.clientToken,
-      dto.attachmentUrl,
-      dto.mimeType,
+      body.body ?? '',
+      body.clientToken,
+      body.attachmentUrl,
+      body.mimeType,
     );
-    return msg;
   }
 
   @Patch(':id/read')
   async markRead(
     @Req() req: any,
     @Param('id') conversationId: string,
-    @Body() dto: MarkReadDto,
+    @Body('lastReadMessageId') lastReadMessageId: string,
   ) {
-    return this.chat.markRead(
-      req.user.id,
+    return this.chats.markRead(
+      req.user.userId,
       conversationId,
-      dto.lastReadMessageId,
+      lastReadMessageId,
     );
   }
 }

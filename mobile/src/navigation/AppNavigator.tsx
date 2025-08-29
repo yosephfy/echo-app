@@ -22,6 +22,7 @@ import { TouchableOpacity, View } from "react-native";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
 import ChatListScreen from "../screens/ChatListScreen";
 import UserPickerScreen from "../screens/UserPickerScreen";
+import ChatThreadScreen from "../screens/ChatThreadScreen";
 
 // --- Types ---
 export type TabParamList = {
@@ -47,6 +48,7 @@ export type RootStackParamList = {
         ) => void;
       }
     | undefined;
+  ChatThread: { id: string };
 };
 
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -135,6 +137,11 @@ export default function AppNavigator() {
       <RootStack.Screen
         name="UserPicker"
         component={UserPickerScreen}
+        options={{ headerShown: false }}
+      />
+      <RootStack.Screen
+        name="ChatThread"
+        component={ChatThreadScreen}
         options={{ headerShown: false }}
       />
     </RootStack.Navigator>

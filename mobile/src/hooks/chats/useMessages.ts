@@ -4,7 +4,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { api } from "../../api/client";
 import { useAuthStore } from "../../store/authStore";
 import { useEntities } from "../../store/entities";
@@ -28,6 +28,9 @@ export function useMessages(conversationId: string, pageSize = 30) {
   const my = useAuthStore((s) => s.user);
   const upsertUsers = useEntities((s) => s.upsertUsers);
 
+  // per-conversation seen id set to avoid duplicates from racey sockets
+  const seenIdsRef = useRef<Set<string>>(new Set());
+
   const query = useInfiniteQuery<Page>({
     queryKey: qk.messages(conversationId, pageSize),
     enabled: !!conversationId,
@@ -37,6 +40,8 @@ export function useMessages(conversationId: string, pageSize = 30) {
         limit: pageSize,
       });
       upsertUsers(res.items.map((m) => m.author));
+      // seed seen set for fetched pages
+      for (const m of res.items) if (m.id) seenIdsRef.current.add(m.id);
       return res; // OLDEST -> NEWEST
     },
     getNextPageParam: (last, all) => {
@@ -51,50 +56,72 @@ export function useMessages(conversationId: string, pageSize = 30) {
   useEffect(() => {
     if (!conversationId) return;
     joinConversationRoom(conversationId);
-    return () => {
-      leaveConversationRoom(conversationId);
-    };
+    return () => leaveConversationRoom(conversationId);
   }, [conversationId]);
 
-  // Live: append to end (ASC)
+  // Live: single-writer model (socket owns the real message)
   useEffect(() => {
     const s = getChatSocket();
     if (!s) return;
-    const handler = (payload: {
+
+    const onNew = (payload: {
       conversationId: string;
       message: ChatMessage;
     }) => {
       if (payload.conversationId !== conversationId) return;
+      const msg = payload.message;
+      if (msg.id && seenIdsRef.current.has(msg.id)) return; // already applied
+      if (msg.id) seenIdsRef.current.add(msg.id);
+
       qc.setQueryData(qk.messages(conversationId, pageSize), (old: any) => {
         if (!old?.pages) return old;
-        const pages = [...old.pages];
-        const lastPage = pages[pages.length - 1];
-        const exists = lastPage.items.some(
-          (m: any) => m.id === payload.message.id
+
+        // clone shallow
+        const pages = old.pages.map((p: any) => ({
+          ...p,
+          items: [...p.items],
+        }));
+        const tail = pages[pages.length - 1];
+
+        // If it's my own message, replace/remove one pending first
+        const isMine = msg.author?.id && msg.author.id === my?.id;
+        if (isMine) {
+          const pendingIdx = [...tail.items]
+            .reverse()
+            .findIndex((m: any) => m.__pending); // last pending
+          if (pendingIdx >= 0) {
+            const idx = tail.items.length - 1 - pendingIdx;
+            tail.items.splice(idx, 1); // remove that pending
+          }
+        }
+
+        // De-dupe by id across all pages just in case
+        const exists = pages.some((p: any) =>
+          p.items.some((m: any) => m.id && msg.id && m.id === msg.id)
         );
-        if (exists) return old;
-        lastPage.items = [...lastPage.items, payload.message];
+        if (!exists) {
+          tail.items.push(msg); // append to end (ASC)
+        }
         return { ...old, pages };
       });
     };
-    s.on("message:new", handler);
-    return () => {
-      s.off("conversation:updated", handler);
-    };
-  }, [qc, conversationId, pageSize]);
 
-  // Optimistic send (no temp UUID sent to server)
+    s.on("message:new", onNew);
+    return () => {
+      s.off("message:new", onNew);
+    };
+  }, [qc, conversationId, pageSize, my?.id]);
+
+  // Optimistic send: add pending; server/WS will replace it
   const send = useMutation({
     mutationFn: async (vars: { body: string; attachmentUrl?: string }) => {
       const clientToken = `${my?.id}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
-      const res = await api.post<ChatMessage>(
-        `/chats/${conversationId}/messages`,
-        {
-          ...vars,
-          clientToken,
-        }
-      );
-      return res;
+      await api.post(`/chats/${conversationId}/messages`, {
+        ...vars,
+        clientToken,
+      });
+      // NO cache writes here: socket will deliver the real message
+      return { clientToken };
     },
     onMutate: async (vars) => {
       await qc.cancelQueries({
@@ -104,8 +131,12 @@ export function useMessages(conversationId: string, pageSize = 30) {
         qk.messages(conversationId, pageSize)
       );
 
-      const pending: ChatMessage & { __pending?: true } = {
-        id: `client:${Date.now()}`,
+      const clientToken = `${my?.id}:${Date.now()}:${Math.random().toString(36).slice(2, 6)}`;
+      const pending: ChatMessage & {
+        __pending?: true;
+        __clientToken?: string;
+      } = {
+        id: undefined as any,
         conversationId,
         author: {
           id: my?.id!,
@@ -116,40 +147,41 @@ export function useMessages(conversationId: string, pageSize = 30) {
         attachmentUrl: vars.attachmentUrl,
         createdAt: new Date().toISOString(),
         __pending: true,
+        __clientToken: clientToken,
       };
 
       if (snapshot?.pages?.length) {
         const pages = [...snapshot.pages];
-        pages[pages.length - 1] = {
-          ...pages[pages.length - 1],
-          items: [...pages[pages.length - 1].items, pending], // append at end
-        };
+        const tail = pages[pages.length - 1];
+        pages[pages.length - 1] = { ...tail, items: [...tail.items, pending] };
         qc.setQueryData(qk.messages(conversationId, pageSize), {
           ...snapshot,
           pages,
         });
       }
-      return { snapshot, pendingId: pending.id };
+      return { snapshot, clientToken };
     },
-    onSuccess: (message, _vars, ctx) => {
-      // replace pending with real
-      qc.setQueryData(qk.messages(conversationId, pageSize), (old: any) => {
-        if (!old?.pages) return old;
-        const pages = [...old.pages];
-        const last = pages[pages.length - 1];
-        last.items = last.items.map((m: any) =>
-          m.id === ctx?.pendingId ? message : m
-        );
-        return { ...old, pages };
-      });
+    onSuccess: () => {
+      // NO-OP: socket will append the real message and the handler will remove one pending
     },
     onError: (_e, _vars, ctx) => {
-      // remove pending
+      // remove pending if request failed
       qc.setQueryData(qk.messages(conversationId, pageSize), (old: any) => {
         if (!old?.pages) return old;
-        const pages = [...old.pages];
-        const last = pages[pages.length - 1];
-        last.items = last.items.filter((m: any) => m.id !== ctx?.pendingId);
+        const pages = old.pages.map((p: any) => ({
+          ...p,
+          items: [...p.items],
+        }));
+        for (let pi = pages.length - 1; pi >= 0; pi--) {
+          const items = pages[pi].items;
+          const idx = items.findIndex(
+            (m: any) => m.__clientToken === ctx?.clientToken || m.__pending
+          );
+          if (idx >= 0) {
+            items.splice(idx, 1);
+            break;
+          }
+        }
         return { ...old, pages };
       });
     },
@@ -160,22 +192,29 @@ export function useMessages(conversationId: string, pageSize = 30) {
     () => query.data?.pages.flatMap((p) => p.items) ?? [],
     [query.data]
   );
-  const newestId = items.length ? items[items.length - 1].id : undefined;
+
+  const newestNonPendingId = useMemo(() => {
+    for (let i = items.length - 1; i >= 0; i--) {
+      const m: any = items[i];
+      if (!m?.__pending && m?.id) return m.id;
+    }
+    return undefined;
+  }, [items]);
 
   const markRead = async () => {
-    if (!newestId) return;
+    if (!newestNonPendingId) return;
     try {
       await api.patch(`/chats/${conversationId}/read`, {
-        lastReadMessageId: newestId,
+        lastReadMessageId: newestNonPendingId,
       });
     } catch {}
   };
 
   return {
-    items, // ASC, render top→down
+    items, // ASC
     loading: query.isLoading,
     hasMore: !!query.hasNextPage,
-    loadMore: () => query.fetchNextPage(), // append newer pages
+    loadMore: () => query.fetchNextPage(),
     refresh: () => query.refetch(),
     send: (body: string, attachmentUrl?: string) =>
       send.mutateAsync({ body, attachmentUrl }),

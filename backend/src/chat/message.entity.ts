@@ -9,6 +9,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Conversation } from './conversation.entity';
+import { User } from '../users/user.entity'; // <- adjust path
 
 @Entity('messages')
 @Index(['conversationId', 'createdAt'])
@@ -25,6 +26,10 @@ export class Message {
 
   @Column('uuid')
   authorId: string;
+
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'authorId' })
+  author: User; // <- added
 
   @Column({ type: 'text', default: '' })
   body: string;
