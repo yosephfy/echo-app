@@ -5,17 +5,14 @@ import React, {
   useMemo,
   useState,
   useCallback,
-  use,
 } from "react";
 import {
   FlatList,
   View,
-  TextInput,
   Text,
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
-  TouchableOpacity,
   Image,
   ActivityIndicator,
   StyleSheet,
@@ -26,7 +23,7 @@ import { useMessages } from "../hooks/chats/useMessages";
 import { useAuthStore } from "../store/authStore";
 import { pickAndUploadChatImage } from "../hooks/chats/useSendImage";
 import { useIsFocused } from "@react-navigation/native";
-import { list } from "firebase/storage";
+import ChatInputComponent from "../components/ChatInputComponent";
 
 type Props = { route: { params: { id: string } } };
 
@@ -40,8 +37,6 @@ export default function ChatThreadScreen({ route }: Props) {
   const isFocused = useIsFocused();
 
   const listRef = useRef<FlatList<any>>(null);
-  const inputRef = useRef<TextInput>(null);
-  const [text, setText] = useState("");
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -88,15 +83,17 @@ export default function ChatThreadScreen({ route }: Props) {
     listRef.current?.scrollToEnd({ animated: false });
   }, [listRef]); // on mount
 
-  const handleSend = useCallback(async () => {
-    const body = text.trim();
-    if (!body || sending) return;
-    await send(body);
-    setText("");
-    // Optimistic pending goes in; we’ll be at bottom after socket confirmation anyway,
-    // but this keeps UX snappy.
-    scrollToBottom();
-  }, [text, sending, send, scrollToBottom]);
+  const handleSend = useCallback(
+    async (body: string) => {
+      const trimmed = body.trim();
+      if (!trimmed || sending) return;
+      await send(trimmed);
+      // Optimistic pending goes in; we’ll be at bottom after socket confirmation anyway,
+      // but this keeps UX snappy.
+      scrollToBottom();
+    },
+    [sending, send, scrollToBottom]
+  );
 
   const handlePickImage = useCallback(async () => {
     const url = await pickAndUploadChatImage(meId);
@@ -200,31 +197,15 @@ export default function ChatThreadScreen({ route }: Props) {
         />
 
         {/* Composer */}
-        <View style={styles.composer}>
-          <TouchableOpacity style={styles.iconBtn} onPress={handlePickImage}>
-            <Text style={styles.iconTxt}>📷</Text>
-          </TouchableOpacity>
-          <TextInput
-            ref={inputRef}
-            value={text}
-            onChangeText={setText}
-            placeholder="Message"
-            placeholderTextColor="#999"
-            style={styles.input}
-            multiline
-            onFocus={() => setTimeout(scrollToBottom, 50)}
-          />
-          <TouchableOpacity
-            style={[
-              styles.sendBtn,
-              (sending || !text.trim()) && styles.sendDisabled,
-            ]}
-            onPress={handleSend}
-            disabled={sending || !text.trim()}
-          >
-            <Text style={styles.sendTxt}>{sending ? "…" : "Send"}</Text>
-          </TouchableOpacity>
-        </View>
+        <ChatInputComponent
+          onSend={handleSend}
+          sending={sending}
+          placeholder="Message"
+          multiline
+          onFocus={() => setTimeout(scrollToBottom, 50)}
+          onPickImage={handlePickImage}
+          sendOnEnter
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -257,36 +238,4 @@ const styles = StyleSheet.create({
   bodyOther: { color: "#222" },
   rowEnd: { marginTop: 4, alignSelf: "flex-end" },
   image: { width: 180, height: 180, borderRadius: 10, marginBottom: 6 },
-  composer: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    padding: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#ddd",
-    backgroundColor: "#fff",
-  },
-  iconBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-  },
-  iconTxt: { fontSize: 18 },
-  input: {
-    flex: 1,
-    minHeight: 40,
-    maxHeight: 120,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginHorizontal: 8,
-  },
-  sendBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: "#3478F6",
-  },
-  sendTxt: { color: "#fff", fontWeight: "600" },
-  sendDisabled: { opacity: 0.5 },
 });
