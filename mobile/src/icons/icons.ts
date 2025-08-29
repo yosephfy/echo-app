@@ -1,20 +1,25 @@
 // AUTO-GENERATED FILE. DO NOT EDIT MANUALLY.
 import { SvgProps } from 'react-native-svg';
+import add_circle from '../../assets/icons/add-circle.svg';
 import animation from '../../assets/icons/animation.svg';
+import attach from '../../assets/icons/attach.svg';
 import bell from '../../assets/icons/bell.svg';
 import blocked from '../../assets/icons/blocked.svg';
 import bookmark_fill from '../../assets/icons/bookmark-fill.svg';
 import bookmark from '../../assets/icons/bookmark.svg';
 import bookmarks from '../../assets/icons/bookmarks.svg';
 import calendar_day from '../../assets/icons/calendar-day.svg';
+import camera from '../../assets/icons/camera.svg';
 import cap from '../../assets/icons/cap.svg';
 import cards from '../../assets/icons/cards.svg';
+import chat_round_line from '../../assets/icons/chat-round-line.svg';
 import check_circle from '../../assets/icons/check-circle.svg';
 import chevron_down from '../../assets/icons/chevron-down.svg';
 import chevron_left from '../../assets/icons/chevron-left.svg';
 import chevron_right from '../../assets/icons/chevron-right.svg';
 import chevron_up from '../../assets/icons/chevron-up.svg';
 import circle_user from '../../assets/icons/circle-user.svg';
+import close_circle from '../../assets/icons/close-circle.svg';
 import color_palette from '../../assets/icons/color-palette.svg';
 import comment from '../../assets/icons/comment.svg';
 import email from '../../assets/icons/email.svg';
@@ -47,24 +52,31 @@ import shield_lock from '../../assets/icons/shield-lock.svg';
 import shuffle from '../../assets/icons/shuffle.svg';
 import text_size from '../../assets/icons/text-size.svg';
 import thumbs_up from '../../assets/icons/thumbs-up.svg';
+import tick_square from '../../assets/icons/tick-square.svg';
 import trash from '../../assets/icons/trash.svg';
+import wrong from '../../assets/icons/wrong.svg';
 
 const iconMap: Record<IconName, React.FC<SvgProps>> = {
+  "add-circle": add_circle,
   "animation": animation,
+  "attach": attach,
   "bell": bell,
   "blocked": blocked,
   "bookmark-fill": bookmark_fill,
   "bookmark": bookmark,
   "bookmarks": bookmarks,
   "calendar-day": calendar_day,
+  "camera": camera,
   "cap": cap,
   "cards": cards,
+  "chat-round-line": chat_round_line,
   "check-circle": check_circle,
   "chevron-down": chevron_down,
   "chevron-left": chevron_left,
   "chevron-right": chevron_right,
   "chevron-up": chevron_up,
   "circle-user": circle_user,
+  "close-circle": close_circle,
   "color-palette": color_palette,
   "comment": comment,
   "email": email,
@@ -97,11 +109,13 @@ const iconMap: Record<IconName, React.FC<SvgProps>> = {
   "shuffle": shuffle,
   "text-size": text_size,
   "thumbs-up": thumbs_up,
+  "tick-square": tick_square,
   "trash": trash,
+  "wrong": wrong,
 } as const;
 
 
-export type IconName = | "animation" | "bell" | "blocked" | "bookmark-fill" | "bookmark" | "bookmarks" | "calendar-day" | "cap" | "cards" | "check-circle" | "chevron-down" | "chevron-left" | "chevron-right" | "chevron-up" | "circle-user" | "color-palette" | "comment" | "email" | "eye-off" | "face-screaming-in-fear" | "face-with-tears-of-joy" | "file-document" | "fire" | "heart-alt" | "heart-full" | "heart" | "help" | "home" | "image-square" | "laugh-emoji" | "lock" | "logout" | "more-horizontal" | "more-vertical" | "mute" | "pencil" | "pouting-face" | "profile-round" | "sad-but-relieved-face" | "screen-smartphone" | "search-alt" | "settings" | "share" | "shield-lock" | "shuffle" | "text-size" | "thumbs-up" | "trash"
+export type IconName = | "add-circle" | "animation" | "attach" | "bell" | "blocked" | "bookmark-fill" | "bookmark" | "bookmarks" | "calendar-day" | "camera" | "cap" | "cards" | "chat-round-line" | "check-circle" | "chevron-down" | "chevron-left" | "chevron-right" | "chevron-up" | "circle-user" | "close-circle" | "color-palette" | "comment" | "email" | "eye-off" | "face-screaming-in-fear" | "face-with-tears-of-joy" | "file-document" | "fire" | "heart-alt" | "heart-full" | "heart" | "help" | "home" | "image-square" | "laugh-emoji" | "lock" | "logout" | "more-horizontal" | "more-vertical" | "mute" | "pencil" | "pouting-face" | "profile-round" | "sad-but-relieved-face" | "screen-smartphone" | "search-alt" | "settings" | "share" | "shield-lock" | "shuffle" | "text-size" | "thumbs-up" | "tick-square" | "trash" | "wrong"
 
 export default iconMap;
 
