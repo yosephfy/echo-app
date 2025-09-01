@@ -1,16 +1,7 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React, { useCallback, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { useTheme } from "../../theme/ThemeContext";
 import { AccountSettingsStackParamList } from "../../navigation/AccountScreenNavigator";
 
 const commonPasswords = new Set([
@@ -57,6 +48,7 @@ type Props = NativeStackScreenProps<
 >;
 
 const ChangePasswordScreen = ({ navigation }: Props) => {
+  const { colors } = useTheme();
   const updatePassword = (params: {
     currentPassword: string;
     newPassword: string;
@@ -130,19 +122,19 @@ const ChangePasswordScreen = ({ navigation }: Props) => {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.select({ ios: "padding", android: undefined })}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>Change Password</Text>
-        <Text style={styles.help}>
+        <Text style={[styles.title, { color: colors.text }]}>Change Password</Text>
+        <Text style={[styles.help, { color: colors.muted }]}>
           Choose a strong, unique password. Avoid reusing passwords from other
           sites.
         </Text>
 
         {
           <>
-            <Text style={styles.label}>Current password</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Current password</Text>
             <TextInput
               value={currentPassword}
               onChangeText={setCurrentPassword}
@@ -151,15 +143,19 @@ const ChangePasswordScreen = ({ navigation }: Props) => {
               secureTextEntry
               textContentType="password"
               autoComplete="current-password"
-              style={[styles.input, !!currentError && styles.inputError]}
+              style={[
+                styles.input,
+                { borderColor: colors.outline, backgroundColor: colors.input, color: colors.text },
+                !!currentError && { borderColor: colors.error },
+              ]}
               accessibilityLabel="Current password"
               returnKeyType="next"
             />
-            {!!currentError && <Text style={styles.error}>{currentError}</Text>}
+            {!!currentError && <Text style={[styles.error, { color: colors.error }]}>{currentError}</Text>}
           </>
         }
 
-        <Text style={[styles.label, { marginTop: 16 }]}>New password</Text>
+        <Text style={[styles.label, { marginTop: 16, color: colors.text }]}>New password</Text>
         <TextInput
           value={newPassword}
           onChangeText={setNewPassword}
@@ -170,27 +166,28 @@ const ChangePasswordScreen = ({ navigation }: Props) => {
           autoComplete="new-password"
           style={[
             styles.input,
-            touched.new && newPasswordIssues.length > 0 && styles.inputError,
+            { borderColor: colors.outline, backgroundColor: colors.input, color: colors.text },
+            touched.new && newPasswordIssues.length > 0 && { borderColor: colors.error },
           ]}
           accessibilityLabel="New password"
           returnKeyType="next"
         />
         {!!newPassword && (
-          <Text style={styles.muted}>
+          <Text style={[styles.muted, { color: colors.muted }]}>
             Strength: {strengthLabel(newPassword)}
           </Text>
         )}
         {touched.new && newPasswordIssues.length > 0 && (
           <View style={{ marginTop: 6 }}>
             {newPasswordIssues.map((i) => (
-              <Text key={i} style={styles.error}>
+              <Text key={i} style={[styles.error, { color: colors.error }]}>
                 • {i}
               </Text>
             ))}
           </View>
         )}
 
-        <Text style={[styles.label, { marginTop: 16 }]}>
+        <Text style={[styles.label, { marginTop: 16, color: colors.text }]}> 
           Confirm new password
         </Text>
         <TextInput
@@ -201,18 +198,22 @@ const ChangePasswordScreen = ({ navigation }: Props) => {
           secureTextEntry
           textContentType="newPassword"
           autoComplete="new-password"
-          style={[styles.input, !!matchError && styles.inputError]}
+          style={[
+            styles.input,
+            { borderColor: colors.outline, backgroundColor: colors.input, color: colors.text },
+            !!matchError && { borderColor: colors.error },
+          ]}
           accessibilityLabel="Confirm new password"
           returnKeyType="done"
           onSubmitEditing={onSubmit}
         />
-        {!!matchError && <Text style={styles.error}>{matchError}</Text>}
+        {!!matchError && <Text style={[styles.error, { color: colors.error }]}>{matchError}</Text>}
 
         <Pressable
           onPress={onSubmit}
           disabled={!canSubmit}
           style={({ pressed }) => [
-            styles.primaryBtn,
+            [styles.primaryBtn, { backgroundColor: colors.primary }],
             !canSubmit && styles.btnDisabled,
             pressed && styles.btnPressed,
           ]}
@@ -233,7 +234,7 @@ const ChangePasswordScreen = ({ navigation }: Props) => {
 export default ChangePasswordScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1 },
   content: { flex: 1, padding: 20, gap: 8, justifyContent: "center" },
   title: {
     fontSize: 22,
@@ -241,26 +242,22 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: "center",
   },
-  help: { fontSize: 14, color: "#555", marginBottom: 12, textAlign: "center" },
-  label: { fontSize: 14, fontWeight: "600", color: "#222" },
+  help: { fontSize: 14, marginBottom: 12, textAlign: "center" },
+  label: { fontSize: 14, fontWeight: "600" },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: Platform.select({ ios: 12, android: 10 }),
     fontSize: 16,
-    backgroundColor: "#fff",
   },
-  inputError: { borderColor: "#e11d48" },
-  error: { color: "#e11d48", fontSize: 12, marginTop: 4 },
-  muted: { color: "#6b7280", fontSize: 12, marginTop: 6 },
+  error: { fontSize: 12, marginTop: 4 },
+  muted: { fontSize: 12, marginTop: 6 },
   primaryBtn: {
     marginTop: 24,
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: "center",
-    backgroundColor: "#111827",
   },
   btnDisabled: { opacity: 0.5 },
   btnPressed: { opacity: 0.9 },

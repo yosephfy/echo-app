@@ -38,7 +38,7 @@ export function CircularProgress({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={backgroundColor ?? colors.border}
+          stroke={backgroundColor ?? colors.outline}
           strokeWidth={strokeWidth}
           fill="none"
         />

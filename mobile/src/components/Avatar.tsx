@@ -94,7 +94,7 @@ export default function Avatar({
             width: size,
             height: size,
             borderRadius: radius,
-            backgroundColor: "#ddd",
+            backgroundColor: colors.surfaceAlt,
           }}
           onError={() => setError(true)}
         />
@@ -102,7 +102,7 @@ export default function Avatar({
         <View
           style={[
             styles.fallback,
-            { borderRadius: radius, backgroundColor: colors.card },
+            { borderRadius: radius, backgroundColor: colors.surface },
           ]}
         >
           <Text style={[styles.initials, { color: colors.muted }]}>

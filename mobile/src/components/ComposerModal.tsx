@@ -87,7 +87,8 @@ export default function ComposerModal({ visible, onClose, onPosted }: Props) {
               style={[
                 //styles.textInput,
                 {
-                  borderColor: colors.border,
+                  borderColor: colors.outline,
+                  backgroundColor: colors.input,
                   color: colors.text,
                   fontSize: fontSizes.md,
                   borderRadius: radii.md,
@@ -120,7 +121,7 @@ export default function ComposerModal({ visible, onClose, onPosted }: Props) {
                 progress={charPct}
                 strokeWidth={4}
                 color={remainingChars < 0 ? colors.error : colors.primary}
-                backgroundColor={colors.border}
+                backgroundColor={colors.outline}
               />
             </View>
           </View>
@@ -161,7 +162,7 @@ export default function ComposerModal({ visible, onClose, onPosted }: Props) {
         </ScrollView>
 
         {/* ACTIONS */}
-        <View style={styles.actionsRow}>
+        <View style={[styles.actionsRow, { borderTopColor: colors.outline }] }>
           <TouchableOpacity
             onPress={onClose}
             style={[
@@ -225,8 +226,8 @@ function MoodButton({
         marginRight: spacing.sm,
         borderRadius: radii.sm,
         borderWidth: 1,
-        borderColor: selected ? colors.primary : colors.border,
-        backgroundColor: selected ? colors.primary + "22" : "transparent",
+        borderColor: selected ? colors.primary : colors.outline,
+        backgroundColor: selected ? colors.primary + "22" : colors.surface,
       }}
     >
       <Text

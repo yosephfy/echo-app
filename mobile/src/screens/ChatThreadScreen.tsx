@@ -21,6 +21,7 @@ import { useAuthStore } from "../store/authStore";
 import { uploadFile, StorageKind } from "../utils/storage";
 import { useIsFocused } from "@react-navigation/native";
 import ChatInputComponent from "../components/ChatInputComponent";
+import { useTheme } from "../theme/ThemeContext";
 
 type Props = { route: { params: { id: string } } };
 
@@ -32,6 +33,7 @@ export default function ChatThreadScreen({ route }: Props) {
   );
   const meId = useAuthStore((s) => s.user?.id);
   const isFocused = useIsFocused();
+  const { colors } = useTheme();
 
   const listRef = useRef<FlatList<any>>(null);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -164,7 +166,7 @@ export default function ChatThreadScreen({ route }: Props) {
   const invertedData = useMemo(() => [...items].reverse(), [items]);
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <FlatList
         ref={listRef}
         data={invertedData}
@@ -199,7 +201,7 @@ export default function ChatThreadScreen({ route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#fff" },
+  safe: { flex: 1 },
   flex: { flex: 1 },
   listContent: { paddingVertical: 8, paddingHorizontal: 10 },
   footer: { paddingVertical: 12 },

@@ -83,9 +83,9 @@ export default function ComposeButton({
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke={colors.border}
+            stroke={colors.outline}
             strokeWidth={strokeWidth}
-            fill={cooldown == 0 ? colors.primary : colors.card}
+            fill={cooldown == 0 ? colors.primary : colors.surface}
           />
           <AnimatedCircle
             cx={size / 2}

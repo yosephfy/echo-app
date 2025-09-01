@@ -4,6 +4,7 @@ import { WebView } from "react-native-webview";
 import * as FileSystem from "expo-file-system";
 import { Asset } from "expo-asset";
 import MarkdownIt from "markdown-it";
+import { useTheme } from "../theme/ThemeContext";
 
 interface Props {
   /** require('../../assets/docs/whatever.md') */
@@ -12,6 +13,7 @@ interface Props {
 
 export default function MarkdownViewer({ assetModule }: Props) {
   const [html, setHtml] = useState<string | null>(null);
+  const { colors } = useTheme();
 
   useEffect(() => {
     async function load() {
@@ -33,9 +35,9 @@ export default function MarkdownViewer({ assetModule }: Props) {
           <head>
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
-              body { font-family: -apple-system, Helvetica, Arial; padding: 16px; color: #333; }
+              body { font-family: -apple-system, Helvetica, Arial; padding: 16px; color: ${colors.text}; background: ${colors.background}; }
               h1,h2,h3 { margin-top: 1.2em; }
-              pre { background: #f4f4f4; padding: 8px; border-radius: 4px; }
+              pre { background: ${colors.surface}; padding: 8px; border-radius: 4px; }
               code { font-family: monospace; }
               img { max-width: 100%; height: auto; }
             </style>

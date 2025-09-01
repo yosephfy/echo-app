@@ -31,7 +31,7 @@ const SectionedSettingsList = ({ sections }: Props) => {
       renderSectionHeader={({ section }) => renderHeader(section)}
       renderItem={(item) => <SettingsRow {...item.item} />}
       SectionSeparatorComponent={() => (
-        <View style={[styles.sep, { backgroundColor: colors.border }]} />
+        <View style={[styles.sep, { backgroundColor: colors.outline }]} />
       )}
       contentContainerStyle={{ paddingVertical: 8 }}
       style={{ backgroundColor: colors.background }}

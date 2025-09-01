@@ -27,7 +27,7 @@ const ReplyItem: React.FC<Props> = ({ reply }) => {
     <View
       style={[
         styles.container,
-        { borderColor: colors.border, backgroundColor: colors.card },
+        { borderColor: colors.outline, backgroundColor: colors.surface },
       ]}
     >
       {/* Header: avatar, username, timestamp, and reaction */}

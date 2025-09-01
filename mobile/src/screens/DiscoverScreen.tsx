@@ -41,7 +41,15 @@ export default function DiscoverScreen() {
   }, [selected]);
 
   const renderItem = ({ item }: any) => (
-    <View style={[styles.item, { borderColor: theme.colors.border }]}>
+    <View
+      style={[
+        styles.item,
+        {
+          borderColor: theme.colors.outline,
+          backgroundColor: theme.colors.surface,
+        },
+      ]}
+    >
       <Text style={{ color: theme.colors.text }}>{item.text}</Text>
     </View>
   );
@@ -56,10 +64,15 @@ export default function DiscoverScreen() {
             key={m}
             style={[
               styles.chip,
-              selected === m && {
-                borderColor: theme.colors.primary,
-                backgroundColor: theme.colors.primary,
-              },
+              selected === m
+                ? {
+                    borderColor: theme.colors.primary,
+                    backgroundColor: theme.colors.primary,
+                  }
+                : {
+                    borderColor: theme.colors.outline,
+                    backgroundColor: theme.colors.surface,
+                  },
             ]}
             onPress={() => setSelected((s) => (s === m ? null : m))}
           >

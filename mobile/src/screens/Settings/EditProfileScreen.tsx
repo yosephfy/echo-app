@@ -209,7 +209,7 @@ export default function EditProfileScreen() {
       {/* Divider */}
       <View
         style={{
-          backgroundColor: colors.border,
+          backgroundColor: colors.outline,
           height: StyleSheet.hairlineWidth,
           marginVertical: 20,
         }}

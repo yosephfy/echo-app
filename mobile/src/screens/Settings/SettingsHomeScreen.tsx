@@ -147,9 +147,7 @@ export default function SettingsHomeScreen({ navigation }: Props) {
           />
         )}
         ItemSeparatorComponent={() => (
-          <View
-            style={[styles.separator, { backgroundColor: colors.border }]}
-          />
+          <View style={[styles.separator, { backgroundColor: colors.outline }]} />
         )}
       />
     </SafeAreaView>

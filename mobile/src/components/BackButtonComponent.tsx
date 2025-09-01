@@ -11,8 +11,8 @@ const BackButton: React.FC = () => {
 
   return (
     <TouchableOpacity style={styles.button} onPress={() => navigation.goBack()}>
-      <IconSvg icon="chevron-left" state="default" size={20} />
-      <Text style={[styles.text, { color: colors.primary }]}>Back</Text>
+      <IconSvg icon="chevron-left" state="default" size={24} />
+      <Text style={[styles.text, { color: colors.text }]}>Back</Text>
     </TouchableOpacity>
   );
 };
@@ -20,9 +20,9 @@ const BackButton: React.FC = () => {
 const styles = StyleSheet.create({
   button: {
     //padding: 12,
-    marginLeft: 16,
+    marginLeft: 0,
     flexDirection: "row",
-    gap: 10,
+    gap: 0,
     alignItems: "center",
   },
   text: {

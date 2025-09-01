@@ -81,11 +81,11 @@ export default function ProfileScreen({ navigation }: Props) {
               size={120}
               badge={<IconSvg icon="pencil" size={20} state="default" />}
               badgePosition="top-right"
-              badgeOffset={0}
+              badgeOffset={-4}
               badgeContainerStyle={{
                 backgroundColor: colors.background,
-                borderRadius: 999,
-                padding: 6,
+                borderRadius: "50%",
+                padding: 10,
                 elevation: 1,
               }}
               onPress={() =>
@@ -103,7 +103,7 @@ export default function ProfileScreen({ navigation }: Props) {
           <StatArea items={stats} />
         </View>
 
-        <View style={[styles.separator, { backgroundColor: colors.border }]} />
+        <View style={[styles.separator, { backgroundColor: colors.outline }]} />
 
         <BioArea
           bio={user?.bio}
@@ -147,18 +147,7 @@ export default function ProfileScreen({ navigation }: Props) {
           <Tabs.Tab
             name={tab.title}
             key={tab.key}
-            label={({ index }) => (
-              <IconSvg
-                icon={tab.icon}
-                stateStyles={{
-                  default: { color: colors.muted },
-                  pressed: { color: colors.primary },
-                }}
-                state={
-                  TAB_CONFIG[index].key === tab.key ? "pressed" : "default"
-                }
-              />
-            )}
+            label={({ index }) => <IconSvg icon={tab.icon} state="default" />}
           >
             <TabList path={tab.path} type={tab.key} />
           </Tabs.Tab>
@@ -225,7 +214,12 @@ function TabList({ path, type }: { path: string; type: ContentType }) {
 function SingleStatBox({ item }: { item: any }) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.statBox, { borderColor: colors.border }]}>
+    <View
+      style={[
+        styles.statBox,
+        { borderColor: colors.outline, backgroundColor: colors.surface },
+      ]}
+    >
       <Text
         onPress={item.onPress}
         style={[styles.statValue, { color: colors.text }]}

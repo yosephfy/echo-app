@@ -94,6 +94,10 @@ function MainTabs() {
         options={{
           headerShown: true,
           headerTitle: user?.handle ?? "My Profile",
+          headerStyle: { backgroundColor: colors.background },
+          headerTitleStyle: { color: colors.text },
+          headerTintColor: colors.text,
+          headerShadowVisible: false,
           headerRight: () => (
             <TouchableOpacity
               onPress={() => nav.navigate("AccountSettings")}
@@ -109,8 +113,17 @@ function MainTabs() {
 }
 
 export default function AppNavigator() {
+  const { colors } = useTheme();
   return (
-    <RootStack.Navigator screenOptions={{ headerShown: false }}>
+    <RootStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        headerStyle: { backgroundColor: colors.background },
+        headerTitleStyle: { color: colors.text },
+        headerTintColor: colors.text,
+        headerShadowVisible: false,
+      }}
+    >
       {/* Bottom tabs (only the four you want visible) */}
       <RootStack.Screen name="Tabs" component={MainTabs} />
 

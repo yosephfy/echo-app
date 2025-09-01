@@ -64,8 +64,13 @@ export default function FeedScreen({ navigation }: Props) {
         onPress={() => setComposerActive(true)}
         composerActive={composerActive}
       />
-      <View style={[styles.headerContainer, { borderColor: colors.border }]}>
-        <Text style={styles.headerTitle}>Echo</Text>
+      <View
+        style={[
+          styles.headerContainer,
+          { borderColor: colors.outline, backgroundColor: colors.surface },
+        ]}
+      >
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Echo</Text>
       </View>
 
       {loading && items.length === 0 ? (

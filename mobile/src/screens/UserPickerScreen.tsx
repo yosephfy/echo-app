@@ -134,7 +134,7 @@ export default function UserPickerScreen({ route, navigation }: Props) {
             style={[
               styles.checkbox,
               {
-                borderColor: picked ? colors.primary : colors.border,
+                borderColor: picked ? colors.primary : colors.outline,
                 backgroundColor: picked ? colors.primary : "transparent",
               },
             ]}
@@ -155,7 +155,7 @@ export default function UserPickerScreen({ route, navigation }: Props) {
         <View
           style={[
             styles.searchWrap,
-            { borderColor: colors.border, backgroundColor: colors.card },
+            { borderColor: colors.outline, backgroundColor: colors.input },
           ]}
         >
           <IconSvg icon="search-alt" size={18} />
@@ -179,7 +179,7 @@ export default function UserPickerScreen({ route, navigation }: Props) {
           onPress={cycleSort}
           style={[
             styles.sortPill,
-            { borderColor: colors.border, backgroundColor: colors.card },
+            { borderColor: colors.outline, backgroundColor: colors.surface },
           ]}
         >
           <Text style={{ color: colors.text, fontWeight: "600" }}>
@@ -196,7 +196,7 @@ export default function UserPickerScreen({ route, navigation }: Props) {
               key={u.id}
               style={[
                 styles.chip,
-                { backgroundColor: colors.card, borderColor: colors.border },
+                { backgroundColor: colors.surface, borderColor: colors.outline },
               ]}
             >
               <Text style={{ color: colors.text, fontWeight: "600" }}>

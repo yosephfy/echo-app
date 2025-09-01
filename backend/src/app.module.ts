@@ -8,7 +8,6 @@ import { RolesGuard } from './auth/roles.guard';
 import { BookmarksModule } from './bookmarks/bookmarks.module';
 import { CapsModule } from './caps/caps.module';
 import { ModerationModule } from './moderation/moderation.module';
-import { PreferencesModule } from './preferences/preferences.module';
 import { ReactionsModule } from './reactions/reactions.module';
 import { RedisModule } from './redis/redis.module';
 import { ReportsModule } from './reports/reports.module';
@@ -39,7 +38,6 @@ import { ChatModule } from './chat/chat.module';
     }),
     UsersModule,
     AuthModule,
-    PreferencesModule,
     RedisModule,
     SecretsModule,
     ReportsModule,

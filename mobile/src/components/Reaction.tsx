@@ -80,8 +80,8 @@ export default function Reaction({
             style={[
               styles.pickerOverlay,
               {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
+                backgroundColor: colors.surface,
+                borderColor: colors.outline,
                 shadowColor: "black",
               },
             ]}

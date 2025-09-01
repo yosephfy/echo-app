@@ -72,7 +72,7 @@ export default React.memo(function ChatListItem({
         </Text>
         {conv.unreadCount > 0 && (
           <View
-            style={styles.badge}
+            style={[styles.badge, { backgroundColor: colors.primary }]}
             accessibilityLabel={`Unread ${conv.unreadCount}`}
           >
             <Text style={styles.badgeText}>
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     height: 22,
     borderRadius: 11,
-    backgroundColor: "#E53935",
+    // themed in render using colors.primary
     alignItems: "center",
     justifyContent: "center",
   },

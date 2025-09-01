@@ -71,7 +71,10 @@ export default function SecretDetailScreen({ route }: Props) {
         ListHeaderComponent={() =>
           secret && <SecretItem secret={secret} display="expanded" />
         }
-        ListHeaderComponentStyle={styles.secretItem}
+        ListHeaderComponentStyle={[
+          styles.secretItem,
+          { borderColor: colors.outline, backgroundColor: colors.surface },
+        ]}
         renderItem={({ item }) => <ReplyItem reply={item.reply} />}
         ListEmptyComponent={() => (
           <Text style={[styles.empty, { color: colors.muted }]}>

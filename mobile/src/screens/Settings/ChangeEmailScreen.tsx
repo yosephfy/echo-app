@@ -1,16 +1,7 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React, { useCallback, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { useTheme } from "../../theme/ThemeContext";
 import { AccountSettingsStackParamList } from "../../navigation/AccountScreenNavigator";
 import { sanitizeEmail } from "../../utils/sanitize";
 
@@ -25,6 +16,7 @@ type Props = NativeStackScreenProps<
   "ChangeEmail"
 >;
 const ChangeEmailScreen = ({ navigation }: Props) => {
+  const { colors } = useTheme();
   const updateEmail = ({
     newEmail,
     currentPassword,
@@ -89,17 +81,17 @@ const ChangeEmailScreen = ({ navigation }: Props) => {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.select({ ios: "padding", android: undefined })}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>Change Email</Text>
-        <Text style={styles.help}>
+        <Text style={[styles.title, { color: colors.text }]}>Change Email</Text>
+        <Text style={[styles.help, { color: colors.muted }]}>
           Updating your email will change where we notifications, and sign-in
           links. You may need to verify the new address.
         </Text>
 
-        <Text style={styles.label}>New email</Text>
+        <Text style={[styles.label, { color: colors.text }]}>New email</Text>
         <TextInput
           value={email}
           onChangeText={setEmail}
@@ -110,15 +102,19 @@ const ChangeEmailScreen = ({ navigation }: Props) => {
           keyboardType="email-address"
           textContentType="emailAddress"
           autoComplete="email"
-          style={[styles.input, !!emailError && styles.inputError]}
+          style={[
+            styles.input,
+            { borderColor: colors.outline, backgroundColor: colors.input, color: colors.text },
+            !!emailError && { borderColor: colors.error },
+          ]}
           accessibilityLabel="New email address"
           returnKeyType="next"
         />
-        {!!emailError && <Text style={styles.error}>{emailError}</Text>}
+        {!!emailError && <Text style={[styles.error, { color: colors.error }]}>{emailError}</Text>}
 
         {
           <>
-            <Text style={[styles.label, { marginTop: 16 }]}>
+            <Text style={[styles.label, { marginTop: 16, color: colors.text }]}>
               Current password
             </Text>
             <TextInput
@@ -129,13 +125,17 @@ const ChangeEmailScreen = ({ navigation }: Props) => {
               secureTextEntry
               textContentType="password"
               autoComplete="password"
-              style={[styles.input, !!passwordError && styles.inputError]}
+              style={[
+                styles.input,
+                { borderColor: colors.outline, backgroundColor: colors.input, color: colors.text },
+                !!passwordError && { borderColor: colors.error },
+              ]}
               accessibilityLabel="Current password"
               returnKeyType="done"
               onSubmitEditing={onSubmit}
             />
             {!!passwordError && (
-              <Text style={styles.error}>{passwordError}</Text>
+              <Text style={[styles.error, { color: colors.error }]}>{passwordError}</Text>
             )}
           </>
         }
@@ -144,7 +144,7 @@ const ChangeEmailScreen = ({ navigation }: Props) => {
           onPress={onSubmit}
           disabled={!canSubmit}
           style={({ pressed }) => [
-            styles.primaryBtn,
+            [styles.primaryBtn, { backgroundColor: colors.primary }],
             !canSubmit && styles.btnDisabled,
             pressed && styles.btnPressed,
           ]}
@@ -165,7 +165,7 @@ const ChangeEmailScreen = ({ navigation }: Props) => {
 export default ChangeEmailScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1 },
   content: { flex: 1, padding: 20, gap: 8, justifyContent: "center" },
   title: {
     fontSize: 22,
@@ -173,25 +173,21 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: "center",
   },
-  help: { fontSize: 14, color: "#555", marginBottom: 12, textAlign: "center" },
-  label: { fontSize: 14, fontWeight: "600", color: "#222" },
+  help: { fontSize: 14, marginBottom: 12, textAlign: "center" },
+  label: { fontSize: 14, fontWeight: "600" },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: Platform.select({ ios: 12, android: 10 }),
     fontSize: 16,
-    backgroundColor: "#fff",
   },
-  inputError: { borderColor: "#e11d48" },
-  error: { color: "#e11d48", fontSize: 12, marginTop: 4 },
+  error: { fontSize: 12, marginTop: 4 },
   primaryBtn: {
     marginTop: 24,
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: "center",
-    backgroundColor: "#111827",
   },
   btnDisabled: { opacity: 0.5 },
   btnPressed: { opacity: 0.9 },

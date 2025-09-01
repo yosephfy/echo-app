@@ -102,7 +102,7 @@ export default function ChatListScreen() {
             <View
               style={[
                 styles.badge,
-                { backgroundColor: colors.primary, borderColor: colors.card },
+                { backgroundColor: colors.primary, borderColor: colors.outline },
               ]}
             >
               <Text style={styles.badgeText}>
@@ -148,7 +148,7 @@ export default function ChatListScreen() {
       <View
         style={[
           styles.searchWrap,
-          { borderColor: colors.border, backgroundColor: colors.card },
+          { borderColor: colors.outline, backgroundColor: colors.input },
         ]}
       >
         <TextInput

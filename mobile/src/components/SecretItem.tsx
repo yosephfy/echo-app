@@ -98,7 +98,7 @@ export default function SecretItem({
       style={[
         styles.card,
         isCondensed && styles.condensedCard,
-        { backgroundColor: colors.card, borderColor: colors.border },
+        { backgroundColor: colors.surface, borderColor: colors.outline },
       ]}
     >
       {/* HEADER */}
@@ -166,7 +166,7 @@ export default function SecretItem({
         </Text>
         {!isExpanded && text.length > 100 && !isCondensed && (
           <LinearGradient
-            colors={["rgba(255,247,237,0)", "rgba(255,247,237,1)"]}
+            colors={[`${colors.surface}00`, colors.surface]}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 7 }}
             locations={[0, 0.15]}
@@ -177,7 +177,15 @@ export default function SecretItem({
       </Pressable>
 
       {/* DIVIDER */}
-      {!isCondensed && <View style={styles.divider} />}
+      {!isCondensed && (
+        <View
+          style={{
+            height: StyleSheet.hairlineWidth,
+            marginBottom: 12,
+            backgroundColor: colors.outline,
+          }}
+        />
+      )}
 
       {/* FOOTER ACTIONS */}
       {!isCondensed && (

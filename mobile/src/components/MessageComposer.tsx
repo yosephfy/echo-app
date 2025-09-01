@@ -157,13 +157,13 @@ export default function MessageComposer({
         behavior: Platform.OS === "ios" ? "padding" : undefined,
         keyboardVerticalOffset,
         style: {
-          borderTopColor: colors.border,
+          borderTopColor: colors.outline,
           backgroundColor: colors.background,
         },
       }
     : {
         style: {
-          borderTopColor: colors.border,
+          borderTopColor: colors.outline,
           backgroundColor: colors.background,
           marginBottom: bottomAvoid,
         },
@@ -174,7 +174,7 @@ export default function MessageComposer({
       {attachments.length > 0 && (
         <ScrollView
           horizontal
-          style={[styles.previewBar, { borderBottomColor: colors.border }]}
+          style={[styles.previewBar, { borderBottomColor: colors.outline }]}
           contentContainerStyle={styles.previewContent}
           showsHorizontalScrollIndicator={false}
         >
@@ -195,7 +195,7 @@ export default function MessageComposer({
       <View
         style={[
           styles.composer,
-          { borderTopColor: colors.border, backgroundColor: colors.background },
+          { borderTopColor: colors.outline, backgroundColor: colors.background },
           containerStyle,
         ]}
       >
@@ -226,14 +226,14 @@ export default function MessageComposer({
           placeholder={placeholder}
           placeholderTextColor={colors.muted}
           style={[
-            styles.input,
-            {
-              color: colors.text,
-              borderColor: colors.border,
-              minHeight: multiline ? 40 : 36,
-              maxHeight: multiline ? 120 : 44,
-            },
-          ]}
+          styles.input,
+          {
+            color: colors.text,
+            borderColor: colors.outline,
+            minHeight: multiline ? 40 : 36,
+            maxHeight: multiline ? 120 : 44,
+          },
+        ]}
           multiline={multiline}
           onSubmitEditing={!multiline ? handleSend : undefined}
           blurOnSubmit={!multiline}

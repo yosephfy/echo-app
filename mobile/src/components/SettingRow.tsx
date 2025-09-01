@@ -13,6 +13,7 @@ import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { IconSvg } from "../icons/IconSvg";
 import { IconName } from "../icons/icons";
 import { AccountSettingsStackParamList } from "../navigation/AccountScreenNavigator";
+import { useTheme } from "../theme/ThemeContext";
 
 // 1) Define the kinds of rows we support
 export type RowType =
@@ -95,6 +96,7 @@ function NavigationRow({
   icon?: IconName;
   disabled: boolean;
 } & NavigationOptions) {
+  const { colors } = useTheme();
   const rowStyle = [styles.row, disabled && styles.disabledRow];
   const onPressHandler = () => {
     //onPress?.();
@@ -107,7 +109,7 @@ function NavigationRow({
       disabled={disabled}
     >
       {icon && <IconSvg icon={icon} size={20} state="default" />}
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
       <IconSvg icon="chevron-right" size={20} state="default" />
     </TouchableOpacity>
   );
@@ -123,11 +125,12 @@ function ButtonRow({
   icon?: IconName;
   disabled: boolean;
 } & ButtonOptions) {
+  const { colors } = useTheme();
   const rowStyle = [styles.row, disabled && styles.disabledRow];
   return (
     <TouchableOpacity style={rowStyle} onPress={onPress} disabled={disabled}>
       {icon && <IconSvg icon={icon} size={20} state="default" />}
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -143,6 +146,7 @@ function SwitchRow({
   icon?: IconName;
   disabled: boolean;
 } & SwitchOptions) {
+  const { colors } = useTheme();
   const rowStyle = [styles.row, disabled && styles.disabledRow];
   const [valueState, setValueState] = useState(value);
   const onValueChangeHandler = (newValue: boolean) => {
@@ -152,7 +156,7 @@ function SwitchRow({
   return (
     <View style={rowStyle}>
       {icon && <IconSvg icon={icon} size={20} state="default" />}
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
       <Switch
         value={valueState}
         onValueChange={onValueChangeHandler}
@@ -174,6 +178,7 @@ function InputRow({
   icon?: IconName;
   disabled: boolean;
 } & InputOptions) {
+  const { colors } = useTheme();
   const rowStyle = [styles.row, disabled && styles.disabledRow];
   const [inputValue, setInputValue] = useState(value);
   const [editing, setEditing] = useState(false);
@@ -186,17 +191,25 @@ function InputRow({
   return (
     <View style={rowStyle}>
       {icon && <IconSvg icon={icon} size={20} state="default" />}
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
       <TextInput
-        style={styles.input}
+        style={[
+          styles.input,
+          {
+            borderColor: colors.outline,
+            backgroundColor: colors.input,
+            color: colors.text,
+          },
+        ]}
         value={inputValue}
         placeholder={placeholder}
+        placeholderTextColor={colors.muted}
         onChangeText={setInputValue}
         editable={!disabled && editing}
       />
       {!editing ? (
         <TouchableOpacity onPress={() => setEditing(true)} disabled={disabled}>
-          <IconSvg icon="pencil" size={20} state="default" />
+          <IconSvg icon="pencil" size={16} state="default" />
         </TouchableOpacity>
       ) : (
         <TouchableOpacity onPress={onSubmitHandler} disabled={disabled}>
@@ -217,12 +230,13 @@ function InfoRow({
   icon?: IconName;
   disabled: boolean;
 } & InfoOptions) {
+  const { colors } = useTheme();
   const rowStyle = [styles.row, disabled && styles.disabledRow];
   return (
     <View style={rowStyle}>
       {icon && <IconSvg icon={icon} size={20} state="default" />}
-      <Text style={styles.label}>{label}</Text>
-      <Text>{value}</Text>
+      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+      <Text style={{ color: colors.muted }}>{value}</Text>
     </View>
   );
 }
@@ -239,6 +253,7 @@ function DropdownRow({
   icon?: IconName;
   disabled: boolean;
 } & DropdownOptions) {
+  const { colors } = useTheme();
   const rowStyle = [styles.row, disabled && styles.disabledRow];
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(selected);
@@ -246,7 +261,7 @@ function DropdownRow({
   return (
     <TouchableOpacity style={rowStyle} disabled={disabled}>
       {icon && <IconSvg icon={icon} size={20} state="default" />}
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
       <View style={{}}>
         <DropDownPicker
           open={open}
@@ -260,10 +275,43 @@ function DropdownRow({
           style={{
             maxWidth: 400,
             minWidth: 150,
-            backgroundColor: "#fff",
+            backgroundColor: colors.input,
+            borderColor: colors.outline,
           }}
           onChangeValue={(item) => onSelect(item as string)}
-          dropDownContainerStyle={{ backgroundColor: "#fff" }}
+          dropDownContainerStyle={{
+            backgroundColor: colors.surface,
+            borderColor: colors.outline,
+          }}
+          textStyle={{ color: colors.text }}
+          badgeStyle={{ backgroundColor: colors.primary }}
+          labelStyle={{ color: colors.text }}
+          badgeDotStyle={{ backgroundColor: colors.background }}
+          badgeTextStyle={{ color: colors.text }}
+          containerStyle={{ backgroundColor: colors.input }}
+          modalTitleStyle={{ color: colors.text }}
+          modalContentContainerStyle={{ backgroundColor: colors.surface }}
+          placeholderStyle={{ color: colors.muted }}
+          ArrowUpIconComponent={() => (
+            <IconSvg icon="chevron-up" size={20} state="default" />
+          )}
+          ArrowDownIconComponent={() => (
+            <IconSvg icon="chevron-down" size={20} state="default" />
+          )}
+          TickIconComponent={() => (
+            <IconSvg icon="check-circle" size={20} state="default" />
+          )}
+          listItemLabelStyle={{ color: colors.text }}
+          listItemContainerStyle={{ backgroundColor: colors.surface }}
+          disabledItemLabelStyle={{ color: colors.muted }}
+          itemSeparatorStyle={{ backgroundColor: colors.outline }}
+          listChildLabelStyle={{ color: colors.text }}
+          listMessageTextStyle={{ color: colors.text }}
+          selectedItemLabelStyle={{ fontWeight: "bold", color: colors.text }}
+          CloseIconComponent={() => (
+            <IconSvg icon="wrong" size={20} state="default" />
+          )}
+          disabled={disabled}
         />
       </View>
     </TouchableOpacity>
@@ -282,6 +330,7 @@ function DateRow({
   icon?: IconName;
   disabled: boolean;
 } & DateOptions) {
+  const { colors } = useTheme();
   const rowStyle = [styles.row, disabled && styles.disabledRow];
   const [value, setValue] = useState(date);
   const [tempValue, setTempValue] = useState(date);
@@ -295,8 +344,8 @@ function DateRow({
       disabled={disabled}
     >
       {icon && <IconSvg icon={icon} size={20} state="default" />}
-      <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>
+      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+      <Text style={[styles.value, { color: colors.muted }]}>
         {type == "date"
           ? value.toLocaleDateString()
           : value.toLocaleTimeString("en-US", {

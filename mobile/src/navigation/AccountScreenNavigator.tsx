@@ -13,6 +13,7 @@ import NotificationsScreen from "../screens/Settings/NotificationsScreen";
 import PrivacyScreen from "../screens/Settings/PrivacyScreen";
 import SettingsHomeScreen from "../screens/Settings/SettingsHomeScreen";
 import DeleteAccountScreen from "../screens/Settings/DeleteAccountScreen";
+import { useTheme } from "../theme/ThemeContext";
 
 export type AccountSettingsStackParamList = {
   SettingsHome: undefined;
@@ -32,8 +33,17 @@ export type AccountSettingsStackParamList = {
 const Stack = createNativeStackNavigator<AccountSettingsStackParamList>();
 
 export default function AccountSettingsNavigator() {
+  const { colors } = useTheme();
   return (
-    <Stack.Navigator initialRouteName="SettingsHome">
+    <Stack.Navigator
+      initialRouteName="SettingsHome"
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.background },
+        headerTitleStyle: { color: colors.text },
+        headerTintColor: colors.text,
+        headerShadowVisible: false,
+      }}
+    >
       <Stack.Screen
         name="SettingsHome"
         component={SettingsHomeScreen}

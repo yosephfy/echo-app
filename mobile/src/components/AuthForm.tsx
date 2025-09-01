@@ -64,10 +64,14 @@ export default function AuthForm({
           key={f.key}
           style={[
             styles.input,
-            { borderColor: colors.border, color: colors.text },
+            {
+              borderColor: colors.outline,
+              backgroundColor: colors.input,
+              color: colors.text,
+            },
           ]}
           placeholder={f.placeholder || f.label}
-          placeholderTextColor={colors.text + "99"}
+          placeholderTextColor={colors.muted}
           secureTextEntry={f.secure}
           keyboardType={f.keyboardType}
           value={values[f.key]}

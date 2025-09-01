@@ -9,7 +9,6 @@ import {
 import { Secret } from '../secrets/secret.entity';
 import { Bookmark } from '../bookmarks/bookmark.entity';
 import { Streak } from '../streaks/streak.entity';
-import { UserPreference } from '../preferences/user-preference.entity';
 
 @Entity()
 @Unique(['email'])
@@ -47,8 +46,7 @@ export class User {
   @OneToMany(() => Streak, (streak) => streak.user)
   streaks: Streak[];
 
-  @OneToMany(() => UserPreference, (preference) => preference.user)
-  preferences: UserPreference[];
+  // Preferences moved to Settings; legacy relation removed
 
   reactions: any;
   tokens: any;
