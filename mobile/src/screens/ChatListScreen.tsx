@@ -50,7 +50,8 @@ export default function ChatListScreen() {
 
   const renderItem = ({ item }: any) => {
     const last = item.lastMessage;
-    const preview = last?.attachmentUrl ? "📎 Attachment" : last?.body || "";
+    const hasAttachment = !!last?.attachmentUrl;
+    const previewText = last?.body || "";
     const ts = last?.createdAt ? timeAgo(last.createdAt, "short") : "";
     return (
       <Pressable
@@ -66,13 +67,31 @@ export default function ChatListScreen() {
           <Text style={[styles.handle, { color: colors.text }]}>
             @{item.peer?.handle}
           </Text>
-          {!!preview && (
-            <Text
-              numberOfLines={1}
-              style={[styles.preview, { color: colors.muted }]}
-            >
-              {preview}
-            </Text>
+          {(hasAttachment || !!previewText) && (
+            <View style={styles.previewRow}>
+              {hasAttachment && (
+                <IconSvg
+                  icon="attach"
+                  size={14}
+                  stateStyles={{ default: { color: colors.muted } }}
+                />
+              )}
+              {!!previewText ? (
+                <Text
+                  numberOfLines={1}
+                  style={[styles.preview, { color: colors.muted }]}
+                >
+                  {previewText}
+                </Text>
+              ) : hasAttachment ? (
+                <Text
+                  numberOfLines={1}
+                  style={[styles.preview, { color: colors.muted }]}
+                >
+                  Attachment
+                </Text>
+              ) : null}
+            </View>
           )}
         </View>
         <View style={styles.rowRight}>
@@ -219,6 +238,7 @@ const styles = StyleSheet.create({
   rowCenter: { flex: 1, marginLeft: 10, gap: 3 },
   handle: { fontSize: 16, fontWeight: "600" },
   preview: { fontSize: 13 },
+  previewRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   rowRight: { alignItems: "flex-end", gap: 6 },
 
   time: { fontSize: 12 },

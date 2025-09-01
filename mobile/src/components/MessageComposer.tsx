@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   TextInput,
@@ -11,6 +11,9 @@ import {
   ViewStyle,
   Image,
   ScrollView,
+  Platform,
+  KeyboardEvent,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useTheme } from "../theme/ThemeContext";
 import { IconSvg } from "../icons/IconSvg";
@@ -32,6 +35,11 @@ export interface MessageComposerProps {
   inputProps?: TextInputProps;
   onFocus?: () => void;
   enableAttachments?: boolean;
+  avoidKeyboard?: boolean;
+  /** Offset in px for headers/tabbars when avoiding keyboard. */
+  keyboardVerticalOffset?: number;
+  /** Use native KeyboardAvoidingView instead of listeners. iOS-focused. */
+  useKeyboardAvoidingView?: boolean;
 }
 
 export default function MessageComposer({
@@ -46,10 +54,41 @@ export default function MessageComposer({
   inputProps,
   onFocus,
   enableAttachments = true,
+  avoidKeyboard = true,
+  keyboardVerticalOffset = 0,
+  useKeyboardAvoidingView = false,
 }: MessageComposerProps) {
   const { colors } = useTheme();
   const [text, setText] = useState("");
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
+  const [kbHeight, setKbHeight] = useState(0);
+  const [kbVisible, setKbVisible] = useState(false);
+
+  // Internal keyboard avoidance so composer stays above keyboard
+  useEffect(() => {
+    if (!avoidKeyboard || useKeyboardAvoidingView) return;
+
+    const onShow = (e: KeyboardEvent) => {
+      const h = e.endCoordinates?.height ?? 0;
+      setKbHeight(h);
+      setKbVisible(true);
+    };
+    const onHide = () => {
+      setKbVisible(false);
+      setKbHeight(0);
+    };
+    const subs = [
+      Keyboard.addListener(
+        Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+        onShow
+      ),
+      Keyboard.addListener(
+        Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+        onHide
+      ),
+    ];
+    return () => subs.forEach((s) => s.remove());
+  }, [avoidKeyboard, useKeyboardAvoidingView]);
 
   const canSend = useMemo(() => {
     return (!!text.trim() || attachments.length > 0) && !sending;
@@ -106,11 +145,32 @@ export default function MessageComposer({
     setAttachments((prev) => prev.filter((a) => a.uri !== uri));
   }, []);
 
+  const bottomAvoid = !useKeyboardAvoidingView && avoidKeyboard && kbVisible
+    ? Math.max(0, kbHeight - (keyboardVerticalOffset || 0))
+    : 0;
+
+  const Outer: React.ComponentType<any> = useKeyboardAvoidingView
+    ? KeyboardAvoidingView
+    : View;
+  const outerProps = useKeyboardAvoidingView
+    ? {
+        behavior: Platform.OS === "ios" ? "padding" : undefined,
+        keyboardVerticalOffset,
+        style: {
+          borderTopColor: colors.border,
+          backgroundColor: colors.background,
+        },
+      }
+    : {
+        style: {
+          borderTopColor: colors.border,
+          backgroundColor: colors.background,
+          marginBottom: bottomAvoid,
+        },
+      };
+
   return (
-    <View style={{
-      borderTopColor: colors.border,
-      backgroundColor: colors.background,
-    }}>
+    <Outer {...outerProps}>
       {attachments.length > 0 && (
         <ScrollView
           horizontal
@@ -194,7 +254,7 @@ export default function MessageComposer({
           )}
         </TouchableOpacity>
       </View>
-    </View>
+    </Outer>
   );
 }
 

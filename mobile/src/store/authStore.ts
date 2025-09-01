@@ -2,6 +2,7 @@
 import { create } from "zustand";
 import * as SecureStore from "expo-secure-store";
 import { api, setUnauthorizedHandler } from "../api/client";
+import { ensureFirebaseSignedIn } from "../lib/firebase";
 
 type User = {
   id?: string;
@@ -63,6 +64,12 @@ export const useAuthStore = create<AuthState>((set, get) => {
         set({ token, loading: true });
         try {
           const me = await api.get<User>("/users/me");
+          // Also sign into Firebase using a custom token so uploads work
+          try {
+            await ensureFirebaseSignedIn();
+          } catch {
+            // Non-fatal: uploading will fail until this succeeds
+          }
           // Prefer server's onboarded if provided; otherwise infer
           const inferred = me.onboarded ?? (await inferOnboardedFromLocal());
           set({ user: me, token, onboarded: inferred, loading: false });
@@ -86,6 +93,11 @@ export const useAuthStore = create<AuthState>((set, get) => {
         }
         // Validate token by hitting /users/me
         const me = await api.get<User>("/users/me");
+        try {
+          await ensureFirebaseSignedIn();
+        } catch {
+          // ignore; uploads will fail until Firebase sign-in completes elsewhere
+        }
         const inferred = me.onboarded ?? (await inferOnboardedFromLocal());
         set({ token, user: me, onboarded: inferred, loading: false });
       } catch {

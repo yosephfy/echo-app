@@ -1,6 +1,7 @@
 // mobile/src/components/ReplyInput.tsx
 import React from "react";
 import MessageComposer from "./MessageComposer";
+import { Platform } from "react-native";
 
 interface Props {
   onSend: (text: string) => void | Promise<void>;
@@ -15,6 +16,11 @@ export default function ReplyInput({ onSend, sending }: Props) {
       sending={sending}
       placeholder="Write a reply..."
       multiline={false}
+      enableAttachments={false}
+      useKeyboardAvoidingView
+      keyboardVerticalOffset={
+        Platform.select({ ios: 128, android: 0 }) as number
+      }
     />
   );
 }

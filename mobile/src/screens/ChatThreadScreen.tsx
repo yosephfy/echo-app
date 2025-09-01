@@ -11,13 +11,10 @@ import {
   View,
   Text,
   SafeAreaView,
-  KeyboardAvoidingView,
   Platform,
   Image,
   ActivityIndicator,
   StyleSheet,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
 } from "react-native";
 import { useMessages } from "../hooks/chats/useMessages";
 import { useAuthStore } from "../store/authStore";
@@ -37,7 +34,6 @@ export default function ChatThreadScreen({ route }: Props) {
   const isFocused = useIsFocused();
 
   const listRef = useRef<FlatList<any>>(null);
-  const [isAtBottom, setIsAtBottom] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
   // newest non-pending message timestamp/id (for read receipts)
@@ -59,44 +55,22 @@ export default function ChatThreadScreen({ route }: Props) {
     if (isFocused && newestKey) markRead();
   }, [isFocused, newestKey]);
 
-  // Auto-scroll to bottom:
-  // - when you send a message (we scroll on content changes if you're already near bottom)
-  // - when a new message arrives and you’re already at bottom
-  const scrollToBottom = useCallback(() => {
-    requestAnimationFrame(() =>
-      listRef.current?.scrollToEnd({ animated: true })
-    );
-  }, []);
-
-  useEffect(() => {
-    // If at bottom or the latest message is authored by me, keep pinned to bottom
-    if (!items.length) return;
-    const last = items[items.length - 1];
-    const isMine = last?.author?.id === meId;
-    if (isAtBottom || isMine) {
-      scrollToBottom();
-    }
-  }, [items.length]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    // on first load, scroll to bottom
-    listRef.current?.scrollToEnd({ animated: false });
-  }, [listRef]); // on mount
+  // no-op: inverted list anchors content at bottom
 
   const handleSend = useCallback(
     async (body: string) => {
       const trimmed = body.trim();
       if (!trimmed || sending) return;
       await send(trimmed);
-      // Optimistic pending goes in; we’ll be at bottom after socket confirmation anyway,
-      // but this keeps UX snappy.
-      scrollToBottom();
     },
-    [sending, send, scrollToBottom]
+    [sending, send]
   );
 
   const handleSendWithAttachments = useCallback(
-    async (body: string, atts: { uri: string; mimeType?: string; name?: string }[]) => {
+    async (
+      body: string,
+      atts: { uri: string; mimeType?: string; name?: string }[]
+    ) => {
       const trimmed = body.trim();
 
       // 1) If there is text, send it as a normal message
@@ -123,10 +97,8 @@ export default function ChatThreadScreen({ route }: Props) {
           // console.warn("Failed to upload attachment:", e);
         }
       }
-
-      scrollToBottom();
     },
-    [meId, send, sending, scrollToBottom]
+    [meId, send, sending]
   );
 
   const onEndReached = useCallback(async () => {
@@ -139,14 +111,7 @@ export default function ChatThreadScreen({ route }: Props) {
     }
   }, [hasMore, loadingMore, loadMore]);
 
-  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-    const paddingToBottom = 48; // px tolerance
-    const atBottom =
-      contentOffset.y + layoutMeasurement.height >=
-      contentSize.height - paddingToBottom;
-    setIsAtBottom(atBottom);
-  }, []);
+  // Inverted list handles bottom anchoring; no manual onScroll needed
 
   const renderItem = useCallback(
     ({ item }: { item: any }) => {
@@ -196,43 +161,39 @@ export default function ChatThreadScreen({ route }: Props) {
     [meId]
   );
 
+  const invertedData = useMemo(() => [...items].reverse(), [items]);
+
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.select({ ios: 64, android: 0 })}
-      >
-        <FlatList
-          ref={listRef}
-          data={items}
-          keyExtractor={(m: any) => m.id ?? m.__clientToken}
-          renderItem={renderItem}
-          onEndReached={onEndReached}
-          onEndReachedThreshold={0.5}
-          onScroll={onScroll}
-          scrollEventThrottle={16}
-          contentContainerStyle={styles.listContent}
-          ListFooterComponent={
-            loadingMore ? (
-              <View style={styles.footer}>
-                <ActivityIndicator />
-              </View>
-            ) : null
-          }
-        />
+      <FlatList
+        ref={listRef}
+        data={invertedData}
+        keyExtractor={(m: any) => m.id ?? m.__clientToken}
+        renderItem={renderItem}
+        inverted
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.5}
+        scrollEventThrottle={16}
+        contentContainerStyle={styles.listContent}
+        maintainVisibleContentPosition={{
+          minIndexForVisible: 1,
+          autoscrollToTopThreshold: 10,
+        }}
+      />
 
-        {/* Composer */}
-        <ChatInputComponent
-          onSend={handleSend}
-          onSendAttachments={handleSendWithAttachments}
-          sending={sending}
-          placeholder="Message"
-          multiline
-          onFocus={() => setTimeout(scrollToBottom, 50)}
-          sendOnEnter
-        />
-      </KeyboardAvoidingView>
+      {/* Composer */}
+      <ChatInputComponent
+        onSend={handleSend}
+        onSendAttachments={handleSendWithAttachments}
+        sending={sending}
+        placeholder="Message"
+        multiline
+        sendOnEnter
+        keyboardVerticalOffset={
+          Platform.select({ ios: 24, android: 0 }) as number
+        }
+        useKeyboardAvoidingView
+      />
     </SafeAreaView>
   );
 }
