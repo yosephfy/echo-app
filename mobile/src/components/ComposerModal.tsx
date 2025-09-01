@@ -60,146 +60,159 @@ export default function ComposerModal({ visible, onClose, onPosted }: Props) {
   };
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      onRequestClose={onClose}
+      style={{ backgroundColor: colors.background }}
+    >
       <SafeAreaView
         style={[
           styles.container,
           {
             backgroundColor: colors.background,
             padding: spacing.md,
-            margin: spacing.md,
+            //margin: spacing.md,
           },
         ]}
       >
-        <Text
-          style={[styles.title, { color: colors.text, fontSize: fontSizes.lg }]}
-        >
-          Share a Secret
-        </Text>
+        <View style={{ flex: 1, padding: spacing.md }}>
+          <Text
+            style={[
+              styles.title,
+              { color: colors.text, fontSize: fontSizes.lg },
+            ]}
+          >
+            Share a Secret
+          </Text>
 
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: spacing.lg }}
-        >
-          {/* TEXT INPUT */}
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={[
-                //styles.textInput,
-                {
-                  borderColor: colors.outline,
-                  backgroundColor: colors.input,
-                  color: colors.text,
-                  fontSize: fontSizes.md,
-                  borderRadius: radii.md,
-                  minHeight: 100,
-                },
-              ]}
-              placeholder="What's on your mind?"
-              placeholderTextColor={colors.muted}
-              multiline
-              maxLength={MAX_CHARS}
-              value={text}
-              onChangeText={setText}
-            />
-            <View style={styles.charCountRow}>
-              <Text
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingBottom: spacing.lg }}
+          >
+            {/* TEXT INPUT */}
+            <View style={styles.inputContainer}>
+              <TextInput
                 style={[
-                  styles.charCount,
+                  //styles.textInput,
                   {
-                    color: remainingChars < 0 ? colors.error : colors.muted,
-                    marginRight: spacing.sm,
+                    borderColor: colors.outline,
+                    backgroundColor: colors.input,
+                    color: colors.text,
+                    fontSize: fontSizes.md,
+                    borderRadius: radii.md,
+                    minHeight: 100,
+                    padding: spacing.md,
+                    textAlignVertical: "top",
+                    borderWidth: StyleSheet.hairlineWidth,
                   },
                 ]}
-              >
-                {remainingChars}
-                {"/"}
-                {MAX_CHARS}
-              </Text>
-              <CircularProgress
-                size={24}
-                progress={charPct}
-                strokeWidth={4}
-                color={remainingChars < 0 ? colors.error : colors.primary}
-                backgroundColor={colors.outline}
+                placeholder="What's on your mind?"
+                placeholderTextColor={colors.muted}
+                multiline
+                maxLength={MAX_CHARS}
+                value={text}
+                onChangeText={setText}
               />
-            </View>
-          </View>
-
-          {/* MOOD SELECTOR */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionLabel, { color: colors.text }]}>
-              Mood (optional)
-            </Text>
-            <View style={styles.moodRow}>
-              {MOODS.map((m) => (
-                <MoodButton
-                  key={m}
-                  mood={m}
-                  selected={mood === m}
-                  onPress={() => setMood(m)}
+              <View style={styles.charCountRow}>
+                <Text
+                  style={[
+                    styles.charCount,
+                    {
+                      color: remainingChars < 0 ? colors.error : colors.muted,
+                      marginRight: spacing.sm,
+                    },
+                  ]}
+                >
+                  {remainingChars}
+                  {"/"}
+                  {MAX_CHARS}
+                </Text>
+                <CircularProgress
+                  size={24}
+                  progress={charPct}
+                  strokeWidth={4}
+                  color={remainingChars < 0 ? colors.error : colors.primary}
+                  backgroundColor={colors.outline}
                 />
-              ))}
+              </View>
             </View>
-          </View>
 
-          {/* PANIC DELETE */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionLabel, { color: colors.text }]}>
-              Panic Delete
-            </Text>
-            <View style={styles.panicRow}>
-              <Text style={{ color: colors.text, flex: 1 }}>
-                Allow immediate deletion from server?
+            {/* MOOD SELECTOR */}
+            <View style={styles.section}>
+              <Text style={[styles.sectionLabel, { color: colors.text }]}>
+                Mood (optional)
               </Text>
-              <Switch
-                value={panic}
-                onValueChange={setPanic}
-                trackColor={{ false: colors.muted, true: colors.error }}
-              />
+              <View style={styles.moodRow}>
+                {MOODS.map((m) => (
+                  <MoodButton
+                    key={m}
+                    mood={m}
+                    selected={mood === m}
+                    onPress={() => setMood(m)}
+                  />
+                ))}
+              </View>
             </View>
-          </View>
-        </ScrollView>
 
-        {/* ACTIONS */}
-        <View style={[styles.actionsRow, { borderTopColor: colors.outline }] }>
-          <TouchableOpacity
-            onPress={onClose}
-            style={[
-              styles.cancelButton,
-              {
-                borderColor: colors.muted,
-                borderRadius: radii.sm,
-                padding: spacing.sm,
-              },
-            ]}
-          >
-            <Text style={{ color: colors.muted }}>Cancel</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={postSecret}
-            disabled={!text.trim() || text.length > MAX_CHARS || loading}
-            style={[
-              styles.postButton,
-              {
-                backgroundColor:
-                  !text.trim() || text.length > MAX_CHARS
-                    ? colors.muted
-                    : colors.primary,
-                borderRadius: radii.sm,
-                padding: spacing.sm,
-              },
-            ]}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={[styles.postText, { fontSize: fontSizes.md }]}>
-                Post
+            {/* PANIC DELETE */}
+            <View style={styles.section}>
+              <Text style={[styles.sectionLabel, { color: colors.text }]}>
+                Panic Delete
               </Text>
-            )}
-          </TouchableOpacity>
+              <View style={styles.panicRow}>
+                <Text style={{ color: colors.text, flex: 1 }}>
+                  Allow immediate deletion from server?
+                </Text>
+                <Switch
+                  value={panic}
+                  onValueChange={setPanic}
+                  trackColor={{ false: colors.muted, true: colors.error }}
+                />
+              </View>
+            </View>
+          </ScrollView>
+
+          {/* ACTIONS */}
+          <View style={[styles.actionsRow, { borderTopColor: colors.outline }]}>
+            <TouchableOpacity
+              onPress={onClose}
+              style={[
+                styles.cancelButton,
+                {
+                  borderColor: colors.muted,
+                  borderRadius: radii.sm,
+                  padding: spacing.sm,
+                },
+              ]}
+            >
+              <Text style={{ color: colors.muted }}>Cancel</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={postSecret}
+              disabled={!text.trim() || text.length > MAX_CHARS || loading}
+              style={[
+                styles.postButton,
+                {
+                  backgroundColor:
+                    !text.trim() || text.length > MAX_CHARS
+                      ? colors.muted
+                      : colors.primary,
+                  borderRadius: radii.sm,
+                  padding: spacing.sm,
+                },
+              ]}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={[styles.postText, { fontSize: fontSizes.md }]}>
+                  Post
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     </Modal>
@@ -249,7 +262,7 @@ const styles = StyleSheet.create({
   charCountRow: {
     position: "absolute",
     right: 0,
-    bottom: -24,
+    bottom: -28,
     flexDirection: "row",
     alignItems: "center",
   },

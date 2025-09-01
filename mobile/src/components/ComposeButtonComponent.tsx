@@ -11,6 +11,7 @@ import {
 import Svg, { Circle as SvgCircle } from "react-native-svg";
 import { useTheme } from "../theme/ThemeContext";
 import useCooldown from "../hooks/useCooldown";
+import { IconSvg } from "../icons/IconSvg";
 
 const AnimatedCircle = Animated.createAnimatedComponent(SvgCircle);
 
@@ -85,7 +86,7 @@ export default function ComposeButton({
             r={radius}
             stroke={colors.outline}
             strokeWidth={strokeWidth}
-            fill={cooldown == 0 ? colors.primary : colors.surface}
+            fill={cooldown == 0 ? colors.surface : colors.surface}
           />
           <AnimatedCircle
             cx={size / 2}
@@ -109,7 +110,7 @@ export default function ComposeButton({
               {formatTime(cooldown)}
             </Text>
           ) : (
-            <Text style={[styles.plus, { color: "white" }]}>+</Text>
+            <IconSvg icon="add-circle" size={size + 4} state="pressed" />
           )}
         </View>
       </TouchableOpacity>
