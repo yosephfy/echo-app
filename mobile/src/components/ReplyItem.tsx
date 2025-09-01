@@ -4,10 +4,11 @@ import { StyleSheet, Text, View } from "react-native";
 import { Reply } from "../hooks/useReplies";
 import { useTheme } from "../theme/ThemeContext";
 import { timeAgo } from "../utils/timeAgo";
-import Reaction from "./Reaction";
+import ReactionPicker, { DEFAULT_REACTIONS } from "./ReactionPicker";
+import { ReactionType } from "../hooks/useReactions";
+import ActionButton from "./ActionButton";
 import Avatar from "./Avatar";
 import useReplyReactions from "../hooks/useReplyReactions";
-import { ReactionType } from "../hooks/useReactions";
 
 interface Props {
   reply: Omit<Reply, "id"> | Reply; // reply without id (for pending replies
@@ -46,11 +47,23 @@ const ReplyItem: React.FC<Props> = ({ reply }) => {
             {timestamp}
           </Text>
         </View>
-        <Reaction
-          current={currentType}
-          onReact={(type: ReactionType) => react(type)}
-          totalCount={totalReactions}
-        />
+        <ReactionPicker
+          value={currentType ?? null}
+          onSelect={(k) => react(k as ReactionType)}
+        >
+          <ActionButton
+            icon={
+              currentType
+                ? (DEFAULT_REACTIONS.find((r) => r.key === currentType)
+                    ?.icon as any)
+                : "heart"
+            }
+            onPress={() => react(currentType ?? ReactionType.Love)}
+            label={totalReactions > 0 ? totalReactions : undefined}
+            active={!!currentType}
+            size={24}
+          />
+        </ReactionPicker>
       </View>
 
       {/* Comment text */}

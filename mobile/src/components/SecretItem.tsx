@@ -17,7 +17,7 @@ import { useTheme } from "../theme/ThemeContext";
 import { timeAgo } from "../utils/timeAgo";
 import ActionButton from "./ActionButton";
 import Avatar from "./Avatar";
-import Reaction from "./Reaction";
+import ReactionPicker, { DEFAULT_REACTIONS } from "./ReactionPicker";
 
 export interface SecretItemProps {
   id: string;
@@ -191,12 +191,26 @@ export default function SecretItem({
       {!isCondensed && (
         <View style={styles.footer}>
           <View style={styles.leftActions}>
-            <Reaction
-              current={currentType}
-              onReact={(t: ReactionType) => !reacting && react(t)}
-              totalCount={totalReactions}
-              disabled={reacting}
-            />
+            <ReactionPicker
+              value={currentType ?? null}
+              onSelect={(k) => !reacting && react(k as ReactionType)}
+            >
+              <ActionButton
+                icon={
+                  currentType
+                    ? (DEFAULT_REACTIONS.find((r) => r.key === currentType)
+                        ?.icon as any)
+                    : "heart"
+                }
+                onPress={() =>
+                  !reacting && react(currentType ?? ReactionType.Love)
+                }
+                label={totalReactions > 0 ? totalReactions : undefined}
+                size={24}
+                disabled={reacting}
+                active={!!currentType}
+              />
+            </ReactionPicker>
             <ActionButton
               icon="comment"
               onPress={onReply}
