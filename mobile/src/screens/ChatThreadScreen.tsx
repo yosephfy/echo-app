@@ -21,7 +21,7 @@ import {
 } from "react-native";
 import { useMessages } from "../hooks/chats/useMessages";
 import { useAuthStore } from "../store/authStore";
-import { pickAndUploadChatImage } from "../hooks/chats/useSendImage";
+import { uploadFile, StorageKind } from "../utils/storage";
 import { useIsFocused } from "@react-navigation/native";
 import ChatInputComponent from "../components/ChatInputComponent";
 
@@ -95,13 +95,39 @@ export default function ChatThreadScreen({ route }: Props) {
     [sending, send, scrollToBottom]
   );
 
-  const handlePickImage = useCallback(async () => {
-    const url = await pickAndUploadChatImage(meId);
-    if (url) {
-      await send("", url);
+  const handleSendWithAttachments = useCallback(
+    async (body: string, atts: { uri: string; mimeType?: string; name?: string }[]) => {
+      const trimmed = body.trim();
+
+      // 1) If there is text, send it as a normal message
+      if (trimmed.length > 0) {
+        await send(trimmed);
+      }
+
+      // 2) Upload and send each attachment as its own message
+      for (const a of atts) {
+        try {
+          const { url } = await uploadFile(
+            { localUri: a.uri },
+            {
+              kind: StorageKind.CHAT_IMAGE,
+              ids: { userId: meId },
+              transform: { quality: 0.65, maxWidth: 1920, maxHeight: 1920 },
+              contentType: a.mimeType,
+              fileName: a.name,
+            }
+          );
+          await send("", url, a.mimeType);
+        } catch (e) {
+          // optional: could show a toast; for now just continue with others
+          // console.warn("Failed to upload attachment:", e);
+        }
+      }
+
       scrollToBottom();
-    }
-  }, [meId, send, scrollToBottom]);
+    },
+    [meId, send, sending, scrollToBottom]
+  );
 
   const onEndReached = useCallback(async () => {
     if (!hasMore || loadingMore) return;
@@ -199,11 +225,11 @@ export default function ChatThreadScreen({ route }: Props) {
         {/* Composer */}
         <ChatInputComponent
           onSend={handleSend}
+          onSendAttachments={handleSendWithAttachments}
           sending={sending}
           placeholder="Message"
           multiline
           onFocus={() => setTimeout(scrollToBottom, 50)}
-          onPickImage={handlePickImage}
           sendOnEnter
         />
       </KeyboardAvoidingView>

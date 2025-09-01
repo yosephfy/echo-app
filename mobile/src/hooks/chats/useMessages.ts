@@ -114,7 +114,7 @@ export function useMessages(conversationId: string, pageSize = 30) {
 
   // Optimistic send: add pending; server/WS will replace it
   const send = useMutation({
-    mutationFn: async (vars: { body: string; attachmentUrl?: string }) => {
+    mutationFn: async (vars: { body: string; attachmentUrl?: string; mimeType?: string }) => {
       const clientToken = `${my?.id}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
       const res = await api.post<ChatMessage>(
         `/chats/${conversationId}/messages`,
@@ -259,8 +259,8 @@ export function useMessages(conversationId: string, pageSize = 30) {
     hasMore: !!query.hasNextPage,
     loadMore: () => query.fetchNextPage(),
     refresh: () => query.refetch(),
-    send: (body: string, attachmentUrl?: string) =>
-      send.mutateAsync({ body, attachmentUrl }),
+    send: (body: string, attachmentUrl?: string, mimeType?: string) =>
+      send.mutateAsync({ body, attachmentUrl, mimeType }),
     sending: send.isPending,
     markRead,
   };
