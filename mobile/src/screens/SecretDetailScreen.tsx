@@ -87,7 +87,7 @@ export default function SecretDetailScreen({ route }: Props) {
         onEndReachedThreshold={0.5}
       />
 
-      <ReplyInput onSend={handleSend} sending={false} />
+      <ReplyInput onSend={handleSend} sending={false} secretId={secretId} />
     </SafeAreaView>
   );
 }

@@ -18,6 +18,10 @@ import { timeAgo } from "../utils/timeAgo";
 import ActionButton from "./ActionButton";
 import Avatar from "./Avatar";
 import ReactionPicker, { DEFAULT_REACTIONS } from "./ReactionPicker";
+import useMe from "../hooks/useMe";
+import { useSecretMutations } from "../hooks/useSecretMutations";
+import { Alert } from "react-native";
+import { useComposer } from "../store/composer";
 
 export interface SecretItemProps {
   id: string;
@@ -41,6 +45,10 @@ export default function SecretItem({
 }) {
   const { id, text, mood, createdAt, author } = secret;
   const { colors } = useTheme();
+  const { user } = useMe();
+  const isMine = user?.id === author?.id;
+  const { deleteSecret } = useSecretMutations();
+  const composer = useComposer();
 
   // Reactions
   const {
@@ -128,18 +136,44 @@ export default function SecretItem({
             )}
 
             <View style={styles.headerRightButtons}>
-              <ActionButton
-                icon="cap"
-                onPress={() => !capping && toggleCap()}
-                label={capCount > 0 ? String(capCount) : undefined}
-                active={hasCapped}
-                disabled={capping}
-              />
-              <ActionButton
-                icon="more-vertical"
-                onPress={report}
-                style={{ marginRight: 0 }}
-              />
+              {isMine ? (
+                <>
+                  <ActionButton icon="pencil" onPress={() => composer.openEdit({ id, text, mood })} />
+                  <ActionButton
+                    icon="trash"
+                    onPress={() =>
+                      Alert.alert(
+                        "Delete secret",
+                        "Are you sure you want to delete this secret?",
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          {
+                            text: "Delete",
+                            style: "destructive",
+                            onPress: () =>
+                              deleteSecret({ id }).catch((e) => alert(e.message)),
+                          },
+                        ]
+                      )
+                    }
+                  />
+                </>
+              ) : (
+                <>
+                  <ActionButton
+                    icon="cap"
+                    onPress={() => !capping && toggleCap()}
+                    label={capCount > 0 ? String(capCount) : undefined}
+                    active={hasCapped}
+                    disabled={capping}
+                  />
+                  <ActionButton
+                    icon="more-vertical"
+                    onPress={report}
+                    style={{ marginRight: 0 }}
+                  />
+                </>
+              )}
             </View>
           </>
         )}

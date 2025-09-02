@@ -7,6 +7,8 @@ import {
   Get,
   Query,
   Param,
+  Patch,
+  Delete,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SecretsService } from './secrets.service';
@@ -16,6 +18,16 @@ import { SecretsGateway } from './secrets.getaway';
 export class CreateSecretDto {
   @IsString()
   text: string;
+
+  @IsOptional()
+  @IsString()
+  mood?: string;
+}
+
+export class UpdateSecretDto {
+  @IsOptional()
+  @IsString()
+  text?: string;
 
   @IsOptional()
   @IsString()
@@ -58,6 +70,23 @@ export class SecretsController {
   async getSecret(@Param('id') secretId: string) {
     const secret = await this.secrets.getSecretById(secretId);
     return secret;
+  }
+
+  /** PATCH /secrets/:id — edit own secret */
+  @Patch(':id')
+  async updateSecret(
+    @Request() req,
+    @Param('id') secretId: string,
+    @Body() dto: UpdateSecretDto,
+  ) {
+    return this.secrets.updateSecret(req.user.userId, secretId, dto);
+  }
+
+  /** DELETE /secrets/:id — soft-delete own secret */
+  @Delete(':id')
+  async deleteSecret(@Request() req, @Param('id') secretId: string) {
+    await this.secrets.deleteSecret(req.user.userId, secretId);
+    return { ok: true };
   }
   @Post()
   async create(@Request() req, @Body() dto: CreateSecretDto) {

@@ -1,4 +1,4 @@
-import { Injectable, Inject, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, Inject, ForbiddenException, Logger, NotFoundException } from '@nestjs/common';
 import { In, Repository } from 'typeorm';
 import { Secret, SecretStatus } from './secret.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -191,5 +191,39 @@ export class SecretsService {
 
   async updateStatus(secretId: string, status: SecretStatus): Promise<void> {
     await this.secretsRepo.update({ id: secretId }, { status });
+  }
+
+  /** Ensure the user owns the secret; throws if not */
+  private async assertOwner(userId: string, secretId: string): Promise<Secret> {
+    const entity = await this.secretsRepo.findOne({ where: { id: secretId } });
+    if (!entity) throw new NotFoundException('Secret not found');
+    if (entity.userId !== userId)
+      throw new ForbiddenException('Not allowed to modify this secret');
+    return entity;
+  }
+
+  /** Update text/mood on a secret (owner only) */
+  async updateSecret(
+    userId: string,
+    secretId: string,
+    patch: { text?: string; mood?: string },
+  ) {
+    const entity = await this.assertOwner(userId, secretId);
+    const next = { ...entity } as any;
+    if (typeof patch.text === 'string') next.text = patch.text;
+    if (typeof patch.mood === 'string') next.mood = patch.mood;
+    await this.secretsRepo.update({ id: secretId }, next);
+
+    const saved = await this.getSecretById(secretId);
+    return saved;
+  }
+
+  /** Soft-delete: mark as REMOVED and redact text (owner only) */
+  async deleteSecret(userId: string, secretId: string) {
+    const entity = await this.assertOwner(userId, secretId);
+    await this.secretsRepo.update(
+      { id: entity.id },
+      { status: SecretStatus.REMOVED, text: '[deleted]' },
+    );
   }
 }

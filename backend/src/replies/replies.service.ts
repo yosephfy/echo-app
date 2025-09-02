@@ -1,5 +1,5 @@
 // backend/src/replies/replies.service.ts
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Reply } from './reply.entity';
@@ -82,5 +82,48 @@ export class RepliesService {
     const items = rows.map((r) => ({ ...r, secretId }));
     const total = await this.repo.count({ where: { secretId } });
     return { items, total, page, limit };
+  }
+
+  private async findById(replyId: string) {
+    const row = await this.repo.findOne({ where: { id: replyId } });
+    if (!row) throw new NotFoundException('Reply not found');
+    return row;
+  }
+
+  /** Update own reply's text */
+  async update(userId: string, secretId: string, replyId: string, text: string) {
+    const row = await this.findById(replyId);
+    if (row.userId !== userId)
+      throw new ForbiddenException('Not allowed to modify this reply');
+    if (row.secretId !== secretId)
+      throw new ForbiddenException('Reply does not belong to this secret');
+
+    await this.repo.update({ id: replyId }, { text });
+
+    const full: any = await this.repo.findOne({
+      where: { id: replyId },
+      relations: ['author'],
+    });
+    return {
+      id: full.id,
+      secretId: full.secretId,
+      text: full.text,
+      createdAt: full.createdAt,
+      author: {
+        id: full.author.id,
+        handle: full.author.handle,
+        avatarUrl: full.author.avatarUrl,
+      },
+    };
+  }
+
+  /** Delete own reply */
+  async remove(userId: string, secretId: string, replyId: string) {
+    const row = await this.findById(replyId);
+    if (row.userId !== userId)
+      throw new ForbiddenException('Not allowed to delete this reply');
+    if (row.secretId !== secretId)
+      throw new ForbiddenException('Reply does not belong to this secret');
+    await this.repo.delete({ id: replyId });
   }
 }

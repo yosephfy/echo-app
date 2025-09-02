@@ -1,6 +1,6 @@
 // components/ReplyItem.tsx
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
 import { Reply } from "../hooks/useReplies";
 import { useTheme } from "../theme/ThemeContext";
 import { timeAgo } from "../utils/timeAgo";
@@ -9,6 +9,9 @@ import { ReactionType } from "../hooks/useReactions";
 import ActionButton from "./ActionButton";
 import Avatar from "./Avatar";
 import useReplyReactions from "../hooks/useReplyReactions";
+import useMe from "../hooks/useMe";
+import { useReplyMutations } from "../hooks/useReplyMutations";
+import { useReplyComposer } from "../store/replyComposer";
 
 interface Props {
   reply: Omit<Reply, "id"> | Reply; // reply without id (for pending replies
@@ -17,6 +20,10 @@ interface Props {
 const ReplyItem: React.FC<Props> = ({ reply }) => {
   const { colors } = useTheme();
   const timestamp = timeAgo(reply.createdAt, "medium");
+  const { user } = useMe();
+  const isMine = user?.id === reply.author.id;
+  const { deleteReply } = useReplyMutations(reply.secretId);
+  const rc = useReplyComposer();
 
   const { counts, currentType, react } =
     "id" in reply
@@ -47,27 +54,64 @@ const ReplyItem: React.FC<Props> = ({ reply }) => {
             {timestamp}
           </Text>
         </View>
-        <ReactionPicker
-          value={currentType ?? null}
-          onSelect={(k) => react(k as ReactionType)}
-        >
-          <ActionButton
-            icon={
-              currentType
-                ? (DEFAULT_REACTIONS.find((r) => r.key === currentType)
-                    ?.icon as any)
-                : "heart"
-            }
-            onPress={() => react(currentType ?? ReactionType.Love)}
-            label={totalReactions > 0 ? totalReactions : undefined}
-            active={!!currentType}
-            size={24}
-          />
-        </ReactionPicker>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          {isMine && "id" in reply && (
+            <>
+              <ActionButton
+                icon="pencil"
+                onPress={() => {
+                  rc.openEdit({ id: (reply as Reply).id, text: reply.text });
+                }}
+                size={20}
+              />
+              <ActionButton
+                icon="trash"
+                onPress={() =>
+                  Alert.alert(
+                    "Delete reply",
+                    "Are you sure you want to delete this reply?",
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      {
+                        text: "Delete",
+                        style: "destructive",
+                        onPress: () => {
+                          deleteReply({ id: (reply as Reply).id }).catch((e) =>
+                            alert(e.message)
+                          );
+                        },
+                      },
+                    ]
+                  )
+                }
+                size={20}
+              />
+            </>
+          )}
+          <ReactionPicker
+            value={currentType ?? null}
+            onSelect={(k) => react(k as ReactionType)}
+          >
+            <ActionButton
+              icon={
+                currentType
+                  ? (DEFAULT_REACTIONS.find((r) => r.key === currentType)
+                      ?.icon as any)
+                  : "heart"
+              }
+              onPress={() => react(currentType ?? ReactionType.Love)}
+              label={totalReactions > 0 ? totalReactions : undefined}
+              active={!!currentType}
+              size={24}
+            />
+          </ReactionPicker>
+        </View>
       </View>
 
       {/* Comment text */}
       <Text style={[styles.text, { color: colors.text }]}>{reply.text}</Text>
+
+      {/* Edit now handled by ReplyInput via replyComposer store */}
     </View>
   );
 };

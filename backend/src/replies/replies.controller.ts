@@ -8,6 +8,8 @@ import {
   Get,
   Query,
   Request,
+  Patch,
+  Delete,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RepliesService } from './replies.service';
@@ -41,5 +43,27 @@ export class RepliesController {
     const pageNum = Math.max(parseInt(page, 10), 1);
     const limitNum = Math.min(Math.max(parseInt(limit, 10), 1), 100);
     return this.svc.list(secretId, pageNum, limitNum);
+  }
+
+  /** PATCH /secrets/:id/replies/:replyId — edit own reply */
+  @Patch(':replyId')
+  async update(
+    @Request() req,
+    @Param('id') secretId: string,
+    @Param('replyId') replyId: string,
+    @Body() dto: CreateReplyDto,
+  ) {
+    return this.svc.update(req.user.userId, secretId, replyId, dto.text);
+  }
+
+  /** DELETE /secrets/:id/replies/:replyId — delete own reply */
+  @Delete(':replyId')
+  async remove(
+    @Request() req,
+    @Param('id') secretId: string,
+    @Param('replyId') replyId: string,
+  ) {
+    await this.svc.remove(req.user.userId, secretId, replyId);
+    return { ok: true };
   }
 }

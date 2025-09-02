@@ -1,5 +1,5 @@
 // mobile/src/components/ComposerModal.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Modal,
   SafeAreaView,
@@ -17,21 +17,19 @@ import { api } from "../api/client";
 import { CircularProgress } from "./CircularProgressComponent";
 import useCooldown from "../hooks/useCooldown";
 import { Socket } from "socket.io-client";
+import { useComposer } from "../store/composer";
+import { useSecretMutations } from "../hooks/useSecretMutations";
 
 const MAX_CHARS = 2000;
 const MOODS = ["happy", "sad", "angry", "relieved"] as const;
 
 type Mood = (typeof MOODS)[number];
 
-interface Props {
-  visible: boolean;
-  onClose: () => void;
-  onPosted: () => void;
-}
-
-export default function ComposerModal({ visible, onClose, onPosted }: Props) {
+export default function ComposerModal() {
   const { colors, spacing, fontSizes, radii } = useTheme();
   const { refresh } = useCooldown();
+  const composer = useComposer();
+  const { editSecret, editing } = useSecretMutations();
   const [text, setText] = useState("");
   const [mood, setMood] = useState<Mood | undefined>(undefined);
   const [panic, setPanic] = useState(false);
@@ -40,17 +38,29 @@ export default function ComposerModal({ visible, onClose, onPosted }: Props) {
   const remainingChars = MAX_CHARS - text.length;
   const charPct = text.length / MAX_CHARS;
 
+  useEffect(() => {
+    if (composer.visible) {
+      setText(composer.text ?? "");
+      setMood((composer.mood as Mood | undefined) ?? undefined);
+      setPanic(false);
+    }
+  }, [composer.visible]);
+
   const postSecret = async () => {
     setLoading(true);
     try {
-      await api.post("/secrets", { text, mood, panic });
-      setText("");
-      setMood(undefined);
-      setPanic(false);
-      onPosted();
-      onClose();
-      // Reset cooldown after posting
-      refresh();
+      if (composer.mode === "edit" && composer.secretId) {
+        await editSecret({ id: composer.secretId, text, mood });
+        composer.close();
+      } else {
+        await api.post("/secrets", { text, mood, panic });
+        setText("");
+        setMood(undefined);
+        setPanic(false);
+        composer.close();
+        // Reset cooldown after posting
+        refresh();
+      }
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -61,9 +71,9 @@ export default function ComposerModal({ visible, onClose, onPosted }: Props) {
 
   return (
     <Modal
-      visible={visible}
+      visible={composer.visible}
       animationType="slide"
-      onRequestClose={onClose}
+      onRequestClose={composer.close}
       style={{ backgroundColor: colors.background }}
     >
       <SafeAreaView
@@ -83,7 +93,7 @@ export default function ComposerModal({ visible, onClose, onPosted }: Props) {
               { color: colors.text, fontSize: fontSizes.lg },
             ]}
           >
-            Share a Secret
+            {composer.mode === "edit" ? "Edit Secret" : "Share a Secret"}
           </Text>
 
           <ScrollView
@@ -155,28 +165,30 @@ export default function ComposerModal({ visible, onClose, onPosted }: Props) {
               </View>
             </View>
 
-            {/* PANIC DELETE */}
-            <View style={styles.section}>
-              <Text style={[styles.sectionLabel, { color: colors.text }]}>
-                Panic Delete
-              </Text>
-              <View style={styles.panicRow}>
-                <Text style={{ color: colors.text, flex: 1 }}>
-                  Allow immediate deletion from server?
+            {/* PANIC DELETE (only for create) */}
+            {composer.mode === "create" && (
+              <View style={styles.section}>
+                <Text style={[styles.sectionLabel, { color: colors.text }]}>
+                  Panic Delete
                 </Text>
-                <Switch
-                  value={panic}
-                  onValueChange={setPanic}
-                  trackColor={{ false: colors.muted, true: colors.error }}
-                />
+                <View style={styles.panicRow}>
+                  <Text style={{ color: colors.text, flex: 1 }}>
+                    Allow immediate deletion from server?
+                  </Text>
+                  <Switch
+                    value={panic}
+                    onValueChange={setPanic}
+                    trackColor={{ false: colors.muted, true: colors.error }}
+                  />
+                </View>
               </View>
-            </View>
+            )}
           </ScrollView>
 
           {/* ACTIONS */}
           <View style={[styles.actionsRow, { borderTopColor: colors.outline }]}>
             <TouchableOpacity
-              onPress={onClose}
+              onPress={composer.close}
               style={[
                 styles.cancelButton,
                 {
@@ -191,7 +203,7 @@ export default function ComposerModal({ visible, onClose, onPosted }: Props) {
 
             <TouchableOpacity
               onPress={postSecret}
-              disabled={!text.trim() || text.length > MAX_CHARS || loading}
+              disabled={!text.trim() || text.length > MAX_CHARS || loading || editing}
               style={[
                 styles.postButton,
                 {
@@ -208,7 +220,7 @@ export default function ComposerModal({ visible, onClose, onPosted }: Props) {
                 <ActivityIndicator color="#fff" />
               ) : (
                 <Text style={[styles.postText, { fontSize: fontSizes.md }]}>
-                  Post
+                  {composer.mode === "edit" ? "Save" : "Post"}
                 </Text>
               )}
             </TouchableOpacity>

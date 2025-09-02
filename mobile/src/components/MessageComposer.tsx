@@ -40,6 +40,11 @@ export interface MessageComposerProps {
   keyboardVerticalOffset?: number;
   /** Use native KeyboardAvoidingView instead of listeners. iOS-focused. */
   useKeyboardAvoidingView?: boolean;
+  /** When provided, component becomes controlled */
+  value?: string;
+  onChangeText?: (val: string) => void;
+  /** Override the send button label */
+  submitLabel?: string;
 }
 
 export default function MessageComposer({
@@ -57,6 +62,9 @@ export default function MessageComposer({
   avoidKeyboard = true,
   keyboardVerticalOffset = 0,
   useKeyboardAvoidingView = false,
+  value,
+  onChangeText,
+  submitLabel,
 }: MessageComposerProps) {
   const { colors } = useTheme();
   const [text, setText] = useState("");
@@ -90,9 +98,12 @@ export default function MessageComposer({
     return () => subs.forEach((s) => s.remove());
   }, [avoidKeyboard, useKeyboardAvoidingView]);
 
+  const controlled = typeof value === "string";
+  const currentText = controlled ? (value as string) : text;
+
   const canSend = useMemo(() => {
-    return (!!text.trim() || attachments.length > 0) && !sending;
-  }, [text, attachments.length, sending]);
+    return (!!currentText.trim() || attachments.length > 0) && !sending;
+  }, [currentText, attachments.length, sending]);
 
   const sendNow = useCallback(
     async (body: string) => {
@@ -103,16 +114,16 @@ export default function MessageComposer({
       } else {
         await onSend(trimmed);
       }
-      setText("");
+      if (!controlled) setText("");
       setAttachments([]);
       Keyboard.dismiss();
     },
-    [sending, onSend, onSendAttachments, attachments]
+    [sending, onSend, onSendAttachments, attachments, controlled]
   );
 
   const handleSend = useCallback(() => {
-    void sendNow(text);
-  }, [text, sendNow]);
+    void sendNow(currentText);
+  }, [currentText, sendNow, sending]);
 
   const handlePick = useCallback(async () => {
     if (!enableAttachments) return;
@@ -137,7 +148,9 @@ export default function MessageComposer({
       const merged = [...prev, ...newOnes];
       // de-dupe by uri
       const seen = new Set<string>();
-      return merged.filter((x) => (seen.has(x.uri) ? false : (seen.add(x.uri), true)));
+      return merged.filter((x) =>
+        seen.has(x.uri) ? false : (seen.add(x.uri), true)
+      );
     });
   }, [enableAttachments]);
 
@@ -145,9 +158,10 @@ export default function MessageComposer({
     setAttachments((prev) => prev.filter((a) => a.uri !== uri));
   }, []);
 
-  const bottomAvoid = !useKeyboardAvoidingView && avoidKeyboard && kbVisible
-    ? Math.max(0, kbHeight - (keyboardVerticalOffset || 0))
-    : 0;
+  const bottomAvoid =
+    !useKeyboardAvoidingView && avoidKeyboard && kbVisible
+      ? Math.max(0, kbHeight - (keyboardVerticalOffset || 0))
+      : 0;
 
   const Outer: React.ComponentType<any> = useKeyboardAvoidingView
     ? KeyboardAvoidingView
@@ -195,7 +209,10 @@ export default function MessageComposer({
       <View
         style={[
           styles.composer,
-          { borderTopColor: colors.outline, backgroundColor: colors.background },
+          {
+            borderTopColor: colors.outline,
+            backgroundColor: colors.background,
+          },
           containerStyle,
         ]}
       >
@@ -212,28 +229,28 @@ export default function MessageComposer({
         {!!leftAccessory && <View style={styles.left}>{leftAccessory}</View>}
 
         <TextInput
-          value={text}
+          value={currentText}
           onChangeText={(val) => {
             if (multiline && sendOnEnter && val.includes("\n")) {
               const withoutNewlines = val.replace(/\n/g, "");
-              void sendNow(withoutNewlines || text);
+              void sendNow(withoutNewlines || currentText);
               // clear composer after sending
-              setText("");
+              if (!controlled) setText("");
             } else {
-              setText(val);
+              controlled ? onChangeText?.(val) : setText(val);
             }
           }}
           placeholder={placeholder}
           placeholderTextColor={colors.muted}
           style={[
-          styles.input,
-          {
-            color: colors.text,
-            borderColor: colors.outline,
-            minHeight: multiline ? 40 : 36,
-            maxHeight: multiline ? 120 : 44,
-          },
-        ]}
+            styles.input,
+            {
+              color: colors.text,
+              borderColor: colors.outline,
+              minHeight: multiline ? 40 : 36,
+              maxHeight: multiline ? 120 : 44,
+            },
+          ]}
           multiline={multiline}
           onSubmitEditing={!multiline ? handleSend : undefined}
           blurOnSubmit={!multiline}
@@ -243,14 +260,18 @@ export default function MessageComposer({
         />
 
         <TouchableOpacity
-          style={[styles.sendBtn, { backgroundColor: colors.primary }, !canSend && styles.sendDisabled]}
+          style={[
+            styles.sendBtn,
+            { backgroundColor: colors.primary },
+            !canSend && styles.sendDisabled,
+          ]}
           onPress={handleSend}
           disabled={!canSend}
         >
           {sending ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.sendTxt}>Send</Text>
+            <Text style={styles.sendTxt}>{submitLabel ?? "Send"}</Text>
           )}
         </TouchableOpacity>
       </View>

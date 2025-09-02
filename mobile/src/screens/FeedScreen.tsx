@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import ComposeButton from "../components/ComposeButtonComponent";
 import ComposerModal from "../components/ComposerModal";
+import { useComposer } from "../store/composer";
 import SecretItem, { SecretItemProps } from "../components/SecretItem";
 import { useFeed } from "../hooks/useFeed";
 import useSocket from "../hooks/useSocket";
@@ -36,7 +37,7 @@ export default function FeedScreen({ navigation }: Props) {
   } = useFeed(10);
 
   const { remaining, duration, refresh: refreshCooldown } = useCooldown();
-  const [composerActive, setComposerActive] = useState(false);
+  const composer = useComposer();
 
   // Real-time: on new secret, refresh feed + cooldown
   useSocket("secretCreated", (_newItem: SecretItemProps) => {
@@ -49,21 +50,14 @@ export default function FeedScreen({ navigation }: Props) {
 
   useEffect(() => {
     refreshCooldown();
-  }, [composerActive]);
+  }, [composer.visible]);
 
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
     >
-      <ComposerModal
-        visible={composerActive}
-        onClose={() => setComposerActive(false)}
-        onPosted={() => setComposerActive(false)}
-      />
-      <ComposeButton
-        onPress={() => setComposerActive(true)}
-        composerActive={composerActive}
-      />
+      <ComposerModal />
+      <ComposeButton onPress={() => composer.openCreate()} composerActive={composer.visible} />
       <View
         style={[
           styles.headerContainer,
