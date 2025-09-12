@@ -48,7 +48,11 @@ export type RootStackParamList = {
         ) => void;
       }
     | undefined;
-  ChatThread: { id: string };
+  ChatThread: {
+    id: string;
+    peerHandle?: string;
+    peerAvatarUrl?: string | null;
+  };
 };
 
 const Tab = createBottomTabNavigator<TabParamList>();

@@ -22,11 +22,17 @@ import { uploadFile, StorageKind } from "../utils/storage";
 import { useIsFocused } from "@react-navigation/native";
 import ChatInputComponent from "../components/ChatInputComponent";
 import { useTheme } from "../theme/ThemeContext";
+import ChatHeader from "../components/ChatHeader";
+import ChatOptionsModal from "../components/ChatOptionsModal";
 
-type Props = { route: { params: { id: string } } };
+type Props = {
+  route: {
+    params: { id: string; peerHandle?: string; peerAvatarUrl?: string | null };
+  };
+};
 
 export default function ChatThreadScreen({ route }: Props) {
-  const { id: conversationId } = route.params;
+  const { id: conversationId, peerHandle, peerAvatarUrl } = route.params;
   const { items, hasMore, loadMore, send, sending, markRead } = useMessages(
     conversationId,
     30
@@ -37,27 +43,22 @@ export default function ChatThreadScreen({ route }: Props) {
 
   const listRef = useRef<FlatList<any>>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [optionsVisible, setOptionsVisible] = useState(false);
 
-  // newest non-pending message timestamp/id (for read receipts)
   const newestKey = useMemo(() => {
     for (let i = items.length - 1; i >= 0; i--) {
       const m: any = items[i];
-      if (!m?.__pending && (m?.id || m?.createdAt)) {
-        return m.id ?? m.createdAt;
-      }
+      if (!m?.__pending && (m?.id || m?.createdAt)) return m.id ?? m.createdAt;
     }
     return undefined;
   }, [items]);
 
-  // Mark read when: newest non-pending changes OR screen refocuses
   useEffect(() => {
     if (newestKey) markRead();
   }, [newestKey]);
   useEffect(() => {
     if (isFocused && newestKey) markRead();
   }, [isFocused, newestKey]);
-
-  // no-op: inverted list anchors content at bottom
 
   const handleSend = useCallback(
     async (body: string) => {
@@ -74,13 +75,7 @@ export default function ChatThreadScreen({ route }: Props) {
       atts: { uri: string; mimeType?: string; name?: string }[]
     ) => {
       const trimmed = body.trim();
-
-      // 1) If there is text, send it as a normal message
-      if (trimmed.length > 0) {
-        await send(trimmed);
-      }
-
-      // 2) Upload and send each attachment as its own message
+      if (trimmed.length > 0) await send(trimmed);
       for (const a of atts) {
         try {
           const { url } = await uploadFile(
@@ -94,10 +89,7 @@ export default function ChatThreadScreen({ route }: Props) {
             }
           );
           await send("", url, a.mimeType);
-        } catch (e) {
-          // optional: could show a toast; for now just continue with others
-          // console.warn("Failed to upload attachment:", e);
-        }
+        } catch {}
       }
     },
     [meId, send, sending]
@@ -107,19 +99,16 @@ export default function ChatThreadScreen({ route }: Props) {
     if (!hasMore || loadingMore) return;
     setLoadingMore(true);
     try {
-      await loadMore(); // fetch newer pages (ASC forward)
+      await loadMore();
     } finally {
       setLoadingMore(false);
     }
   }, [hasMore, loadingMore, loadMore]);
 
-  // Inverted list handles bottom anchoring; no manual onScroll needed
-
   const renderItem = useCallback(
     ({ item }: { item: any }) => {
       const isMine = item?.author?.id === meId;
       const pending = !!item?.__pending;
-
       return (
         <View
           style={[
@@ -167,6 +156,11 @@ export default function ChatThreadScreen({ route }: Props) {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+      <ChatHeader
+        handle={peerHandle}
+        avatarUrl={peerAvatarUrl}
+        onPressOptions={() => setOptionsVisible(true)}
+      />
       <FlatList
         ref={listRef}
         data={invertedData}
@@ -182,8 +176,6 @@ export default function ChatThreadScreen({ route }: Props) {
           autoscrollToTopThreshold: 10,
         }}
       />
-
-      {/* Composer */}
       <ChatInputComponent
         onSend={handleSend}
         onSendAttachments={handleSendWithAttachments}
@@ -196,6 +188,44 @@ export default function ChatThreadScreen({ route }: Props) {
         }
         useKeyboardAvoidingView
       />
+      <ChatOptionsModal
+        visible={optionsVisible}
+        onClose={() => setOptionsVisible(false)}
+        title="Conversation"
+        options={[
+          {
+            label: "View Profile",
+            action: () => {
+              // TODO: navigate to profile screen using peer handle/id
+            },
+          },
+          {
+            label: "Mute Notifications",
+            action: () => {
+              // TODO: implement mute conversation API
+            },
+          },
+          {
+            label: "Block User",
+            action: () => {
+              // TODO: implement block user API
+            },
+          },
+          {
+            label: "Report Conversation",
+            action: () => {
+              // TODO: integrate report flow for conversation
+            },
+          },
+          {
+            label: "Delete Conversation",
+            destructive: true,
+            action: () => {
+              // TODO: implement delete conversation then navigate back
+            },
+          },
+        ]}
+      />
     </SafeAreaView>
   );
 }
@@ -205,10 +235,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   listContent: { paddingVertical: 8, paddingHorizontal: 10 },
   footer: { paddingVertical: 12 },
-  msgRow: {
-    flexDirection: "row",
-    paddingVertical: 4,
-  },
+  msgRow: { flexDirection: "row", paddingVertical: 4 },
   bubble: {
     maxWidth: "82%",
     borderRadius: 14,

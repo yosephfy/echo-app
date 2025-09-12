@@ -55,7 +55,13 @@ export default function ChatListScreen() {
     const ts = last?.createdAt ? timeAgo(last.createdAt, "short") : "";
     return (
       <Pressable
-        onPress={() => nav.navigate("ChatThread", { id: item.id })}
+        onPress={() =>
+          nav.navigate("ChatThread", {
+            id: item.id,
+            peerHandle: item.peer?.handle,
+            peerAvatarUrl: item.peer?.avatarUrl,
+          })
+        }
         style={[styles.row, { borderColor: colors.border }]}
       >
         <Avatar
@@ -102,7 +108,10 @@ export default function ChatListScreen() {
             <View
               style={[
                 styles.badge,
-                { backgroundColor: colors.primary, borderColor: colors.outline },
+                {
+                  backgroundColor: colors.primary,
+                  borderColor: colors.outline,
+                },
               ]}
             >
               <Text style={styles.badgeText}>
@@ -238,7 +247,7 @@ const styles = StyleSheet.create({
   rowCenter: { flex: 1, marginLeft: 10, gap: 3 },
   handle: { fontSize: 16, fontWeight: "600" },
   preview: { fontSize: 13 },
-  previewRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  previewRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   rowRight: { alignItems: "flex-end", gap: 6 },
 
   time: { fontSize: 12 },
