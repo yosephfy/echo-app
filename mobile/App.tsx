@@ -14,6 +14,7 @@ import { registerForPushNotificationsAsync } from "./src/utils/pushNotifications
 import { useSettingsStore } from "./src/store/settingsStore";
 import { ensureFirebaseSignedIn } from "./src/lib/firebase";
 import { QueryProvider } from "./src/query/client";
+import { GlobalModalProvider } from "./src/components/modal/GlobalModalProvider";
 
 export default function App() {
   const token = useAuthStore((s) => s.token);
@@ -58,15 +59,17 @@ export default function App() {
     <SafeAreaProvider>
       <ThemeProvider>
         <QueryProvider>
-          <NavigationContainer>
-            {!token ? (
-              <AuthNavigator />
-            ) : !onboarded ? (
-              <OnboardingNavigator />
-            ) : (
-              <AppNavigator />
-            )}
-          </NavigationContainer>
+          <GlobalModalProvider>
+            <NavigationContainer>
+              {!token ? (
+                <AuthNavigator />
+              ) : !onboarded ? (
+                <OnboardingNavigator />
+              ) : (
+                <AppNavigator />
+              )}
+            </NavigationContainer>
+          </GlobalModalProvider>
         </QueryProvider>
       </ThemeProvider>
     </SafeAreaProvider>

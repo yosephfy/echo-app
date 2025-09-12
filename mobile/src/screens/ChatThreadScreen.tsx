@@ -23,7 +23,7 @@ import { useIsFocused } from "@react-navigation/native";
 import ChatInputComponent from "../components/ChatInputComponent";
 import { useTheme } from "../theme/ThemeContext";
 import ChatHeader from "../components/ChatHeader";
-import ChatOptionsModal from "../components/ChatOptionsModal";
+import { useGlobalModal } from "../components/modal/GlobalModalProvider";
 
 type Props = {
   route: {
@@ -43,7 +43,7 @@ export default function ChatThreadScreen({ route }: Props) {
 
   const listRef = useRef<FlatList<any>>(null);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [optionsVisible, setOptionsVisible] = useState(false);
+  const { show: showGlobalModal } = useGlobalModal();
 
   const newestKey = useMemo(() => {
     for (let i = items.length - 1; i >= 0; i--) {
@@ -159,7 +159,45 @@ export default function ChatThreadScreen({ route }: Props) {
       <ChatHeader
         handle={peerHandle}
         avatarUrl={peerAvatarUrl}
-        onPressOptions={() => setOptionsVisible(true)}
+        onPressOptions={() => {
+          showGlobalModal({
+            title: "Conversation",
+            options: [
+              {
+                label: "View Profile",
+                onPress: () => {
+                  /* TODO: navigate to profile */
+                },
+              },
+              {
+                label: "Mute Notifications",
+                onPress: () => {
+                  /* TODO: mute */
+                },
+              },
+              {
+                label: "Block User",
+                onPress: () => {
+                  /* TODO: block */
+                },
+              },
+              {
+                label: "Report Conversation",
+                onPress: () => {
+                  /* TODO: report */
+                },
+              },
+              {
+                label: "Delete Conversation",
+                destructive: true,
+                onPress: () => {
+                  /* TODO: delete */
+                },
+              },
+            ],
+            cancelText: "Cancel",
+          });
+        }}
       />
       <FlatList
         ref={listRef}
@@ -187,44 +225,6 @@ export default function ChatThreadScreen({ route }: Props) {
           Platform.select({ ios: 24, android: 0 }) as number
         }
         useKeyboardAvoidingView
-      />
-      <ChatOptionsModal
-        visible={optionsVisible}
-        onClose={() => setOptionsVisible(false)}
-        title="Conversation"
-        options={[
-          {
-            label: "View Profile",
-            action: () => {
-              // TODO: navigate to profile screen using peer handle/id
-            },
-          },
-          {
-            label: "Mute Notifications",
-            action: () => {
-              // TODO: implement mute conversation API
-            },
-          },
-          {
-            label: "Block User",
-            action: () => {
-              // TODO: implement block user API
-            },
-          },
-          {
-            label: "Report Conversation",
-            action: () => {
-              // TODO: integrate report flow for conversation
-            },
-          },
-          {
-            label: "Delete Conversation",
-            destructive: true,
-            action: () => {
-              // TODO: implement delete conversation then navigate back
-            },
-          },
-        ]}
       />
     </SafeAreaView>
   );
