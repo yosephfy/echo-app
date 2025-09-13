@@ -10,24 +10,35 @@ import {
 import { api } from "../api/client";
 import { useTheme } from "../theme/ThemeContext";
 
-const moods = ["happy", "sad", "angry", "relieved"];
+const moodsCatalog = [
+  "happy",
+  "sad",
+  "angry",
+  "relieved",
+  "anxious",
+  "hopeful",
+];
 
 export default function DiscoverScreen() {
   const theme = useTheme();
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
   const [feed, setFeed] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
 
+  const toggleMood = (m: string) => {
+    setSelected((prev) =>
+      prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]
+    );
+  };
+
   const load = useCallback(
     async (nextPage = 1) => {
-      const params: { page: number; limit: number; mood?: string } = {
+      const params: { page: number; limit: number; moods?: string } = {
         page: nextPage,
         limit: 20,
       };
-      if (selected) {
-        params.mood = selected;
-      }
+      if (selected.length) params.moods = selected.join(",");
       const res: any = await api.get("/secrets/feed", params);
       setFeed((prev) => (nextPage === 1 ? res.items : [...prev, ...res.items]));
       setTotal(res.total);
@@ -59,30 +70,39 @@ export default function DiscoverScreen() {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       <View style={styles.chipRow}>
-        {moods.map((m) => (
-          <TouchableOpacity
-            key={m}
-            style={[
-              styles.chip,
-              selected === m
-                ? {
-                    borderColor: theme.colors.primary,
-                    backgroundColor: theme.colors.primary,
-                  }
-                : {
-                    borderColor: theme.colors.outline,
-                    backgroundColor: theme.colors.surface,
-                  },
-            ]}
-            onPress={() => setSelected((s) => (s === m ? null : m))}
-          >
-            <Text
-              style={{ color: selected === m ? "#fff" : theme.colors.text }}
+        {moodsCatalog.map((m) => {
+          const active = selected.includes(m);
+          return (
+            <TouchableOpacity
+              key={m}
+              style={[
+                styles.chip,
+                active
+                  ? {
+                      borderColor: theme.colors.primary,
+                      backgroundColor: theme.colors.primary,
+                    }
+                  : {
+                      borderColor: theme.colors.outline,
+                      backgroundColor: theme.colors.surface,
+                    },
+              ]}
+              onPress={() => toggleMood(m)}
             >
-              {m}
-            </Text>
+              <Text style={{ color: active ? "#fff" : theme.colors.text }}>
+                {m}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+        {selected.length > 0 && (
+          <TouchableOpacity
+            onPress={() => setSelected([])}
+            style={[styles.chip, { borderColor: theme.colors.error }]}
+          >
+            <Text style={{ color: theme.colors.error }}>Clear</Text>
           </TouchableOpacity>
-        ))}
+        )}
       </View>
       <FlatList
         data={feed}
@@ -97,13 +117,14 @@ export default function DiscoverScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  chipRow: { flexDirection: "row", marginBottom: 12 },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", marginBottom: 12 },
   chip: {
     borderWidth: 1,
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 6,
     marginRight: 8,
+    marginBottom: 8,
   },
   item: {
     borderWidth: 1,

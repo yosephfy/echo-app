@@ -39,8 +39,15 @@ export function useSecretMutations() {
   const upsertSecrets = useEntities((s) => s.upsertSecrets);
 
   const edit = useMutation({
-    mutationFn: ({ id, text, mood }: { id: string; text?: string; mood?: string }) =>
-      api.patch(`/secrets/${id}`, { text, mood }),
+    mutationFn: ({
+      id,
+      text,
+      moods,
+    }: {
+      id: string;
+      text?: string;
+      moods?: string[];
+    }) => api.patch(`/secrets/${id}`, { text, moods }),
     onSuccess: (saved: any) => {
       // update entity store
       upsertSecrets([saved]);

@@ -12,7 +12,9 @@ export type UserEntity = {
 export type SecretEntity = {
   id: string;
   text: string;
-  mood?: string | null;
+  // legacy mood removed; using multi-moods + tags now
+  moods?: { code: string; label?: string }[];
+  tags?: string[]; // normalized slugs from backend
   status: string;
   createdAt: string | Date;
   authorId: string; // normalized pointer
@@ -51,15 +53,23 @@ export const useEntities = create<EntitiesState>((set, get) => ({
       const nextUsers = { ...s.users };
       for (const x of arr) {
         if (!x?.id) continue;
-        // normalize author if present
         if (x.author?.id) {
           const a = x.author as UserEntity;
           nextUsers[a.id] = { ...(nextUsers[a.id] || {}), ...a };
         }
         const authorId = x.author?.id ?? (x as any).authorId;
+        // sanitize moods/tags shape (ensure arrays)
+        const moods = Array.isArray((x as any).moods)
+          ? (x as any).moods.map((m: any) => ({ code: m.code, label: m.label }))
+          : undefined;
+        const tags = Array.isArray((x as any).tags)
+          ? (x as any).tags.filter((t: any) => typeof t === "string")
+          : undefined;
         nextSecrets[x.id] = {
           ...(nextSecrets[x.id] || {}),
           ...x,
+          moods,
+          tags,
           authorId,
         } as SecretEntity;
       }

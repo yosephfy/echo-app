@@ -16,14 +16,12 @@ import { useTheme } from "../theme/ThemeContext";
 import { api } from "../api/client";
 import { CircularProgress } from "./CircularProgressComponent";
 import useCooldown from "../hooks/useCooldown";
-import { Socket } from "socket.io-client";
 import { useComposer } from "../store/composer";
 import { useSecretMutations } from "../hooks/useSecretMutations";
+import MoodPickerModal from "./MoodPickerModal";
+import { MOOD_COLOR_MAP } from "../constants/moods";
 
 const MAX_CHARS = 2000;
-const MOODS = ["happy", "sad", "angry", "relieved"] as const;
-
-type Mood = (typeof MOODS)[number];
 
 export default function ComposerModal() {
   const { colors, spacing, fontSizes, radii } = useTheme();
@@ -31,7 +29,6 @@ export default function ComposerModal() {
   const composer = useComposer();
   const { editSecret, editing } = useSecretMutations();
   const [text, setText] = useState("");
-  const [mood, setMood] = useState<Mood | undefined>(undefined);
   const [panic, setPanic] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -41,7 +38,6 @@ export default function ComposerModal() {
   useEffect(() => {
     if (composer.visible) {
       setText(composer.text ?? "");
-      setMood((composer.mood as Mood | undefined) ?? undefined);
       setPanic(false);
     }
   }, [composer.visible]);
@@ -50,15 +46,18 @@ export default function ComposerModal() {
     setLoading(true);
     try {
       if (composer.mode === "edit" && composer.secretId) {
-        await editSecret({ id: composer.secretId, text, mood });
+        await editSecret({
+          id: composer.secretId,
+          text,
+          moods: composer.moods,
+        });
         composer.close();
       } else {
-        await api.post("/secrets", { text, mood, panic });
+        await api.post("/secrets", { text, moods: composer.moods, panic });
         setText("");
-        setMood(undefined);
+        composer.clearMoods();
         setPanic(false);
         composer.close();
-        // Reset cooldown after posting
         refresh();
       }
     } catch (err: any) {
@@ -79,13 +78,10 @@ export default function ComposerModal() {
       <SafeAreaView
         style={[
           styles.container,
-          {
-            backgroundColor: colors.background,
-            padding: spacing.md,
-            //margin: spacing.md,
-          },
+          { backgroundColor: colors.background, padding: spacing.md },
         ]}
       >
+        <MoodPickerModal />
         <View style={{ flex: 1, padding: spacing.md }}>
           <Text
             style={[
@@ -93,7 +89,7 @@ export default function ComposerModal() {
               { color: colors.text, fontSize: fontSizes.lg },
             ]}
           >
-            {composer.mode === "edit" ? "Edit Secret" : "Share a Secret"}
+            \n {composer.mode === "edit" ? "Edit Secret" : "Share a Secret"}
           </Text>
 
           <ScrollView
@@ -103,20 +99,17 @@ export default function ComposerModal() {
             {/* TEXT INPUT */}
             <View style={styles.inputContainer}>
               <TextInput
-                style={[
-                  //styles.textInput,
-                  {
-                    borderColor: colors.outline,
-                    backgroundColor: colors.input,
-                    color: colors.text,
-                    fontSize: fontSizes.md,
-                    borderRadius: radii.md,
-                    minHeight: 100,
-                    padding: spacing.md,
-                    textAlignVertical: "top",
-                    borderWidth: StyleSheet.hairlineWidth,
-                  },
-                ]}
+                style={{
+                  borderColor: colors.outline,
+                  backgroundColor: colors.input,
+                  color: colors.text,
+                  fontSize: fontSizes.md,
+                  borderRadius: radii.md,
+                  minHeight: 100,
+                  padding: spacing.md,
+                  textAlignVertical: "top",
+                  borderWidth: StyleSheet.hairlineWidth,
+                }}
                 placeholder="What's on your mind?"
                 placeholderTextColor={colors.muted}
                 multiline
@@ -126,17 +119,13 @@ export default function ComposerModal() {
               />
               <View style={styles.charCountRow}>
                 <Text
-                  style={[
-                    styles.charCount,
-                    {
-                      color: remainingChars < 0 ? colors.error : colors.muted,
-                      marginRight: spacing.sm,
-                    },
-                  ]}
+                  style={{
+                    color: remainingChars < 0 ? colors.error : colors.muted,
+                    marginRight: spacing.sm,
+                    fontWeight: "500",
+                  }}
                 >
-                  {remainingChars}
-                  {"/"}
-                  {MAX_CHARS}
+                  {remainingChars}/{MAX_CHARS}
                 </Text>
                 <CircularProgress
                   size={24}
@@ -148,21 +137,83 @@ export default function ComposerModal() {
               </View>
             </View>
 
-            {/* MOOD SELECTOR */}
+            {/* MOODS MULTI SELECT */}
             <View style={styles.section}>
-              <Text style={[styles.sectionLabel, { color: colors.text }]}>
-                Mood (optional)
-              </Text>
-              <View style={styles.moodRow}>
-                {MOODS.map((m) => (
-                  <MoodButton
-                    key={m}
-                    mood={m}
-                    selected={mood === m}
-                    onPress={() => setMood(m)}
-                  />
-                ))}
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  marginBottom: 8,
+                }}
+              >
+                <Text style={[styles.sectionLabel, { color: colors.text }]}>
+                  Moods (optional)
+                </Text>
+                <TouchableOpacity
+                  onPress={composer.clearMoods}
+                  disabled={!composer.moods.length}
+                >
+                  <Text
+                    style={{
+                      color: composer.moods.length
+                        ? colors.error
+                        : colors.muted,
+                    }}
+                  >
+                    Clear
+                  </Text>
+                </TouchableOpacity>
               </View>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                {/* Stacked selected chips */}
+                <View style={{ flexDirection: "row", marginRight: 12 }}>
+                  {composer.moods.map((code, idx) => {
+                    const left = idx * -14;
+                    const bg = MOOD_COLOR_MAP[code] || colors.primary;
+                    return (
+                      <TouchableOpacity
+                        key={code}
+                        onLongPress={() => composer.toggleMood(code)}
+                        onPress={composer.showMoodPicker}
+                        style={{
+                          marginLeft: left,
+                          backgroundColor: bg,
+                          paddingHorizontal: 10,
+                          paddingVertical: 6,
+                          borderRadius: 16,
+                          borderWidth: 1,
+                          borderColor: colors.background,
+                        }}
+                      >
+                        <Text style={{ color: "#000", fontWeight: "600" }}>
+                          {code}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                {/* Open global mood picker */}
+                <TouchableOpacity
+                  onPress={composer.showMoodPicker}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    backgroundColor: colors.primary,
+                    borderRadius: 20,
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontWeight: "600" }}>
+                    {composer.moods.length ? "Add / Remove" : "Select Moods"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {composer.moods.length > 0 && (
+                <Text
+                  style={{ color: colors.muted, marginTop: 6, fontSize: 12 }}
+                >
+                  {composer.moods.length}/3 selected
+                </Text>
+              )}
             </View>
 
             {/* PANIC DELETE (only for create) */}
@@ -189,37 +240,45 @@ export default function ComposerModal() {
           <View style={[styles.actionsRow, { borderTopColor: colors.outline }]}>
             <TouchableOpacity
               onPress={composer.close}
-              style={[
-                styles.cancelButton,
-                {
-                  borderColor: colors.muted,
-                  borderRadius: radii.sm,
-                  padding: spacing.sm,
-                },
-              ]}
+              style={{
+                borderColor: colors.muted,
+                borderRadius: radii.sm,
+                padding: spacing.sm,
+                borderWidth: 1,
+                flex: 1,
+                alignItems: "center",
+                marginRight: 8,
+              }}
             >
               <Text style={{ color: colors.muted }}>Cancel</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={postSecret}
-              disabled={!text.trim() || text.length > MAX_CHARS || loading || editing}
-              style={[
-                styles.postButton,
-                {
-                  backgroundColor:
-                    !text.trim() || text.length > MAX_CHARS
-                      ? colors.muted
-                      : colors.primary,
-                  borderRadius: radii.sm,
-                  padding: spacing.sm,
-                },
-              ]}
+              disabled={
+                !text.trim() || text.length > MAX_CHARS || loading || editing
+              }
+              style={{
+                backgroundColor:
+                  !text.trim() || text.length > MAX_CHARS
+                    ? colors.muted
+                    : colors.primary,
+                borderRadius: radii.sm,
+                padding: spacing.sm,
+                flex: 1,
+                alignItems: "center",
+              }}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={[styles.postText, { fontSize: fontSizes.md }]}>
+                <Text
+                  style={{
+                    color: "#fff",
+                    fontWeight: "600",
+                    fontSize: fontSizes.md,
+                  }}
+                >
                   {composer.mode === "edit" ? "Save" : "Post"}
                 </Text>
               )}
@@ -228,42 +287,6 @@ export default function ComposerModal() {
         </View>
       </SafeAreaView>
     </Modal>
-  );
-}
-
-// small mood button component
-function MoodButton({
-  mood,
-  selected,
-  onPress,
-}: {
-  mood: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  const { colors, spacing, fontSizes, radii } = useTheme();
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={{
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-        marginRight: spacing.sm,
-        borderRadius: radii.sm,
-        borderWidth: 1,
-        borderColor: selected ? colors.primary : colors.outline,
-        backgroundColor: selected ? colors.primary + "22" : colors.surface,
-      }}
-    >
-      <Text
-        style={{
-          color: selected ? colors.primary : colors.text,
-          fontSize: fontSizes.sm,
-        }}
-      >
-        {mood.charAt(0).toUpperCase() + mood.slice(1)}
-      </Text>
-    </TouchableOpacity>
   );
 }
 
@@ -278,20 +301,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  charCount: { fontWeight: "500" },
-
   section: { marginBottom: 24 },
-  sectionLabel: { marginBottom: 8, fontWeight: "500" },
-  moodRow: { flexDirection: "row" },
+  sectionLabel: { fontWeight: "500" },
   panicRow: { flexDirection: "row", alignItems: "center" },
-
   actionsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  cancelButton: { flex: 1, alignItems: "center", marginRight: 8 },
-  postButton: { flex: 1, alignItems: "center", marginLeft: 8 },
-  postText: { color: "#fff", fontWeight: "600" },
 });

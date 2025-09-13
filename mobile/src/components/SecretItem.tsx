@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Text,
   View,
+  TouchableOpacity,
 } from "react-native";
 import { useBookmark } from "../hooks/useBookmarks"; // ✅ was from useBookmarks
 import useCap from "../hooks/useCap";
@@ -22,17 +23,52 @@ import useMe from "../hooks/useMe";
 import { useSecretMutations } from "../hooks/useSecretMutations";
 import { Alert } from "react-native";
 import { useComposer } from "../store/composer";
+import { useGlobalModal } from "./modal/GlobalModalProvider";
 
 export interface SecretItemProps {
   id: string;
   text: string;
-  mood?: string;
+  moods?: { code: string; label?: string }[];
+  tags?: string[];
   status: string;
   createdAt: string;
   author: { id: string; handle: string; avatarUrl: string };
 }
 
 export type DisplayMode = "normal" | "expanded" | "condensed";
+
+const MOOD_COLORS: Record<string, string> = {
+  happy: "#FFC107",
+  sad: "#2196F3",
+  angry: "#F44336",
+  relieved: "#4CAF50",
+  anxious: "#9C27B0",
+  hopeful: "#FF9800",
+};
+
+function linkifyHashtags(text: string, color: string) {
+  const parts = text.split(/(#[a-zA-Z0-9_]{2,32})/g);
+  return parts.map((p, idx) => {
+    if (/^#[a-zA-Z0-9_]{2,32}$/.test(p)) {
+      return (
+        <Text
+          key={idx}
+          style={{ color, fontWeight: "600" }}
+          onPress={() => {
+            // future: navigate to tag feed
+          }}
+        >
+          {p}
+        </Text>
+      );
+    }
+    return (
+      <Text key={idx} style={{ color: "inherit" as any }}>
+        {p}
+      </Text>
+    );
+  });
+}
 
 export default function SecretItem({
   secret,
@@ -43,14 +79,13 @@ export default function SecretItem({
   display?: DisplayMode;
   navigation?: any;
 }) {
-  const { id, text, mood, createdAt, author } = secret;
+  const { id, text, moods, createdAt, author } = secret;
   const { colors } = useTheme();
   const { user } = useMe();
   const isMine = user?.id === author?.id;
   const { deleteSecret } = useSecretMutations();
   const composer = useComposer();
 
-  // Reactions
   const {
     currentType,
     counts: reactionCounts,
@@ -58,7 +93,6 @@ export default function SecretItem({
     loading: reacting,
   } = useReactions(id);
 
-  // Cap
   const {
     hasCapped,
     count: capCount,
@@ -66,7 +100,6 @@ export default function SecretItem({
     loading: capping,
   } = useCap(id);
 
-  // Bookmark
   const {
     bookmarked,
     count: bookmarkCount,
@@ -74,17 +107,11 @@ export default function SecretItem({
     toggle: toggleBookmark,
   } = useBookmark(id);
 
-  // Replies (we only need total)
   const { total: countReplies } = useReplies(id);
-
-  // Report & Share
   const { report, ReportModal } = useReport(id);
   const { share, ShareModal } = useShare(id);
-
-  // computed flags
   const isExpanded = display === "expanded";
   const isCondensed = display === "condensed";
-
   const totalReactions = Object.values(reactionCounts).reduce(
     (s, c) => s + c,
     0
@@ -96,10 +123,51 @@ export default function SecretItem({
     }
   };
 
-  // animation trigger on mode change
   React.useEffect(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
   }, [display]);
+
+  const activeMoods = moods && moods.length ? moods.map((m) => m.code) : [];
+  const maxCollapsedChips = 3;
+  const visibleMoodCodes = isExpanded
+    ? activeMoods
+    : activeMoods.slice(0, maxCollapsedChips);
+  const extraMoodCount = isExpanded
+    ? 0
+    : Math.max(0, activeMoods.length - maxCollapsedChips);
+  const { show: showGlobalModal } = useGlobalModal();
+
+  const openMoodsModal = () => {
+    if (!moods || moods.length === 0) return;
+    showGlobalModal({
+      title: `@${author?.handle ?? "user"} was feeling`,
+      message: (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {moods.map((m) => {
+            const color = MOOD_COLORS[m.code] || colors.primary;
+            return (
+              <View
+                key={m.code}
+                style={{
+                  backgroundColor: `${color}22`,
+                  borderColor: color,
+                  borderWidth: 1,
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 16,
+                }}
+              >
+                <Text style={{ color: colors.text, fontWeight: "600" }}>
+                  {m.label ?? m.code}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      ),
+      cancelText: "Close",
+    });
+  };
 
   return (
     <View
@@ -127,18 +195,21 @@ export default function SecretItem({
               </Text>
             </View>
 
-            {mood && (
-              <View style={[styles.moodPill, { borderColor: colors.primary }]}>
-                <Text style={[styles.moodText, { color: colors.primary }]}>
-                  {mood[0].toUpperCase() + mood.slice(1)}
-                </Text>
-              </View>
-            )}
+            {/* moods are moved below footer */}
 
             <View style={styles.headerRightButtons}>
               {isMine ? (
                 <>
-                  <ActionButton icon="pencil" onPress={() => composer.openEdit({ id, text, mood })} />
+                  <ActionButton
+                    icon="pencil"
+                    onPress={() =>
+                      composer.openEdit({
+                        id,
+                        text,
+                        moods: activeMoods.map((c) => ({ code: c })),
+                      })
+                    }
+                  />
                   <ActionButton
                     icon="trash"
                     onPress={() =>
@@ -151,7 +222,9 @@ export default function SecretItem({
                             text: "Delete",
                             style: "destructive",
                             onPress: () =>
-                              deleteSecret({ id }).catch((e) => alert(e.message)),
+                              deleteSecret({ id }).catch((e) =>
+                                alert(e.message)
+                              ),
                           },
                         ]
                       )
@@ -196,7 +269,7 @@ export default function SecretItem({
             isCondensed && styles.condensedBodyText,
           ]}
         >
-          {text}
+          {linkifyHashtags(text, colors.primary)}
         </Text>
         {!isExpanded && text.length > 100 && !isCondensed && (
           <LinearGradient
@@ -264,6 +337,76 @@ export default function SecretItem({
         </View>
       )}
 
+      {/* MOODS under actions */}
+      {!isCondensed && activeMoods.length > 0 && (
+        <Pressable
+          onPress={openMoodsModal}
+          accessibilityRole="button"
+          accessibilityLabel="View moods for this secret"
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "flex-end",
+              flexWrap: isExpanded ? "wrap" : "nowrap",
+              paddingHorizontal: 6,
+              marginTop: 8,
+              marginBottom: 2,
+            }}
+          >
+            {visibleMoodCodes.map((code, idx) => {
+              const color = MOOD_COLORS[code] || colors.primary;
+              return (
+                <View
+                  key={code + idx}
+                  style={{
+                    marginLeft: idx === 0 ? 0 : isExpanded ? 6 : -10,
+                    marginBottom: isExpanded ? 6 : 0,
+                    backgroundColor: color,
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 6,
+                    borderWidth: 1,
+                    borderColor: colors.background,
+                  }}
+                >
+                  <Text
+                    style={{ color: "#000", fontSize: 12, fontWeight: "600" }}
+                  >
+                    {code}
+                  </Text>
+                </View>
+              );
+            })}
+            {extraMoodCount > 0 && (
+              <View
+                style={{
+                  marginLeft:
+                    visibleMoodCodes.length === 0 ? 0 : isExpanded ? 6 : -10,
+                  marginBottom: isExpanded ? 6 : 0,
+                  backgroundColor: colors.surface,
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  borderRadius: 6,
+                  borderWidth: 1,
+                  borderColor: colors.outline,
+                }}
+              >
+                <Text
+                  style={{
+                    color: colors.muted,
+                    fontSize: 12,
+                    fontWeight: "600",
+                  }}
+                >
+                  {extraMoodCount} more
+                </Text>
+              </View>
+            )}
+          </View>
+        </Pressable>
+      )}
+
       {/* MODALS */}
       <ReportModal />
       <ShareModal />
@@ -289,20 +432,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
   },
-  meta: {
-    flex: 1,
-    marginLeft: 12,
-  },
+  meta: { flex: 1, marginLeft: 12 },
   handle: { fontSize: 16, fontWeight: "500" },
   timestamp: { fontSize: 12, marginTop: 2 },
-  moodPill: {
-    borderWidth: 1.5,
-    borderRadius: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginRight: 8,
-  },
-  moodText: { fontSize: 14, fontWeight: "500" },
   headerRightButtons: {
     flexDirection: "row",
     alignItems: "center",
@@ -323,12 +455,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     height: 80,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    marginBottom: 12,
-    backgroundColor: "#ccc",
-    opacity: 0.5,
   },
   footer: {
     flexDirection: "row",

@@ -41,6 +41,7 @@ export default function FeedScreen({ navigation }: Props) {
 
   // Real-time: on new secret, refresh feed + cooldown
   useSocket("secretCreated", (_newItem: SecretItemProps) => {
+    // _newItem now may include moods[] & tags[]; we simply refresh
     refresh();
     refreshCooldown();
   });
@@ -57,7 +58,10 @@ export default function FeedScreen({ navigation }: Props) {
       style={[styles.container, { backgroundColor: colors.background }]}
     >
       <ComposerModal />
-      <ComposeButton onPress={() => composer.openCreate()} composerActive={composer.visible} />
+      <ComposeButton
+        onPress={() => composer.openCreate()}
+        composerActive={composer.visible}
+      />
       <View
         style={[
           styles.headerContainer,

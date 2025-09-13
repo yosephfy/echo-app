@@ -8,7 +8,7 @@ export function useCreateSecret() {
   const upsertSecrets = useEntities((s) => s.upsertSecrets);
 
   return useMutation({
-    mutationFn: (body: { text: string; mood?: string }) =>
+    mutationFn: (body: { text: string; moods?: string[]; panic?: boolean }) =>
       api.post<any>("/secrets", body),
     onSuccess: (newSecret) => {
       // normalize into entity store
@@ -79,7 +79,7 @@ export function useCreateReply(secretId: string) {
         old
           ? {
               ...old,
-              items: [reply, ...old.items],
+              items: [reply, ...(old.items || [])],
               total: (old.total ?? 0) + 1,
             }
           : old
