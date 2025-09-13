@@ -26,6 +26,7 @@ export default function SecretDetailScreen({ route }: Props) {
   const { items, loading, refreshing, hasMore, loadMore, refresh, add } =
     useReplies(secretId);
   const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
 
   const loadSecret = useCallback(async () => {
     setLoadingSecret(true);
@@ -44,9 +45,15 @@ export default function SecretDetailScreen({ route }: Props) {
   }, [secretId]);
 
   const handleSend = async (reply: string) => {
-    if (!reply.trim()) return;
-    add(reply.trim());
-    refresh();
+    const body = reply.trim();
+    if (!body) return;
+    try {
+      setSending(true);
+      await add(body);
+      // No manual refresh; useReplies handles optimistic update and cache
+    } finally {
+      setSending(false);
+    }
   };
 
   if (loadingSecret) {
@@ -87,7 +94,7 @@ export default function SecretDetailScreen({ route }: Props) {
         onEndReachedThreshold={0.5}
       />
 
-      <ReplyInput onSend={handleSend} sending={false} secretId={secretId} />
+      <ReplyInput onSend={handleSend} sending={sending} secretId={secretId} />
     </SafeAreaView>
   );
 }

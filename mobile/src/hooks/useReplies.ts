@@ -3,7 +3,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { api } from "../api/client";
 import useSocket from "./useSocket";
 import { useEntities } from "../store/entities";
@@ -145,23 +145,28 @@ export function useReplies(secretId: string, limit = 10) {
   });
 
   // Real-time: only prepend **server replies** to cache (no pending involved)
-  useSocket(`replyCreated:${secretId}`, (reply: Reply) => {
-    upsertUsers([reply.author]);
-    qc.setQueryData(["replies", secretId, limit], (old: any) => {
-      if (!old) return old;
-      const first = old.pages?.[0];
-      if (!first) return old;
-      const newFirst = {
-        ...first,
-        items: uniqueById([reply, ...first.items]),
-        total: (first.total ?? 0) + 1,
-      };
-      return { ...old, pages: [newFirst, ...old.pages.slice(1)] };
-    });
-    qc.setQueryData(["secret", secretId], (old: any) =>
-      old ? { ...old, replyCount: (old.replyCount ?? 0) + 1 } : old
-    );
-  });
+  const onReplyCreated = useCallback(
+    (reply: Reply) => {
+      upsertUsers([reply.author]);
+      qc.setQueryData(["replies", secretId, limit], (old: any) => {
+        if (!old) return old;
+        const first = old.pages?.[0];
+        if (!first) return old;
+        const newFirst = {
+          ...first,
+          items: uniqueById([reply, ...first.items]),
+          total: (first.total ?? 0) + 1,
+        };
+        return { ...old, pages: [newFirst, ...old.pages.slice(1)] };
+      });
+      qc.setQueryData(["secret", secretId], (old: any) =>
+        old ? { ...old, replyCount: (old.replyCount ?? 0) + 1 } : old
+      );
+    },
+    [qc, secretId, limit, upsertUsers]
+  );
+
+  useSocket(`replyCreated:${secretId}`, onReplyCreated);
 
   return {
     items, // discriminated: pending/server

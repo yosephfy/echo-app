@@ -24,6 +24,7 @@ import { useSecretMutations } from "../hooks/useSecretMutations";
 import { Alert } from "react-native";
 import { useComposer } from "../store/composer";
 import { useGlobalModal } from "./modal/GlobalModalProvider";
+import { MOOD_COLOR_MAP } from "../constants/moods";
 
 export interface SecretItemProps {
   id: string;
@@ -36,15 +37,6 @@ export interface SecretItemProps {
 }
 
 export type DisplayMode = "normal" | "expanded" | "condensed";
-
-const MOOD_COLORS: Record<string, string> = {
-  happy: "#FFC107",
-  sad: "#2196F3",
-  angry: "#F44336",
-  relieved: "#4CAF50",
-  anxious: "#9C27B0",
-  hopeful: "#FF9800",
-};
 
 function linkifyHashtags(text: string, color: string) {
   const parts = text.split(/(#[a-zA-Z0-9_]{2,32})/g);
@@ -62,11 +54,8 @@ function linkifyHashtags(text: string, color: string) {
         </Text>
       );
     }
-    return (
-      <Text key={idx} style={{ color: "inherit" as any }}>
-        {p}
-      </Text>
-    );
+    // inherit parent Text styles for non-hashtag segments
+    return <Text key={idx}>{p}</Text>;
   });
 }
 
@@ -108,8 +97,8 @@ export default function SecretItem({
   } = useBookmark(id);
 
   const { total: countReplies } = useReplies(id);
-  const { report, ReportModal } = useReport(id);
-  const { share, ShareModal } = useShare(id);
+  const { report } = useReport(id);
+  const { share } = useShare(id);
   const isExpanded = display === "expanded";
   const isCondensed = display === "condensed";
   const totalReactions = Object.values(reactionCounts).reduce(
@@ -144,7 +133,7 @@ export default function SecretItem({
       message: (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           {moods.map((m) => {
-            const color = MOOD_COLORS[m.code] || colors.primary;
+            const color = MOOD_COLOR_MAP[m.code] || colors.primary;
             return (
               <View
                 key={m.code}
@@ -355,7 +344,7 @@ export default function SecretItem({
             }}
           >
             {visibleMoodCodes.map((code, idx) => {
-              const color = MOOD_COLORS[code] || colors.primary;
+              const color = MOOD_COLOR_MAP[code] || colors.primary;
               return (
                 <View
                   key={code + idx}
@@ -407,9 +396,7 @@ export default function SecretItem({
         </Pressable>
       )}
 
-      {/* MODALS */}
-      <ReportModal />
-      <ShareModal />
+      {/* Modals are managed globally via GlobalModalProvider */}
     </View>
   );
 }
