@@ -1,10 +1,18 @@
-import { Injectable, Inject, ForbiddenException, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  ForbiddenException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { In, Repository } from 'typeorm';
 import { Secret, SecretStatus } from './secret.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import Redis from 'ioredis';
 import { Queue } from 'bullmq';
 import { User } from 'src/users/user.entity';
+import { Mood } from 'src/moods/mood.entity';
+import { Tag } from 'src/tags/tag.entity';
 
 const COOLDOWN_SECONDS = 24 * 60 * 60; // 24h
 
@@ -18,13 +26,16 @@ export class SecretsService {
     @Inject('REDIS') private redis: Redis,
     @Inject('MOD_QUEUE') private modQueue: Queue,
     @Inject('NOTIF_QUEUE') private readonly notifQueue: Queue,
+    @InjectRepository(Mood) private moodRepo: Repository<Mood>,
+    @InjectRepository(Tag) private tagRepo: Repository<Tag>,
   ) {}
 
   /** Attempt to create a secret for a user, enforcing 24h cooldown */
   async createSecret(
     userId: string,
     text: string,
-    mood?: string,
+    moods?: string[],
+    tags?: string[],
   ): Promise<Secret> {
     const cooldownKey = `cooldown:${userId}`;
     const ttl = await this.redis.ttl(cooldownKey);
@@ -35,9 +46,69 @@ export class SecretsService {
       );
     }
 
-    // Save the secret
-    const secret = this.secretsRepo.create({ userId, text, mood });
+    // Normalize input arrays
+    const normMoods = Array.isArray(moods)
+      ? Array.from(
+          new Set(moods.map((m) => m.trim().toLowerCase()).filter(Boolean)),
+        )
+      : [];
+    // Build tag set from provided tags and auto-extracted hashtags from text
+    const providedTags: string[] = Array.isArray(tags)
+      ? tags
+          .map((t) => this.normalizeTag(t))
+          .filter((v): v is string => typeof v === 'string' && v.length > 0)
+      : [];
+    const extractedTags = this.extractTagsFromText(text);
+    const normTags: string[] = Array.from(
+      new Set([...providedTags, ...extractedTags]),
+    ).slice(0, 5);
+
+    // Fetch moods
+    let moodEntities: Mood[] = [];
+    if (normMoods.length) {
+      moodEntities = await this.moodRepo.find({
+        where: { code: In(normMoods), active: true },
+      });
+    }
+
+    // Upsert tags
+    const tagEntities: Tag[] = [];
+    for (const slug of normTags) {
+      let existing = await this.tagRepo.findOne({ where: { slug } });
+      if (!existing) {
+        existing = this.tagRepo.create({ slug, raw: slug });
+        try {
+          existing = await this.tagRepo.save(existing);
+        } catch (e) {
+          // race condition: try find again
+          const again = await this.tagRepo.findOne({ where: { slug } });
+          if (again) existing = again;
+          else throw e;
+        }
+      }
+      existing.usageCount += 1;
+      await this.tagRepo.save(existing);
+      tagEntities.push(existing);
+    }
+
+    // Save the secret (relations set after initial save if needed)
+    const secret = this.secretsRepo.create({ userId, text });
     const saved = await this.secretsRepo.save(secret);
+
+    if (moodEntities.length) {
+      await this.secretsRepo
+        .createQueryBuilder()
+        .relation(Secret, 'moods')
+        .of(saved.id)
+        .add(moodEntities.map((m) => m.id));
+    }
+    if (tagEntities.length) {
+      await this.secretsRepo
+        .createQueryBuilder()
+        .relation(Secret, 'tags')
+        .of(saved.id)
+        .add(tagEntities.map((t) => t.id));
+    }
 
     // Set cooldown key
     await this.redis.set(cooldownKey, '1', 'EX', COOLDOWN_SECONDS);
@@ -67,7 +138,7 @@ export class SecretsService {
     // now reload with author relation
     const full = await this.secretsRepo.findOne({
       where: { id: saved.id },
-      relations: ['author'],
+      relations: ['author', 'moods', 'tags'],
     });
 
     // full should never be null here
@@ -99,10 +170,18 @@ export class SecretsService {
 
   // backend/src/secrets/secrets.service.ts
 
-  async getFeed(userId: string, page: number, limit: number, mood?: string) {
+  async getFeed(
+    userId: string,
+    page: number,
+    limit: number,
+    moods?: string[],
+    tags?: string[],
+  ) {
     const q = this.secretsRepo
       .createQueryBuilder('s')
       .leftJoinAndSelect('s.author', 'author')
+      .leftJoinAndSelect('s.moods', 'm')
+      .leftJoinAndSelect('s.tags', 'tg')
       .where('s.status IN (:...statuses)', {
         statuses: [SecretStatus.PUBLISHED, SecretStatus.UNDER_REVIEW],
       })
@@ -110,13 +189,17 @@ export class SecretsService {
       .skip((page - 1) * limit)
       .take(limit);
 
-    if (mood) {
-      q.andWhere('s.mood = :mood', { mood });
+    if (moods && moods.length) {
+      q.andWhere('m.code IN (:...moods)', { moods });
+    }
+    if (tags && tags.length) {
+      q.andWhere('tg.slug IN (:...tags)', {
+        tags: tags.map((t) => this.normalizeTag(t)),
+      });
     }
     const total = await this.secretsRepo.count({
       where: {
         status: In([SecretStatus.PUBLISHED, SecretStatus.UNDER_REVIEW]),
-        ...(mood ? { mood } : {}),
       },
     });
 
@@ -129,7 +212,8 @@ export class SecretsService {
       items: filtered.map((s) => ({
         id: s.id,
         text: s.text,
-        mood: s.mood,
+        moods: s.moods?.map((m) => ({ code: m.code, label: m.label })) || [],
+        tags: s.tags?.map((t) => t.slug) || [],
         status: s.status,
         createdAt: s.createdAt,
         author: {
@@ -145,10 +229,18 @@ export class SecretsService {
   }
 
   /** Fetch a paginated list of this user’s own secrets */
-  async getSecrets(userId: string, page: number, limit: number, mood?: string) {
+  async getSecrets(
+    userId: string,
+    page: number,
+    limit: number,
+    moods?: string[],
+    tags?: string[],
+  ) {
     const q = this.secretsRepo
       .createQueryBuilder('s')
       .leftJoinAndSelect('s.author', 'author')
+      .leftJoinAndSelect('s.moods', 'm')
+      .leftJoinAndSelect('s.tags', 'tg')
       .where('s.userId = :userId', { userId })
       .andWhere('s.status IN (:...statuses)', {
         statuses: [SecretStatus.PUBLISHED, SecretStatus.UNDER_REVIEW],
@@ -157,8 +249,13 @@ export class SecretsService {
       .skip((page - 1) * limit)
       .take(limit);
 
-    if (mood) {
-      q.andWhere('s.mood = :mood', { mood });
+    if (moods && moods.length) {
+      q.andWhere('m.code IN (:...moods)', { moods });
+    }
+    if (tags && tags.length) {
+      q.andWhere('tg.slug IN (:...tags)', {
+        tags: tags.map((t) => this.normalizeTag(t)),
+      });
     }
 
     const [items, totalCount] = await q.getManyAndCount();
@@ -167,7 +264,8 @@ export class SecretsService {
       items: items.map((s) => ({
         id: s.id,
         text: s.text,
-        mood: s.mood,
+        moods: s.moods?.map((m) => ({ code: m.code, label: m.label })) || [],
+        tags: s.tags?.map((t) => t.slug) || [],
         status: s.status,
         createdAt: s.createdAt,
         author: {
@@ -185,7 +283,7 @@ export class SecretsService {
   async getSecretById(secretId: string): Promise<Secret | null> {
     return this.secretsRepo.findOne({
       where: { id: secretId },
-      relations: ['author'],
+      relations: ['author', 'moods', 'tags'],
     });
   }
 
@@ -202,20 +300,69 @@ export class SecretsService {
     return entity;
   }
 
-  /** Update text/mood on a secret (owner only) */
+  /** Update text and relations on a secret (owner only) */
   async updateSecret(
     userId: string,
     secretId: string,
-    patch: { text?: string; mood?: string },
+    patch: { text?: string; moods?: string[]; tags?: string[] },
   ) {
     const entity = await this.assertOwner(userId, secretId);
     const next = { ...entity } as any;
     if (typeof patch.text === 'string') next.text = patch.text;
-    if (typeof patch.mood === 'string') next.mood = patch.mood;
     await this.secretsRepo.update({ id: secretId }, next);
 
-    const saved = await this.getSecretById(secretId);
-    return saved;
+    // Update relations if provided
+    if (patch.moods) {
+      const norm = Array.from(
+        new Set(patch.moods.map((m) => m.trim().toLowerCase()).filter(Boolean)),
+      );
+      const moodEntities = norm.length
+        ? await this.moodRepo.find({ where: { code: In(norm), active: true } })
+        : [];
+      await this.secretsRepo
+        .createQueryBuilder()
+        .relation(Secret, 'moods')
+        .of(entity.id)
+        .set(moodEntities.map((m) => m.id));
+    }
+    // Update tags: if provided, normalize; otherwise if text changed, extract from text
+    if (patch.tags || typeof patch.text === 'string') {
+      const provided = Array.isArray(patch.tags)
+        ? patch.tags
+            .map((t) => this.normalizeTag(t))
+            .filter((v): v is string => typeof v === 'string' && v.length > 0)
+        : [];
+      const extracted =
+        typeof patch.text === 'string'
+          ? this.extractTagsFromText(patch.text)
+          : [];
+      const normTags: string[] = Array.from(
+        new Set([...(provided.length ? provided : []), ...extracted]),
+      ).slice(0, 5);
+      const tagEntities: Tag[] = [];
+      for (const slug of normTags) {
+        let existing = await this.tagRepo.findOne({ where: { slug } });
+        if (!existing) {
+          existing = this.tagRepo.create({ slug, raw: slug });
+          try {
+            existing = await this.tagRepo.save(existing);
+          } catch (e) {
+            const again = await this.tagRepo.findOne({ where: { slug } });
+            if (again) existing = again;
+            else throw e;
+          }
+        }
+        // Avoid increment on updates to prevent inflation
+        tagEntities.push(existing);
+      }
+      await this.secretsRepo
+        .createQueryBuilder()
+        .relation(Secret, 'tags')
+        .of(entity.id)
+        .set(tagEntities.map((t) => t.id));
+    }
+
+    return this.getSecretById(secretId);
   }
 
   /** Soft-delete: mark as REMOVED and redact text (owner only) */
@@ -225,5 +372,23 @@ export class SecretsService {
       { id: entity.id },
       { status: SecretStatus.REMOVED, text: '[deleted]' },
     );
+  }
+
+  private normalizeTag(input: string): string | null {
+    if (!input) return null;
+    let s = input.trim().toLowerCase();
+    if (s.startsWith('#')) s = s.slice(1);
+    s = s.replace(/[^a-z0-9_]/g, '');
+    if (s.length < 2 || s.length > 32) return null;
+    return s;
+  }
+
+  private extractTagsFromText(text: string): string[] {
+    if (!text) return [];
+    const matches = text.match(/#[a-zA-Z0-9_]{2,32}/g) || [];
+    const normalized = matches
+      .map((m) => this.normalizeTag(m))
+      .filter((v): v is string => typeof v === 'string');
+    return Array.from(new Set(normalized));
   }
 }

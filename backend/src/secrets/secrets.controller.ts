@@ -12,16 +12,33 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SecretsService } from './secrets.service';
-import { IsOptional, IsString } from 'class-validator';
 import { SecretsGateway } from './secrets.getaway';
+import {
+  IsOptional,
+  IsString,
+  IsArray,
+  ArrayMaxSize,
+  ArrayUnique,
+} from 'class-validator';
 
 export class CreateSecretDto {
   @IsString()
   text: string;
 
+  // New multi-mood support (codes). Kept optional; enforce limits in service
   @IsOptional()
-  @IsString()
-  mood?: string;
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  moods?: string[];
+
+  // Optional user-provided hashtags (either with or without #)
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5)
+  @ArrayUnique()
+  @IsString({ each: true })
+  tags?: string[];
 }
 
 export class UpdateSecretDto {
@@ -30,8 +47,17 @@ export class UpdateSecretDto {
   text?: string;
 
   @IsOptional()
-  @IsString()
-  mood?: string;
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  moods?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5)
+  @ArrayUnique()
+  @IsString({ each: true })
+  tags?: string[];
 }
 
 @UseGuards(JwtAuthGuard)
@@ -47,11 +73,30 @@ export class SecretsController {
     @Request() req,
     @Query('page') page = '1',
     @Query('limit') limit = '20',
-    @Query('mood') mood?: string, // new
+    @Query('moods') moodsCsv?: string,
+    @Query('tags') tagsCsv?: string,
   ) {
     const pageNum = Math.max(parseInt(page, 10), 1);
     const limitNum = Math.min(Math.max(parseInt(limit, 10), 1), 100);
-    return this.secrets.getFeed(req.user.userId, pageNum, limitNum, mood);
+    const moods = moodsCsv
+      ? moodsCsv
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : undefined;
+    const tags = tagsCsv
+      ? tagsCsv
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : undefined;
+    return this.secrets.getFeed(
+      req.user.userId,
+      pageNum,
+      limitNum,
+      moods,
+      tags,
+    );
   }
 
   @Get('secretslist/me')
@@ -59,11 +104,30 @@ export class SecretsController {
     @Request() req,
     @Query('page') page = '1',
     @Query('limit') limit = '20',
-    @Query('mood') mood?: string,
+    @Query('moods') moodsCsv?: string,
+    @Query('tags') tagsCsv?: string,
   ) {
     const pageNum = Math.max(parseInt(page, 10), 1);
     const limitNum = Math.min(Math.max(parseInt(limit, 10), 1), 100);
-    return this.secrets.getSecrets(req.user.userId, pageNum, limitNum, mood);
+    const moods = moodsCsv
+      ? moodsCsv
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : undefined;
+    const tags = tagsCsv
+      ? tagsCsv
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : undefined;
+    return this.secrets.getSecrets(
+      req.user.userId,
+      pageNum,
+      limitNum,
+      moods,
+      tags,
+    );
   }
 
   @Get('find/:id')
@@ -91,10 +155,15 @@ export class SecretsController {
   @Post()
   async create(@Request() req, @Body() dto: CreateSecretDto) {
     const { userId } = req.user;
-    const secret = await this.secrets.createSecret(userId, dto.text, dto.mood);
+    const secret = await this.secrets.createSecret(
+      userId,
+      dto.text,
+      dto.moods,
+      dto.tags,
+    );
     // Notify WebSocket client about the new secret
 
-    this.getaway.notifyNewSecret(secret);
+    this.getaway.notifyNewSecret(secret as any);
     // Return minimal view
     return secret;
   }

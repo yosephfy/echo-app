@@ -17,7 +17,8 @@ export class SecretsGateway implements OnGatewayInit {
   notifyNewSecret(secret: {
     id: string;
     text: string;
-    mood?: string;
+    moods?: { code: string; label: string }[];
+    tags?: string[];
     status: string;
     createdAt: Date;
   }) {
