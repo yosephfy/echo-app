@@ -19,6 +19,8 @@ import { ReplyReactionsModule } from './reply-reactions/reply-reactions.module';
 import { SettingsModule } from './settings/settings.module';
 import { FirebaseModule } from './firebase/firebase.module';
 import { ChatModule } from './chat/chat.module';
+import { MoodsModule } from './moods/moods.module';
+import { TagsModule } from './tags/tags.module';
 
 @Module({
   providers: [
@@ -51,6 +53,9 @@ import { ChatModule } from './chat/chat.module';
     SettingsModule,
     FirebaseModule,
     ChatModule,
+    MoodsModule,
+    TagsModule,
+
     // ... your feature modules (Users, Auth) go here
   ],
 })

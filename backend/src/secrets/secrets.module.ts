@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Secret } from './secret.entity';
+import { Mood } from 'src/moods/mood.entity';
+import { Tag } from 'src/tags/tag.entity';
 import { SecretsService } from './secrets.service';
 import { SecretsController } from './secrets.controller';
 import { SecretsGateway } from './secrets.getaway';
@@ -9,7 +11,7 @@ import { ReportsModule } from 'src/reports/reports.module';
 import { NotificationsModule } from 'src/notifications/notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Secret]), NotificationsModule],
+  imports: [TypeOrmModule.forFeature([Secret, Mood, Tag]), NotificationsModule],
   providers: [SecretsService, SecretsGateway],
   controllers: [SecretsController],
   exports: [SecretsService],

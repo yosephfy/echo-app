@@ -6,10 +6,14 @@ import {
   CreateDateColumn,
   JoinColumn,
   OneToMany,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
 import { User } from '../users/user.entity';
 import { Bookmark } from 'src/bookmarks/bookmark.entity';
 import { Reply } from 'src/replies/reply.entity';
+import { Mood } from 'src/moods/mood.entity';
+import { Tag } from 'src/tags/tag.entity';
 
 export enum SecretStatus {
   UNDER_REVIEW = 'under_review',
@@ -25,8 +29,22 @@ export class Secret {
   @Column('text')
   text: string;
 
-  @Column({ length: 32, nullable: true })
-  mood?: string;
+  // Multi-mood relation
+  @ManyToMany(() => Mood, (m) => m.secrets, { cascade: false })
+  @JoinTable({
+    name: 'secret_moods',
+    joinColumn: { name: 'secretId', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'moodId', referencedColumnName: 'id' },
+  })
+  moods?: Mood[];
+
+  @ManyToMany(() => Tag, (t) => t.secrets, { cascade: false })
+  @JoinTable({
+    name: 'secret_tags',
+    joinColumn: { name: 'secretId', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'tagId', referencedColumnName: 'id' },
+  })
+  tags?: Tag[];
 
   @Column({
     type: 'enum',
