@@ -101,6 +101,18 @@ export class SecretsController {
     );
   }
 
+  // GET /secrets/trending?limit=10&hours=24
+  @Get('trending')
+  async trending(
+    @Request() req,
+    @Query('limit') limit = '10',
+    @Query('hours') hours = '24',
+  ) {
+    const limitNum = Math.min(Math.max(parseInt(limit, 10), 1), 50);
+    const hoursNum = Math.min(Math.max(parseInt(hours, 10), 1), 168); // Max 1 week
+    return this.secrets.getTrending(req.user.userId, limitNum, hoursNum);
+  }
+
   @Get('secretslist/me')
   async getMySecrets(
     @Request() req,

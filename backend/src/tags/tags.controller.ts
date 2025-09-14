@@ -11,6 +11,13 @@ export class TagsController {
     return this.tags.list(lim);
   }
 
+  @Get('trending')
+  trending(@Query('limit') limit?: string, @Query('hours') hours?: string) {
+    const lim = Math.min(Math.max(parseInt(limit ?? '20', 10) || 20, 1), 100);
+    const hrs = Math.min(Math.max(parseInt(hours ?? '24', 10) || 24, 1), 168); // Max 1 week
+    return this.tags.getTrending(lim, hrs);
+  }
+
   @Get('search')
   search(@Query('q') q?: string, @Query('limit') limit?: string) {
     const lim = Math.min(Math.max(parseInt(limit ?? '20', 10) || 20, 1), 200);
