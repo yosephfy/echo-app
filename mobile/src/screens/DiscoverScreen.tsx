@@ -9,10 +9,12 @@ import {
   TextInput,
   Pressable,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import { api } from "../api/client";
 import { useTheme } from "../theme/ThemeContext";
 import { IconSvg } from "../icons/IconSvg";
+import HashtagChip from "../components/HashtagChip";
 
 const moodsCatalog = [
   "happy",
@@ -24,6 +26,7 @@ const moodsCatalog = [
 ];
 
 type SortOption = "newest" | "oldest" | "popular";
+type ViewMode = "feed" | "trending" | "hashtags";
 
 const sortOptions: { key: SortOption; label: string; icon: string }[] = [
   { key: "newest", label: "Newest", icon: "calendar-day" },
@@ -31,9 +34,26 @@ const sortOptions: { key: SortOption; label: string; icon: string }[] = [
   { key: "popular", label: "Popular", icon: "fire" },
 ];
 
+const viewModes: { key: ViewMode; label: string; icon: string }[] = [
+  { key: "feed", label: "Feed", icon: "home" },
+  { key: "trending", label: "Trending", icon: "fire" },
+  { key: "hashtags", label: "Tags", icon: "bookmarks" },
+];
+
+// Mock trending hashtags (in real app, this would come from API)
+const trendingTags = [
+  { tag: "selfcare", count: 24 },
+  { tag: "anxiety", count: 18 },
+  { tag: "relationships", count: 15 },
+  { tag: "work", count: 12 },
+  { tag: "dreams", count: 9 },
+  { tag: "growth", count: 8 },
+];
+
 export default function DiscoverScreen() {
   const theme = useTheme();
   const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [feed, setFeed] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -46,6 +66,9 @@ export default function DiscoverScreen() {
   
   // Sort functionality
   const [sortBy, setSortBy] = useState<SortOption>("newest");
+  
+  // View mode
+  const [viewMode, setViewMode] = useState<ViewMode>("feed");
   
   // Debounce search query
   useEffect(() => {
@@ -61,6 +84,12 @@ export default function DiscoverScreen() {
     );
   };
 
+  const toggleTag = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((x) => x !== tag) : [...prev, tag]
+    );
+  };
+
   const load = useCallback(
     async (nextPage = 1, isRefresh = false) => {
       if (loading && !isRefresh) return;
@@ -72,12 +101,13 @@ export default function DiscoverScreen() {
       }
 
       try {
-        const params: { page: number; limit: number; moods?: string; search?: string } = {
+        const params: { page: number; limit: number; moods?: string; tags?: string; search?: string } = {
           page: nextPage,
           limit: 20,
         };
         
         if (selectedMoods.length) params.moods = selectedMoods.join(",");
+        if (selectedTags.length) params.tags = selectedTags.join(",");
         if (debouncedQuery.trim()) params.search = debouncedQuery.trim();
         
         const res: any = await api.get("/secrets/feed", params);
@@ -106,12 +136,14 @@ export default function DiscoverScreen() {
         setRefreshing(false);
       }
     },
-    [selectedMoods, debouncedQuery, sortBy, loading]
+    [selectedMoods, selectedTags, debouncedQuery, sortBy, loading]
   );
 
   useEffect(() => {
-    load(1, true);
-  }, [selectedMoods, debouncedQuery, sortBy]);
+    if (viewMode === "feed") {
+      load(1, true);
+    }
+  }, [selectedMoods, selectedTags, debouncedQuery, sortBy, viewMode]);
 
   const cycleSortOption = () => {
     const currentIndex = sortOptions.findIndex(option => option.key === sortBy);
@@ -121,9 +153,104 @@ export default function DiscoverScreen() {
 
   const clearAllFilters = () => {
     setSelectedMoods([]);
+    setSelectedTags([]);
     setSearchQuery("");
     setSortBy("newest");
   };
+
+  const renderTrendingContent = () => (
+    <ScrollView style={styles.trendingContainer}>
+      <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+        🔥 Trending Now
+      </Text>
+      <Text style={[styles.sectionSubtitle, { color: theme.colors.muted }]}>
+        Popular secrets from the past 24 hours
+      </Text>
+      
+      {/* Mock trending content */}
+      <View style={styles.trendingItem}>
+        <View style={styles.trendingRank}>
+          <Text style={styles.rankNumber}>1</Text>
+        </View>
+        <View style={styles.trendingContent}>
+          <Text style={[styles.trendingText, { color: theme.colors.text }]}>
+            "I finally told my best friend how I really feel about them..."
+          </Text>
+          <Text style={[styles.trendingMeta, { color: theme.colors.muted }]}>
+            42 reactions • 18 replies
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.trendingItem}>
+        <View style={styles.trendingRank}>
+          <Text style={styles.rankNumber}>2</Text>
+        </View>
+        <View style={styles.trendingContent}>
+          <Text style={[styles.trendingText, { color: theme.colors.text }]}>
+            "Sometimes I pretend to be busy just to avoid social events..."
+          </Text>
+          <Text style={[styles.trendingMeta, { color: theme.colors.muted }]}>
+            38 reactions • 23 replies
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.trendingItem}>
+        <View style={styles.trendingRank}>
+          <Text style={styles.rankNumber}>3</Text>
+        </View>
+        <View style={styles.trendingContent}>
+          <Text style={[styles.trendingText, { color: theme.colors.text }]}>
+            "I've been learning to code in secret for 6 months now..."
+          </Text>
+          <Text style={[styles.trendingMeta, { color: theme.colors.muted }]}>
+            35 reactions • 15 replies
+          </Text>
+        </View>
+      </View>
+    </ScrollView>
+  );
+
+  const renderHashtagsContent = () => (
+    <ScrollView style={styles.hashtagsContainer}>
+      <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+        🏷️ Trending Hashtags
+      </Text>
+      <Text style={[styles.sectionSubtitle, { color: theme.colors.muted }]}>
+        Discover secrets by popular topics
+      </Text>
+      
+      <View style={styles.hashtagGrid}>
+        {trendingTags.map((item) => (
+          <HashtagChip
+            key={item.tag}
+            tag={item.tag}
+            count={item.count}
+            isSelected={selectedTags.includes(item.tag)}
+            onPress={toggleTag}
+          />
+        ))}
+      </View>
+
+      {selectedTags.length > 0 && (
+        <>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text, marginTop: 24 }]}>
+            Secrets with selected tags
+          </Text>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+            </View>
+          ) : (
+            <View>
+              {feed.map((item) => renderItem({ item }))}
+            </View>
+          )}
+        </>
+      )}
+    </ScrollView>
+  );
 
   const renderItem = ({ item }: any) => (
     <View
@@ -143,142 +270,200 @@ export default function DiscoverScreen() {
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
-      {/* Search Bar */}
-      <View style={styles.searchSection}>
-        <View
-          style={[
-            styles.searchContainer,
-            {
-              borderColor: theme.colors.outline,
-              backgroundColor: theme.colors.surface,
-            },
-          ]}
-        >
-          <IconSvg icon="search-alt" size={18} />
-          <TextInput
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search secrets..."
-            placeholderTextColor={theme.colors.muted}
-            style={[styles.searchInput, { color: theme.colors.text }]}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {!!searchQuery && (
-            <Pressable onPress={() => setSearchQuery("")}>
-              <IconSvg icon="wrong" size={16} />
-            </Pressable>
-          )}
-        </View>
-        
-        {/* Sort Button */}
-        <Pressable
-          onPress={cycleSortOption}
-          style={[
-            styles.sortButton,
-            {
-              borderColor: theme.colors.outline,
-              backgroundColor: theme.colors.surface,
-            },
-          ]}
-        >
-          <IconSvg 
-            icon={sortOptions.find(opt => opt.key === sortBy)?.icon as any || "calendar-day"} 
-            size={16} 
-          />
-          <Text style={[styles.sortButtonText, { color: theme.colors.text }]}>
-            {sortOptions.find(opt => opt.key === sortBy)?.label}
-          </Text>
-        </Pressable>
-      </View>
-
-      {/* Mood Filter Chips */}
-      <View style={styles.chipRow}>
-        {moodsCatalog.map((m) => {
-          const active = selectedMoods.includes(m);
-          return (
-            <TouchableOpacity
-              key={m}
-              style={[
-                styles.chip,
-                active
-                  ? {
-                      borderColor: theme.colors.primary,
-                      backgroundColor: theme.colors.primary,
-                    }
-                  : {
-                      borderColor: theme.colors.outline,
-                      backgroundColor: theme.colors.surface,
-                    },
-              ]}
-              onPress={() => toggleMood(m)}
-            >
-              <Text style={{ color: active ? "#fff" : theme.colors.text }}>
-                {m}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-        {(selectedMoods.length > 0 || searchQuery || sortBy !== "newest") && (
+      {/* View Mode Tabs */}
+      <View style={styles.tabContainer}>
+        {viewModes.map((mode) => (
           <TouchableOpacity
-            onPress={clearAllFilters}
+            key={mode.key}
             style={[
-              styles.chip, 
-              { 
-                borderColor: theme.colors.error,
-                backgroundColor: theme.colors.error + "20",
-              }
+              styles.tab,
+              {
+                backgroundColor: viewMode === mode.key ? theme.colors.primary : 'transparent',
+                borderBottomColor: viewMode === mode.key ? theme.colors.primary : 'transparent',
+              },
             ]}
+            onPress={() => setViewMode(mode.key)}
           >
-            <Text style={{ color: theme.colors.error }}>Clear All</Text>
+            <IconSvg 
+              icon={mode.icon as any} 
+              size={16} 
+              state={viewMode === mode.key ? "pressed" : "default"}
+            />
+            <Text 
+              style={[
+                styles.tabText,
+                { color: viewMode === mode.key ? "#fff" : theme.colors.text }
+              ]}
+            >
+              {mode.label}
+            </Text>
           </TouchableOpacity>
-        )}
+        ))}
       </View>
 
-      {/* Results */}
-      {loading && feed.length === 0 ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={[styles.loadingText, { color: theme.colors.muted }]}>
-            Discovering secrets...
-          </Text>
-        </View>
-      ) : feed.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <IconSvg icon="search-alt" size={48} />
-          <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
-            No secrets found
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: theme.colors.muted }]}>
-            {searchQuery || selectedMoods.length > 0
-              ? "Try adjusting your search or filters"
-              : "Be the first to share a secret!"}
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={feed}
-          keyExtractor={(i) => i.id}
-          renderItem={renderItem}
-          onEndReached={() => feed.length < total && !loading && load(page + 1)}
-          onEndReachedThreshold={0.5}
-          refreshing={refreshing}
-          onRefresh={() => load(1, true)}
-          ListFooterComponent={() =>
-            loading && feed.length > 0 ? (
-              <View style={styles.footerLoader}>
-                <ActivityIndicator size="small" color={theme.colors.primary} />
-              </View>
-            ) : null
-          }
-        />
+      {viewMode === "feed" && (
+        <>
+          {/* Search Bar */}
+          <View style={styles.searchSection}>
+            <View
+              style={[
+                styles.searchContainer,
+                {
+                  borderColor: theme.colors.outline,
+                  backgroundColor: theme.colors.surface,
+                },
+              ]}
+            >
+              <IconSvg icon="search-alt" size={18} />
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Search secrets..."
+                placeholderTextColor={theme.colors.muted}
+                style={[styles.searchInput, { color: theme.colors.text }]}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {!!searchQuery && (
+                <Pressable onPress={() => setSearchQuery("")}>
+                  <IconSvg icon="wrong" size={16} />
+                </Pressable>
+              )}
+            </View>
+            
+            {/* Sort Button */}
+            <Pressable
+              onPress={cycleSortOption}
+              style={[
+                styles.sortButton,
+                {
+                  borderColor: theme.colors.outline,
+                  backgroundColor: theme.colors.surface,
+                },
+              ]}
+            >
+              <IconSvg 
+                icon={sortOptions.find(opt => opt.key === sortBy)?.icon as any || "calendar-day"} 
+                size={16} 
+              />
+              <Text style={[styles.sortButtonText, { color: theme.colors.text }]}>
+                {sortOptions.find(opt => opt.key === sortBy)?.label}
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* Mood Filter Chips */}
+          <View style={styles.chipRow}>
+            {moodsCatalog.map((m) => {
+              const active = selectedMoods.includes(m);
+              return (
+                <TouchableOpacity
+                  key={m}
+                  style={[
+                    styles.chip,
+                    active
+                      ? {
+                          borderColor: theme.colors.primary,
+                          backgroundColor: theme.colors.primary,
+                        }
+                      : {
+                          borderColor: theme.colors.outline,
+                          backgroundColor: theme.colors.surface,
+                        },
+                  ]}
+                  onPress={() => toggleMood(m)}
+                >
+                  <Text style={{ color: active ? "#fff" : theme.colors.text }}>
+                    {m}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+            {(selectedMoods.length > 0 || selectedTags.length > 0 || searchQuery || sortBy !== "newest") && (
+              <TouchableOpacity
+                onPress={clearAllFilters}
+                style={[
+                  styles.chip, 
+                  { 
+                    borderColor: theme.colors.error,
+                    backgroundColor: theme.colors.error + "20",
+                  }
+                ]}
+              >
+                <Text style={{ color: theme.colors.error }}>Clear All</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Results */}
+          {loading && feed.length === 0 ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+              <Text style={[styles.loadingText, { color: theme.colors.muted }]}>
+                Discovering secrets...
+              </Text>
+            </View>
+          ) : feed.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <IconSvg icon="search-alt" size={48} />
+              <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+                No secrets found
+              </Text>
+              <Text style={[styles.emptySubtitle, { color: theme.colors.muted }]}>
+                {searchQuery || selectedMoods.length > 0 || selectedTags.length > 0
+                  ? "Try adjusting your search or filters"
+                  : "Be the first to share a secret!"}
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={feed}
+              keyExtractor={(i) => i.id}
+              renderItem={renderItem}
+              onEndReached={() => feed.length < total && !loading && load(page + 1)}
+              onEndReachedThreshold={0.5}
+              refreshing={refreshing}
+              onRefresh={() => load(1, true)}
+              ListFooterComponent={() =>
+                loading && feed.length > 0 ? (
+                  <View style={styles.footerLoader}>
+                    <ActivityIndicator size="small" color={theme.colors.primary} />
+                  </View>
+                ) : null
+              }
+            />
+          )}
+        </>
       )}
+
+      {viewMode === "trending" && renderTrendingContent()}
+      {viewMode === "hashtags" && renderHashtagsContent()}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabContainer: {
+    flexDirection: "row",
+    backgroundColor: "transparent",
+    borderBottomWidth: 1,
+    borderBottomColor: "#333",
+  },
+  tab: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 6,
+    borderBottomWidth: 2,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
   searchSection: {
     flexDirection: "row",
     alignItems: "center",
@@ -364,5 +549,65 @@ const styles = StyleSheet.create({
   footerLoader: {
     paddingVertical: 20,
     alignItems: "center",
+  },
+  // Trending styles
+  trendingContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  trendingItem: {
+    flexDirection: "row",
+    backgroundColor: "#2a2a2a",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    alignItems: "flex-start",
+  },
+  trendingRank: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#007AFF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  rankNumber: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
+  },
+  trendingContent: {
+    flex: 1,
+  },
+  trendingText: {
+    fontSize: 16,
+    lineHeight: 22,
+    marginBottom: 8,
+  },
+  trendingMeta: {
+    fontSize: 12,
+  },
+  // Hashtags styles
+  hashtagsContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  hashtagGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 8,
   },
 });
