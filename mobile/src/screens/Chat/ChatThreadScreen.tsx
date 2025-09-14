@@ -16,14 +16,14 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from "react-native";
-import { useMessages } from "../hooks/chats/useMessages";
-import { useAuthStore } from "../store/authStore";
-import { uploadFile, StorageKind } from "../utils/storage";
+import { useMessages } from "../../hooks/chats/useMessages";
+import { useAuthStore } from "../../store/authStore";
+import { uploadFile, StorageKind } from "../../utils/storage";
 import { useIsFocused } from "@react-navigation/native";
-import ChatInputComponent from "../components/ChatInputComponent";
-import { useTheme } from "../theme/ThemeContext";
-import ChatHeader from "../components/ChatHeader";
-import { useGlobalModal } from "../components/modal/GlobalModalProvider";
+import ChatInputComponent from "../../components/ChatInputComponent";
+import { useTheme } from "../../theme/ThemeContext";
+import ChatHeader from "../../components/ChatHeader";
+import { useGlobalModal } from "../../components/modal/GlobalModalProvider";
 
 type Props = {
   route: {

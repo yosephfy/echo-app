@@ -10,13 +10,13 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useTheme } from "../theme/ThemeContext";
-import Avatar from "../components/Avatar";
-import { timeAgo } from "../utils/timeAgo";
-import { useConversations } from "../hooks/chats/useConversation";
-import { useStartChat } from "../hooks/chats/useStartChat"; // ⬅️ import
+import { useTheme } from "../../theme/ThemeContext";
+import Avatar from "../../components/Avatar";
+import { timeAgo } from "../../utils/timeAgo";
+import { useConversations } from "../../hooks/chats/useConversation";
+import { useStartChat } from "../../hooks/chats/useStartChat"; // ⬅️ import
 import { useNavigation } from "@react-navigation/native";
-import { IconSvg } from "../icons/IconSvg";
+import { IconSvg } from "../../icons/IconSvg";
 
 export default function ChatListScreen() {
   const nav = useNavigation<any>();

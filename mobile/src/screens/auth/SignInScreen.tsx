@@ -1,10 +1,10 @@
 // mobile/src/screens/SignInScreen.tsx
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React from "react";
-import AuthForm from "../components/AuthForm";
-import useAsyncAction from "../hooks/useAsyncAction";
-import useOnboard from "../hooks/useOnboard";
-import { AuthStackParamList } from "../navigation/AuthNavigator";
+import AuthForm from "../../components/AuthForm";
+import useAsyncAction from "../../hooks/useAsyncAction";
+import useOnboard from "../../hooks/useOnboard";
+import { AuthStackParamList } from "../../navigation/AuthNavigator";
 
 export default function SignInScreen({
   navigation,

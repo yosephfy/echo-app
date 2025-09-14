@@ -20,9 +20,9 @@ import { useTheme } from "../theme/ThemeContext";
 import useMe from "../hooks/useMe";
 import { TouchableOpacity, View } from "react-native";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
-import ChatListScreen from "../screens/ChatListScreen";
+import ChatListScreen from "../screens/Chat/ChatListScreen";
 import UserPickerScreen from "../screens/UserPickerScreen";
-import ChatThreadScreen from "../screens/ChatThreadScreen";
+import ChatThreadScreen from "../screens/Chat/ChatThreadScreen";
 
 // --- Types ---
 export type TabParamList = {
