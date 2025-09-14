@@ -168,6 +168,52 @@ export class SecretsService {
     };
   }
 
+  /** Get trending secrets based on recent engagement (reactions + replies) */
+  async getTrending(userId: string, limit: number, hours: number) {
+    const hoursAgo = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+    const items = await this.secretsRepo
+      .createQueryBuilder('s')
+      .leftJoinAndSelect('s.author', 'author')
+      .leftJoinAndSelect('s.moods', 'm')
+      .leftJoinAndSelect('s.tags', 'tg')
+      .leftJoin('s.reactions', 'r')
+      .leftJoin('s.replies', 'rep')
+      .where('s.status IN (:...statuses)', {
+        statuses: [SecretStatus.PUBLISHED, SecretStatus.UNDER_REVIEW],
+      })
+      .andWhere('s.createdAt >= :hoursAgo', { hoursAgo })
+      .groupBy('s.id')
+      .addGroupBy('author.id')
+      .addGroupBy('m.id')
+      .addGroupBy('tg.id')
+      .orderBy('(COUNT(DISTINCT r.id) + COUNT(DISTINCT rep.id))', 'DESC')
+      .addOrderBy('s.createdAt', 'DESC') // Secondary sort by recency
+      .limit(limit)
+      .getMany();
+
+    // Filter out secrets with no author
+    const filtered = items.filter((s) => s.author !== null);
+
+    return {
+      items: filtered.map((s) => ({
+        id: s.id,
+        text: s.text,
+        moods: s.moods?.map((m) => ({ code: m.code, label: m.label })) || [],
+        tags: s.tags?.map((t) => t.slug) || [],
+        status: s.status,
+        createdAt: s.createdAt,
+        author: {
+          id: s.author.id,
+          handle: s.author.handle,
+          avatarUrl: s.author.avatarUrl,
+        },
+      })),
+      hours,
+      limit,
+    };
+  }
+
   // backend/src/secrets/secrets.service.ts
 
   async getFeed(

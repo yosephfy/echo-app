@@ -15,6 +15,7 @@ import { api } from "../api/client";
 import { useTheme } from "../theme/ThemeContext";
 import { IconSvg } from "../icons/IconSvg";
 import HashtagChip from "../components/HashtagChip";
+import SecretItem from "../components/SecretItem";
 
 const moodsCatalog = [
   "happy",
@@ -28,6 +29,23 @@ const moodsCatalog = [
 type SortOption = "newest" | "oldest" | "popular";
 type ViewMode = "feed" | "trending" | "hashtags";
 
+interface TrendingSecret {
+  id: string;
+  text: string;
+  moods?: { code: string; label?: string }[];
+  tags?: string[];
+  status: string;
+  createdAt: string;
+  author: { id: string; handle: string; avatarUrl: string };
+}
+
+interface TrendingTag {
+  tag: string;
+  count: number;
+  slug: string;
+  raw?: string;
+}
+
 const sortOptions: { key: SortOption; label: string; icon: string }[] = [
   { key: "newest", label: "Newest", icon: "calendar-day" },
   { key: "oldest", label: "Oldest", icon: "calendar-day" },
@@ -40,8 +58,8 @@ const viewModes: { key: ViewMode; label: string; icon: string }[] = [
   { key: "hashtags", label: "Tags", icon: "bookmarks" },
 ];
 
-// Mock trending hashtags (in real app, this would come from API)
-const trendingTags = [
+// Mock trending hashtags (will be replaced with API call)
+const mockTrendingTags = [
   { tag: "selfcare", count: 24 },
   { tag: "anxiety", count: 18 },
   { tag: "relationships", count: 15 },
@@ -50,15 +68,19 @@ const trendingTags = [
   { tag: "growth", count: 8 },
 ];
 
-export default function DiscoverScreen() {
+export default function DiscoverScreen({ navigation }: { navigation?: any }) {
   const theme = useTheme();
   const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [feed, setFeed] = useState<any[]>([]);
+  const [trendingSecrets, setTrendingSecrets] = useState<TrendingSecret[]>([]);
+  const [trendingTags, setTrendingTags] = useState<TrendingTag[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingTrending, setLoadingTrending] = useState(false);
+  const [loadingTags, setLoadingTags] = useState(false);
   
   // Search functionality
   const [searchQuery, setSearchQuery] = useState("");
@@ -89,6 +111,38 @@ export default function DiscoverScreen() {
       prev.includes(tag) ? prev.filter((x) => x !== tag) : [...prev, tag]
     );
   };
+
+  const loadTrending = useCallback(async () => {
+    if (loadingTrending) return;
+    
+    setLoadingTrending(true);
+    try {
+      const res: { items: TrendingSecret[]; hours: number; limit: number } = 
+        await api.get("/secrets/trending", { limit: 10, hours: 24 });
+      setTrendingSecrets(res.items);
+    } catch (error) {
+      console.error("Failed to load trending secrets:", error);
+      setTrendingSecrets([]);
+    } finally {
+      setLoadingTrending(false);
+    }
+  }, [loadingTrending]);
+
+  const loadTrendingTags = useCallback(async () => {
+    if (loadingTags) return;
+    
+    setLoadingTags(true);
+    try {
+      const res: TrendingTag[] = await api.get("/tags/trending", { limit: 20, hours: 24 });
+      setTrendingTags(res);
+    } catch (error) {
+      console.error("Failed to load trending tags:", error);
+      // Fallback to mock data if API fails
+      setTrendingTags(mockTrendingTags.map(tag => ({ ...tag, slug: tag.tag, raw: tag.tag })));
+    } finally {
+      setLoadingTags(false);
+    }
+  }, [loadingTags]);
 
   const load = useCallback(
     async (nextPage = 1, isRefresh = false) => {
@@ -142,8 +196,21 @@ export default function DiscoverScreen() {
   useEffect(() => {
     if (viewMode === "feed") {
       load(1, true);
+    } else if (viewMode === "trending") {
+      loadTrending();
+    } else if (viewMode === "hashtags") {
+      loadTrendingTags();
     }
   }, [selectedMoods, selectedTags, debouncedQuery, sortBy, viewMode]);
+
+  // Load trending data when switching to trending/hashtags view
+  useEffect(() => {
+    if (viewMode === "trending" && trendingSecrets.length === 0) {
+      loadTrending();
+    } else if (viewMode === "hashtags" && trendingTags.length === 0) {
+      loadTrendingTags();
+    }
+  }, [viewMode]);
 
   const cycleSortOption = () => {
     const currentIndex = sortOptions.findIndex(option => option.key === sortBy);
@@ -167,48 +234,41 @@ export default function DiscoverScreen() {
         Popular secrets from the past 24 hours
       </Text>
       
-      {/* Mock trending content */}
-      <View style={styles.trendingItem}>
-        <View style={styles.trendingRank}>
-          <Text style={styles.rankNumber}>1</Text>
-        </View>
-        <View style={styles.trendingContent}>
-          <Text style={[styles.trendingText, { color: theme.colors.text }]}>
-            "I finally told my best friend how I really feel about them..."
-          </Text>
-          <Text style={[styles.trendingMeta, { color: theme.colors.muted }]}>
-            42 reactions • 18 replies
+      {loadingTrending ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={[styles.loadingText, { color: theme.colors.muted }]}>
+            Loading trending secrets...
           </Text>
         </View>
-      </View>
-
-      <View style={styles.trendingItem}>
-        <View style={styles.trendingRank}>
-          <Text style={styles.rankNumber}>2</Text>
-        </View>
-        <View style={styles.trendingContent}>
-          <Text style={[styles.trendingText, { color: theme.colors.text }]}>
-            "Sometimes I pretend to be busy just to avoid social events..."
+      ) : trendingSecrets.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <IconSvg icon="fire" size={48} />
+          <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+            No trending secrets
           </Text>
-          <Text style={[styles.trendingMeta, { color: theme.colors.muted }]}>
-            38 reactions • 23 replies
+          <Text style={[styles.emptySubtitle, { color: theme.colors.muted }]}>
+            Check back later for trending content
           </Text>
         </View>
-      </View>
-
-      <View style={styles.trendingItem}>
-        <View style={styles.trendingRank}>
-          <Text style={styles.rankNumber}>3</Text>
+      ) : (
+        <View>
+          {trendingSecrets.map((secret, index) => (
+            <View key={secret.id} style={styles.trendingItem}>
+              <View style={styles.trendingRank}>
+                <Text style={styles.rankNumber}>{index + 1}</Text>
+              </View>
+              <View style={styles.trendingContent}>
+                <SecretItem
+                  secret={secret}
+                  display="condensed"
+                  navigation={navigation}
+                />
+              </View>
+            </View>
+          ))}
         </View>
-        <View style={styles.trendingContent}>
-          <Text style={[styles.trendingText, { color: theme.colors.text }]}>
-            "I've been learning to code in secret for 6 months now..."
-          </Text>
-          <Text style={[styles.trendingMeta, { color: theme.colors.muted }]}>
-            35 reactions • 15 replies
-          </Text>
-        </View>
-      </View>
+      )}
     </ScrollView>
   );
 
@@ -221,31 +281,49 @@ export default function DiscoverScreen() {
         Discover secrets by popular topics
       </Text>
       
-      <View style={styles.hashtagGrid}>
-        {trendingTags.map((item) => (
-          <HashtagChip
-            key={item.tag}
-            tag={item.tag}
-            count={item.count}
-            isSelected={selectedTags.includes(item.tag)}
-            onPress={toggleTag}
-          />
-        ))}
-      </View>
-
-      {selectedTags.length > 0 && (
-        <>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text, marginTop: 24 }]}>
-            Secrets with selected tags
+      {loadingTags ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={[styles.loadingText, { color: theme.colors.muted }]}>
+            Loading trending hashtags...
           </Text>
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
-            </View>
-          ) : (
-            <View>
-              {feed.map((item) => renderItem({ item }))}
-            </View>
+        </View>
+      ) : (
+        <>
+          <View style={styles.hashtagGrid}>
+            {trendingTags.map((item) => (
+              <HashtagChip
+                key={item.tag}
+                tag={item.tag}
+                count={item.count}
+                isSelected={selectedTags.includes(item.tag)}
+                onPress={toggleTag}
+              />
+            ))}
+          </View>
+
+          {selectedTags.length > 0 && (
+            <>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text, marginTop: 24 }]}>
+                Secrets with selected tags
+              </Text>
+              {loading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={theme.colors.primary} />
+                </View>
+              ) : (
+                <View>
+                  {feed.map((secret) => (
+                    <SecretItem
+                      key={secret.id}
+                      secret={secret}
+                      display="normal"
+                      navigation={navigation}
+                    />
+                  ))}
+                </View>
+              )}
+            </>
           )}
         </>
       )}
@@ -253,17 +331,11 @@ export default function DiscoverScreen() {
   );
 
   const renderItem = ({ item }: any) => (
-    <View
-      style={[
-        styles.item,
-        {
-          borderColor: theme.colors.outline,
-          backgroundColor: theme.colors.surface,
-        },
-      ]}
-    >
-      <Text style={{ color: theme.colors.text }}>{item.text}</Text>
-    </View>
+    <SecretItem
+      secret={item}
+      display="normal"
+      navigation={navigation}
+    />
   );
 
   return (
@@ -512,13 +584,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
   },
-  item: {
-    borderWidth: 1,
-    borderRadius: 4,
-    padding: 12,
-    marginHorizontal: 16,
-    marginBottom: 12,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -570,7 +635,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: "#2a2a2a",
     borderRadius: 12,
-    padding: 16,
+    padding: 8,
     marginBottom: 12,
     alignItems: "flex-start",
   },
@@ -582,6 +647,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
+    flexShrink: 0,
   },
   rankNumber: {
     color: "#fff",
@@ -590,14 +656,6 @@ const styles = StyleSheet.create({
   },
   trendingContent: {
     flex: 1,
-  },
-  trendingText: {
-    fontSize: 16,
-    lineHeight: 22,
-    marginBottom: 8,
-  },
-  trendingMeta: {
-    fontSize: 12,
   },
   // Hashtags styles
   hashtagsContainer: {
