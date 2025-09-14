@@ -75,6 +75,7 @@ export class SecretsController {
     @Query('limit') limit = '20',
     @Query('moods') moodsCsv?: string,
     @Query('tags') tagsCsv?: string,
+    @Query('search') searchQuery?: string,
   ) {
     const pageNum = Math.max(parseInt(page, 10), 1);
     const limitNum = Math.min(Math.max(parseInt(limit, 10), 1), 100);
@@ -96,6 +97,7 @@ export class SecretsController {
       limitNum,
       moods,
       tags,
+      searchQuery,
     );
   }
 

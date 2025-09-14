@@ -1,5 +1,9 @@
 // backend/src/replies/replies.service.ts
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Reply } from './reply.entity';
@@ -91,7 +95,12 @@ export class RepliesService {
   }
 
   /** Update own reply's text */
-  async update(userId: string, secretId: string, replyId: string, text: string) {
+  async update(
+    userId: string,
+    secretId: string,
+    replyId: string,
+    text: string,
+  ) {
     const row = await this.findById(replyId);
     if (row.userId !== userId)
       throw new ForbiddenException('Not allowed to modify this reply');

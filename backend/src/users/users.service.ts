@@ -128,7 +128,7 @@ export class UsersService {
     const user = await this.usersRepo.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 
-    user.avatarUrl = !!dto.random ? this.handleSvc.pickAvatar() : dto.avatarUrl;
+    user.avatarUrl = dto.random ? this.handleSvc.pickAvatar() : dto.avatarUrl;
     return this.usersRepo.save(user);
   }
 

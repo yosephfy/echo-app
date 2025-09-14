@@ -161,7 +161,7 @@ export class ChatService {
                 : null,
             }
           : null,
-        updatedAt: (p.conversation?.lastMessageCreatedAt ?? p.joinedAt) as Date,
+        updatedAt: p.conversation?.lastMessageCreatedAt ?? p.joinedAt,
         peer: peerUser
           ? {
               id: peerUser.id,

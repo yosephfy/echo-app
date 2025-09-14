@@ -176,6 +176,7 @@ export class SecretsService {
     limit: number,
     moods?: string[],
     tags?: string[],
+    searchQuery?: string,
   ) {
     const q = this.secretsRepo
       .createQueryBuilder('s')
@@ -195,6 +196,11 @@ export class SecretsService {
     if (tags && tags.length) {
       q.andWhere('tg.slug IN (:...tags)', {
         tags: tags.map((t) => this.normalizeTag(t)),
+      });
+    }
+    if (searchQuery && searchQuery.trim()) {
+      q.andWhere('s.text ILIKE :search', {
+        search: `%${searchQuery.trim()}%`,
       });
     }
     const total = await this.secretsRepo.count({
