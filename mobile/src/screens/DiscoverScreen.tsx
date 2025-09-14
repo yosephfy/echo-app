@@ -11,11 +11,13 @@ import {
   ActivityIndicator,
   ScrollView,
 } from "react-native";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { api } from "../api/client";
 import { useTheme } from "../theme/ThemeContext";
 import { IconSvg } from "../icons/IconSvg";
 import HashtagChip from "../components/HashtagChip";
 import SecretItem from "../components/SecretItem";
+import { TabParamList } from "../navigation/AppNavigator";
 
 const moodsCatalog = [
   "happy",
@@ -68,7 +70,9 @@ const mockTrendingTags = [
   { tag: "growth", count: 8 },
 ];
 
-export default function DiscoverScreen({ navigation }: { navigation?: any }) {
+type Props = NativeStackScreenProps<TabParamList, "Discover">;
+
+export default function DiscoverScreen({ navigation }: Props) {
   const theme = useTheme();
   const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
