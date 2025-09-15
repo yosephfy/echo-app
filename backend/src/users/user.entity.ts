@@ -4,11 +4,13 @@ import {
   PrimaryGeneratedColumn,
   Column,
   OneToMany,
+  OneToOne,
   Unique,
 } from 'typeorm';
 import { Secret } from '../secrets/secret.entity';
 import { Bookmark } from '../bookmarks/bookmark.entity';
 import { Streak } from '../streaks/streak.entity';
+import { UserMetrics } from './user-metrics.entity';
 
 @Entity()
 @Unique(['email'])
@@ -45,6 +47,10 @@ export class User {
 
   @OneToMany(() => Streak, (streak) => streak.user)
   streaks: Streak[];
+
+  // Optional: Denormalized metrics for performance
+  @OneToOne(() => UserMetrics, (metrics) => metrics.user)
+  metrics?: UserMetrics;
 
   // Preferences moved to Settings; legacy relation removed
 

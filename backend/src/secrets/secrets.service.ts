@@ -14,6 +14,7 @@ import { User } from 'src/users/user.entity';
 import { Mood } from 'src/moods/mood.entity';
 import { Tag } from 'src/tags/tag.entity';
 import { Reaction } from 'src/reactions/reaction.entity';
+import { Streak } from 'src/streaks/streak.entity';
 import { DatabaseService } from 'src/database/database.service';
 
 const COOLDOWN_SECONDS = 24 * 60 * 60; // 24h
@@ -27,6 +28,8 @@ export class SecretsService {
     private secretsRepo: Repository<Secret>,
     @InjectRepository(Reaction)
     private reactionsRepo: Repository<Reaction>,
+    @InjectRepository(Streak)
+    private streaksRepo: Repository<Streak>,
     @Inject('REDIS') private redis: Redis,
     @Inject('MOD_QUEUE') private modQueue: Queue,
     @Inject('NOTIF_QUEUE') private readonly notifQueue: Queue,
@@ -139,6 +142,9 @@ export class SecretsService {
     );
 
     this.logger.log(`Scheduled cooldown and reminder for user ${userId}`);
+
+    // Update streak after successful secret creation
+    await this.updateStreak(userId);
 
     // now reload with author relation
     const full = await this.secretsRepo.findOne({
@@ -645,5 +651,42 @@ export class SecretsService {
       page,
       limit,
     };
+  }
+
+  /** Update user streak after successful secret creation */
+  private async updateStreak(userId: string): Promise<void> {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    // Find existing streak for user
+    let streak = await this.streaksRepo.findOne({ where: { userId } });
+
+    if (!streak) {
+      // No streak → create with days = 1 and lastIncrementedOn = today
+      streak = this.streaksRepo.create({
+        userId,
+        days: 1,
+        lastIncrementedOn: today,
+      });
+      await this.streaksRepo.save(streak);
+      this.logger.log(`Created new streak for user ${userId}`);
+    } else if (streak.lastIncrementedOn === yesterdayStr) {
+      // lastIncrementedOn is yesterday → increment days and set lastIncrementedOn = today
+      streak.days += 1;
+      streak.lastIncrementedOn = today;
+      await this.streaksRepo.save(streak);
+      this.logger.log(`Incremented streak for user ${userId} to ${streak.days} days`);
+    } else if (streak.lastIncrementedOn === today) {
+      // lastIncrementedOn is today → no-op
+      this.logger.log(`No streak update needed for user ${userId} (already updated today)`);
+    } else {
+      // Else → reset days = 1 and lastIncrementedOn = today
+      streak.days = 1;
+      streak.lastIncrementedOn = today;
+      await this.streaksRepo.save(streak);
+      this.logger.log(`Reset streak for user ${userId} (last post was not consecutive)`);
+    }
   }
 }

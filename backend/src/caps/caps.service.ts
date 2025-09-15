@@ -37,4 +37,53 @@ export class CapsService {
     const existing = await this.repo.findOne({ where: { userId, secretId } });
     return !!existing;
   }
+
+  /** Get paginated list of secrets the user has capped */
+  async getSecretsUserCapped(
+    userId: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<{
+    items: any[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const offset = (page - 1) * limit;
+
+    // Get secrets with cap date for ordering
+    const query = this.repo
+      .createQueryBuilder('cap')
+      .innerJoinAndSelect('cap.secret', 'secret')
+      .innerJoinAndSelect('secret.author', 'author')
+      .leftJoinAndSelect('secret.moods', 'moods')
+      .leftJoinAndSelect('secret.tags', 'tags')
+      .where('cap.userId = :userId', { userId })
+      .andWhere('secret.status IN (:...statuses)', { statuses: ['published', 'under_review'] })
+      .orderBy('cap.createdAt', 'DESC')
+      .take(limit)
+      .skip(offset);
+
+    const [caps, total] = await query.getManyAndCount();
+
+    // Build response with reaction counts for each secret
+    const items = await Promise.all(
+      caps.map(async (cap) => {
+        const capsCount = await this.count(cap.secret.id);
+        
+        return {
+          secret: cap.secret,
+          reactionsCount: capsCount, // keeping consistent naming with reactions endpoint
+          cappedAt: cap.createdAt,
+        };
+      })
+    );
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+    };
+  }
 }

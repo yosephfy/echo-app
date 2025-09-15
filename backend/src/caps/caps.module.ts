@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CapsService } from './caps.service';
 import { CapsController } from './caps.controller';
+import { UserCapsController } from './user-caps.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Cap } from './cap.entity';
 
@@ -10,7 +11,7 @@ import { Cap } from './cap.entity';
     TypeOrmModule.forFeature([Cap]),
   ],
   providers: [CapsService],
-  controllers: [CapsController],
+  controllers: [CapsController, UserCapsController],
   exports: [CapsService], // if you want to use it elsewhere
 })
 export class CapsModule {}

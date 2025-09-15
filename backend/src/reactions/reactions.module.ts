@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ReactionsService } from './reactions.service';
 import { ReactionsController } from './reactions.controller';
+import { UserReactionsController } from './user-reactions.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Reaction } from './reaction.entity';
 
@@ -10,7 +11,7 @@ import { Reaction } from './reaction.entity';
     TypeOrmModule.forFeature([Reaction]),
   ],
   providers: [ReactionsService],
-  controllers: [ReactionsController],
+  controllers: [ReactionsController, UserReactionsController],
   exports: [ReactionsService],
 })
 export class ReactionsModule {}

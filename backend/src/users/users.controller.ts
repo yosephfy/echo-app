@@ -7,6 +7,7 @@ import {
   Request,
   Post,
   Query,
+  Param,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UpdateCredentialsDto } from '../auth/dto/update-credentials.dto';
@@ -56,6 +57,11 @@ export class UsersController {
   @Get('me/stats')
   async getStats(@Request() req) {
     return this.usersService.getStats(req.user.userId);
+  }
+
+  @Get(':id/stats')
+  async getUserStats(@Param('id') userId: string) {
+    return this.usersService.getStats(userId);
   }
 
   @Post('refresh-profile')

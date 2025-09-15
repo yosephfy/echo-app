@@ -4,6 +4,7 @@ import { Secret } from './secret.entity';
 import { Mood } from 'src/moods/mood.entity';
 import { Tag } from 'src/tags/tag.entity';
 import { Reaction } from 'src/reactions/reaction.entity';
+import { Streak } from 'src/streaks/streak.entity';
 import { SecretsService } from './secrets.service';
 import { SecretsController } from './secrets.controller';
 import { SecretsGateway } from './secrets.getaway';
@@ -14,7 +15,7 @@ import { DatabaseModule } from 'src/database/database.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Secret, Mood, Tag, Reaction]),
+    TypeOrmModule.forFeature([Secret, Mood, Tag, Reaction, Streak]),
     NotificationsModule,
     DatabaseModule,
   ],
