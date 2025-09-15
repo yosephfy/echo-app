@@ -504,4 +504,124 @@ export class SecretsService {
       .filter((v): v is string => typeof v === 'string');
     return Array.from(new Set(normalized));
   }
+
+  /** Enhanced search functionality with hashtag parsing and dynamic query building */
+  async searchSecrets(
+    userId: string,
+    params: {
+      q?: string;
+      moods?: string[];
+      tags?: string[];
+      sort?: 'newest' | 'relevant';
+    },
+    page: number,
+    limit: number,
+  ) {
+    const qb = this.secretsRepo
+      .createQueryBuilder('s')
+      .leftJoinAndSelect('s.author', 'author')
+      .leftJoinAndSelect('s.moods', 'm')
+      .leftJoinAndSelect('s.tags', 'tg')
+      .where('s.status IN (:...statuses)', {
+        statuses: [SecretStatus.PUBLISHED, SecretStatus.UNDER_REVIEW],
+      });
+
+    // Parse query for hashtags and regular text
+    let searchText = '';
+    let queryTags: string[] = [];
+    
+    if (params.q?.trim()) {
+      const extractedTags = this.extractTagsFromText(params.q);
+      queryTags = extractedTags;
+      
+      // Remove hashtags from search text for better text search
+      searchText = params.q
+        .replace(/#[a-zA-Z0-9_]{2,32}/g, '')
+        .trim();
+    }
+
+    // Combine explicit tags with extracted hashtags from query
+    const allTags = [
+      ...(params.tags || []),
+      ...queryTags,
+    ].map(t => this.normalizeTag(t)).filter(Boolean);
+
+    // Text search using ILIKE for now (can be enhanced with pg_trgm later)
+    if (searchText) {
+      qb.andWhere('s.text ILIKE :searchText', {
+        searchText: `%${searchText}%`,
+      });
+    }
+
+    // Mood filters
+    if (params.moods && params.moods.length) {
+      qb.andWhere('m.code IN (:...moods)', { moods: params.moods });
+    }
+
+    // Tag filters
+    if (allTags.length) {
+      qb.andWhere('tg.slug IN (:...tags)', { tags: allTags });
+    }
+
+    // Sorting
+    if (params.sort === 'relevant' && searchText) {
+      // For relevance, we can add a simple scoring based on text position
+      // This can be enhanced with pg_trgm similarity later
+      qb.addSelect(
+        "CASE WHEN s.text ILIKE :exactSearchText THEN 2 ELSE 1 END",
+        "relevance_score"
+      ).setParameter('exactSearchText', `%${searchText}%`)
+      .orderBy('relevance_score', 'DESC')
+      .addOrderBy('s.createdAt', 'DESC');
+    } else {
+      qb.orderBy('s.createdAt', 'DESC');
+    }
+
+    // Get total count for pagination
+    const totalQb = qb.clone();
+    totalQb.select('COUNT(DISTINCT s.id)', 'total');
+    const totalResult = await totalQb.getRawOne();
+    const total = parseInt(totalResult?.total || '0', 10);
+
+    // Apply pagination
+    qb.skip((page - 1) * limit).take(limit);
+
+    const items = await qb.getMany();
+
+    // Filter out secrets with no author
+    const filtered = items.filter((s) => s.author !== null);
+
+    // Fetch reactions count for these items
+    const ids = filtered.map((s) => s.id);
+    const counts = ids.length
+      ? await this.reactionsRepo
+          .createQueryBuilder('r')
+          .select('r.secretId', 'secretId')
+          .addSelect('COUNT(1)', 'cnt')
+          .where('r.secretId IN (:...ids)', { ids })
+          .groupBy('r.secretId')
+          .getRawMany<{ secretId: string; cnt: string }>()
+      : [];
+    const byId = new Map(counts.map((c) => [c.secretId, Number(c.cnt)]));
+
+    return {
+      items: filtered.map((s) => ({
+        id: s.id,
+        text: s.text,
+        moods: s.moods?.map((m) => ({ code: m.code, label: m.label })) || [],
+        tags: s.tags?.map((t) => t.slug) || [],
+        status: s.status,
+        createdAt: s.createdAt,
+        author: {
+          id: s.author.id,
+          handle: s.author.handle,
+          avatarUrl: s.author.avatarUrl,
+        },
+        reactionsCount: byId.get(s.id) ?? 0,
+      })),
+      total,
+      page,
+      limit,
+    };
+  }
 }

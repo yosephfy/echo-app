@@ -201,4 +201,43 @@ export class SecretsController {
     // returns { start: Date, duration: number, remaining: number }
     return this.secrets.getCooldownInfo(req.user.userId);
   }
+
+  /** GET /secrets/search - Enhanced search with hashtags, moods, and text */
+  @Get('search')
+  async search(
+    @Request() req,
+    @Query('q') q?: string,
+    @Query('moods') moodsCsv?: string,
+    @Query('tags') tagsCsv?: string,
+    @Query('sort') sort?: 'newest' | 'relevant',
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+  ) {
+    const pageNum = Math.max(parseInt(page, 10), 1);
+    const limitNum = Math.min(Math.max(parseInt(limit, 10), 1), 100);
+    const moods = moodsCsv
+      ? moodsCsv
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : undefined;
+    const tags = tagsCsv
+      ? tagsCsv
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : undefined;
+    
+    return this.secrets.searchSecrets(
+      req.user.userId,
+      {
+        q: q?.trim(),
+        moods,
+        tags,
+        sort: sort || 'newest',
+      },
+      pageNum,
+      limitNum,
+    );
+  }
 }
