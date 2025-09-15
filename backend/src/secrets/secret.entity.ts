@@ -14,6 +14,8 @@ import { Bookmark } from 'src/bookmarks/bookmark.entity';
 import { Reply } from 'src/replies/reply.entity';
 import { Mood } from 'src/moods/mood.entity';
 import { Tag } from 'src/tags/tag.entity';
+import { Reaction } from 'src/reactions/reaction.entity';
+import { Cap } from 'src/caps/cap.entity';
 
 export enum SecretStatus {
   UNDER_REVIEW = 'under_review',
@@ -69,6 +71,10 @@ export class Secret {
   @CreateDateColumn()
   createdAt: Date;
 
-  reactions: any;
-  caps: any;
+  // Aggregated engagement relations
+  @OneToMany(() => Reaction, (reaction) => reaction.secret)
+  reactions: Reaction[];
+
+  @OneToMany(() => Cap, (cap) => cap.secret)
+  caps: Cap[];
 }

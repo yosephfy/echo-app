@@ -107,10 +107,17 @@ export class SecretsController {
     @Request() req,
     @Query('limit') limit = '10',
     @Query('hours') hours = '24',
+    @Query('page') page = '1',
   ) {
     const limitNum = Math.min(Math.max(parseInt(limit, 10), 1), 50);
     const hoursNum = Math.min(Math.max(parseInt(hours, 10), 1), 168); // Max 1 week
-    return this.secrets.getTrending(req.user.userId, limitNum, hoursNum);
+    const pageNum = Math.max(parseInt(page, 10), 1);
+    return this.secrets.getTrending(
+      req.user.userId,
+      limitNum,
+      hoursNum,
+      pageNum,
+    );
   }
 
   @Get('secretslist/me')

@@ -6,6 +6,7 @@ import {
   ManyToOne,
   CreateDateColumn,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { User } from '../users/user.entity';
 import { Secret } from '../secrets/secret.entity';
@@ -15,6 +16,7 @@ export class Reply {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Index()
   @Column()
   userId: string;
 
@@ -22,6 +24,7 @@ export class Reply {
   @JoinColumn({ name: 'userId' })
   author: User;
 
+  @Index()
   @Column()
   secretId: string;
 
@@ -32,6 +35,7 @@ export class Reply {
   @Column('text')
   text: string;
 
+  @Index()
   @CreateDateColumn()
   createdAt: Date;
 

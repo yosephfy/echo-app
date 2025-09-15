@@ -13,6 +13,7 @@ import { Queue } from 'bullmq';
 import { User } from 'src/users/user.entity';
 import { Mood } from 'src/moods/mood.entity';
 import { Tag } from 'src/tags/tag.entity';
+import { Reaction } from 'src/reactions/reaction.entity';
 
 const COOLDOWN_SECONDS = 24 * 60 * 60; // 24h
 
@@ -23,6 +24,8 @@ export class SecretsService {
   constructor(
     @InjectRepository(Secret)
     private secretsRepo: Repository<Secret>,
+    @InjectRepository(Reaction)
+    private reactionsRepo: Repository<Reaction>,
     @Inject('REDIS') private redis: Redis,
     @Inject('MOD_QUEUE') private modQueue: Queue,
     @Inject('NOTIF_QUEUE') private readonly notifQueue: Queue,
@@ -169,31 +172,58 @@ export class SecretsService {
   }
 
   /** Get trending secrets based on recent engagement (reactions + replies) */
-  async getTrending(userId: string, limit: number, hours: number) {
+  async getTrending(userId: string, limit: number, hours: number, page = 1) {
     const hoursAgo = new Date(Date.now() - hours * 60 * 60 * 1000);
-
-    const items = await this.secretsRepo
+    const qb = this.secretsRepo
       .createQueryBuilder('s')
-      .leftJoinAndSelect('s.author', 'author')
-      .leftJoinAndSelect('s.moods', 'm')
-      .leftJoinAndSelect('s.tags', 'tg')
-      .leftJoin('s.reactions', 'r')
-      .leftJoin('s.replies', 'rep')
+      .leftJoin('s.reactions', 'r', 'r.createdAt >= :hoursAgo', { hoursAgo })
+      .leftJoin('s.replies', 'rep', 'rep.createdAt >= :hoursAgo', { hoursAgo })
       .where('s.status IN (:...statuses)', {
         statuses: [SecretStatus.PUBLISHED, SecretStatus.UNDER_REVIEW],
       })
-      .andWhere('s.createdAt >= :hoursAgo', { hoursAgo })
-      .groupBy('s.id')
-      .addGroupBy('author.id')
-      .addGroupBy('m.id')
-      .addGroupBy('tg.id')
-      .orderBy('(COUNT(DISTINCT r.id) + COUNT(DISTINCT rep.id))', 'DESC')
-      .addOrderBy('s.createdAt', 'DESC') // Secondary sort by recency
+      .select('s.id', 'id')
+      .addSelect('COUNT(DISTINCT r.id) + COUNT(DISTINCT rep.id)', 'score')
+      .groupBy('s.id');
+
+    // total distinct secrets with any engagement in window
+    const totalRes = await qb
+      .clone()
+      .getRawMany<{ id: string; score: string }>();
+    const total = totalRes.length;
+
+    // Step 1: find top secret IDs by recent engagement (reactions + replies)
+    const raw = await qb
+      .orderBy('score', 'DESC')
+      .addOrderBy('s.createdAt', 'DESC')
+      .offset((page - 1) * limit)
       .limit(limit)
-      .getMany();
+      .getRawMany<{ id: string; score: string }>();
+
+    const ids = raw.map((r) => r.id);
+    if (ids.length === 0) {
+      return { items: [], hours, limit, page, total };
+    }
+
+    // Step 2: load full entities with relations and preserve trending order
+    const entities = await this.secretsRepo.find({
+      where: { id: In(ids) },
+      relations: ['author', 'moods', 'tags'],
+    });
+    const order = new Map(ids.map((id, idx) => [id, idx] as const));
+    entities.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
 
     // Filter out secrets with no author
-    const filtered = items.filter((s) => s.author !== null);
+    const filtered = entities.filter((s) => s.author !== null);
+
+    // reactionsCount per secret
+    const counts = await this.reactionsRepo
+      .createQueryBuilder('r')
+      .select('r.secretId', 'secretId')
+      .addSelect('COUNT(1)', 'cnt')
+      .where('r.secretId IN (:...ids)', { ids })
+      .groupBy('r.secretId')
+      .getRawMany<{ secretId: string; cnt: string }>();
+    const byId = new Map(counts.map((c) => [c.secretId, Number(c.cnt)]));
 
     return {
       items: filtered.map((s) => ({
@@ -208,9 +238,12 @@ export class SecretsService {
           handle: s.author.handle,
           avatarUrl: s.author.avatarUrl,
         },
+        reactionsCount: byId.get(s.id) ?? 0,
       })),
       hours,
       limit,
+      page,
+      total,
     };
   }
 
@@ -260,6 +293,19 @@ export class SecretsService {
     // OPTION A: Filter out secrets with no author
     const filtered = items.filter((s) => s.author !== null);
 
+    // Fetch reactions count for these items
+    const ids = filtered.map((s) => s.id);
+    const counts = ids.length
+      ? await this.reactionsRepo
+          .createQueryBuilder('r')
+          .select('r.secretId', 'secretId')
+          .addSelect('COUNT(1)', 'cnt')
+          .where('r.secretId IN (:...ids)', { ids })
+          .groupBy('r.secretId')
+          .getRawMany<{ secretId: string; cnt: string }>()
+      : [];
+    const byId = new Map(counts.map((c) => [c.secretId, Number(c.cnt)]));
+
     return {
       items: filtered.map((s) => ({
         id: s.id,
@@ -273,6 +319,7 @@ export class SecretsService {
           handle: s.author.handle,
           avatarUrl: s.author.avatarUrl,
         },
+        reactionsCount: byId.get(s.id) ?? 0,
       })),
       total,
       page,
@@ -312,6 +359,19 @@ export class SecretsService {
 
     const [items, totalCount] = await q.getManyAndCount();
 
+    // Fetch reactions count for these items
+    const ids = items.map((s) => s.id);
+    const counts = ids.length
+      ? await this.reactionsRepo
+          .createQueryBuilder('r')
+          .select('r.secretId', 'secretId')
+          .addSelect('COUNT(1)', 'cnt')
+          .where('r.secretId IN (:...ids)', { ids })
+          .groupBy('r.secretId')
+          .getRawMany<{ secretId: string; cnt: string }>()
+      : [];
+    const byId2 = new Map(counts.map((c) => [c.secretId, Number(c.cnt)]));
+
     return {
       items: items.map((s) => ({
         id: s.id,
@@ -325,6 +385,7 @@ export class SecretsService {
           handle: s.author.handle,
           avatarUrl: s.author.avatarUrl,
         },
+        reactionsCount: byId2.get(s.id) ?? 0,
       })),
       total: totalCount,
       page,
