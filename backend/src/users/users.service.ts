@@ -9,7 +9,8 @@ import { UpdateAvatarDto } from 'src/auth/dto/update-avatar.dto';
 import { UpdateCredentialsDto } from 'src/auth/dto/update-credentials.dto';
 import { Cap } from 'src/caps/cap.entity';
 import { Reaction } from 'src/reactions/reaction.entity';
-import { Repository } from 'typeorm';
+import { Reply } from 'src/replies/reply.entity';
+import { Repository, In } from 'typeorm';
 import { RegisterDto } from '../auth/dto/register.dto';
 import { Bookmark } from '../bookmarks/bookmark.entity';
 import { Secret } from '../secrets/secret.entity';
@@ -33,6 +34,8 @@ export class UsersService {
     private reactionsRepo: Repository<Reaction>,
     @InjectRepository(Cap)
     private capsRepo: Repository<Cap>,
+    @InjectRepository(Reply)
+    private repliesRepo: Repository<Reply>,
     private handleSvc: HandleService,
   ) {}
 
@@ -159,22 +162,70 @@ export class UsersService {
   }
 
   async getStats(userId: string) {
-    const postsCount = await this.secretsRepo.count({ where: { userId } });
+    // Count posts excluding REMOVED status
+    const postsCount = await this.secretsRepo.count({ 
+      where: { 
+        userId,
+        status: In(['published', 'under_review']) 
+      } 
+    });
+
     const bookmarksCount = await this.bookmarksRepo.count({
       where: { userId },
     });
-    const totalReactions = await this.reactionsRepo.count({
+
+    // Reactions given by user
+    const reactionsGiven = await this.reactionsRepo.count({
       where: { userId },
     });
-    const totalCaps = await this.capsRepo.count({ where: { userId } });
-    // assuming one active streak record per user
+
+    // Reactions received on user's secrets (with status filter)
+    const reactionsReceived = await this.reactionsRepo
+      .createQueryBuilder('reaction')
+      .innerJoin('reaction.secret', 'secret')
+      .where('secret.userId = :userId', { userId })
+      .andWhere('secret.status IN (:...statuses)', { statuses: ['published', 'under_review'] })
+      .getCount();
+
+    // Caps given by user
+    const capsGiven = await this.capsRepo.count({
+      where: { userId },
+    });
+
+    // Caps received on user's secrets (with status filter)
+    const capsReceived = await this.capsRepo
+      .createQueryBuilder('cap')
+      .innerJoin('cap.secret', 'secret')
+      .where('secret.userId = :userId', { userId })
+      .andWhere('secret.status IN (:...statuses)', { statuses: ['published', 'under_review'] })
+      .getCount();
+
+    // Replies received on user's secrets (with status filter)
+    const repliesReceived = await this.secretsRepo
+      .createQueryBuilder('secret')
+      .leftJoin('secret.replies', 'reply')
+      .where('secret.userId = :userId', { userId })
+      .andWhere('secret.status IN (:...statuses)', { statuses: ['published', 'under_review'] })
+      .select('COUNT(reply.id)', 'count')
+      .getRawOne()
+      .then(result => parseInt(result.count) || 0);
+
+    // Calculate average reactions per post
+    const avgReactionsPerPost = postsCount > 0 ? reactionsReceived / postsCount : 0;
+
+    // Assuming one active streak record per user
     const streak = await this.streaksRepo.findOne({ where: { userId } });
+
     return {
       postsCount,
       bookmarksCount,
       currentStreak: streak?.days || 0,
-      totalReactions: totalReactions, // implement if you have reactions
-      totalCaps: totalCaps, // implement if you have caps
+      reactionsGiven,
+      reactionsReceived,
+      capsGiven,
+      capsReceived,
+      repliesReceived,
+      avgReactionsPerPost: Math.round(avgReactionsPerPost * 100) / 100, // Round to 2 decimal places
     };
   }
 
