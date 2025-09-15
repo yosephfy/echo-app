@@ -14,6 +14,7 @@ import { User } from 'src/users/user.entity';
 import { Mood } from 'src/moods/mood.entity';
 import { Tag } from 'src/tags/tag.entity';
 import { Reaction } from 'src/reactions/reaction.entity';
+import { DatabaseService } from 'src/database/database.service';
 
 const COOLDOWN_SECONDS = 24 * 60 * 60; // 24h
 
@@ -31,6 +32,7 @@ export class SecretsService {
     @Inject('NOTIF_QUEUE') private readonly notifQueue: Queue,
     @InjectRepository(Mood) private moodRepo: Repository<Mood>,
     @InjectRepository(Tag) private tagRepo: Repository<Tag>,
+    private databaseService: DatabaseService,
   ) {}
 
   /** Attempt to create a secret for a user, enforcing 24h cooldown */
@@ -548,9 +550,18 @@ export class SecretsService {
 
     // Text search using ILIKE for now (can be enhanced with pg_trgm later)
     if (searchText) {
-      qb.andWhere('s.text ILIKE :searchText', {
-        searchText: `%${searchText}%`,
-      });
+      // Try to use pg_trgm similarity search for better results
+      try {
+        // Check if we can use enhanced search with similarity
+        qb.andWhere('(s.text ILIKE :searchText OR similarity(s.text, :searchText) > 0.1)', {
+          searchText: `%${searchText}%`,
+        });
+      } catch (error) {
+        // Fallback to simple ILIKE if pg_trgm is not available
+        qb.andWhere('s.text ILIKE :searchText', {
+          searchText: `%${searchText}%`,
+        });
+      }
     }
 
     // Mood filters
@@ -566,13 +577,24 @@ export class SecretsService {
     // Sorting
     if (params.sort === 'relevant' && searchText) {
       // For relevance, we can add a simple scoring based on text position
-      // This can be enhanced with pg_trgm similarity later
-      qb.addSelect(
-        "CASE WHEN s.text ILIKE :exactSearchText THEN 2 ELSE 1 END",
-        "relevance_score"
-      ).setParameter('exactSearchText', `%${searchText}%`)
-      .orderBy('relevance_score', 'DESC')
-      .addOrderBy('s.createdAt', 'DESC');
+      // Enhanced with pg_trgm similarity if available
+      try {
+        qb.addSelect(
+          "CASE WHEN s.text ILIKE :exactSearchText THEN 2 ELSE similarity(s.text, :searchTextForSimilarity) END",
+          "relevance_score"
+        ).setParameter('exactSearchText', `%${searchText}%`)
+        .setParameter('searchTextForSimilarity', searchText)
+        .orderBy('relevance_score', 'DESC')
+        .addOrderBy('s.createdAt', 'DESC');
+      } catch (error) {
+        // Fallback to simple exact match scoring
+        qb.addSelect(
+          "CASE WHEN s.text ILIKE :exactSearchText THEN 2 ELSE 1 END",
+          "relevance_score"
+        ).setParameter('exactSearchText', `%${searchText}%`)
+        .orderBy('relevance_score', 'DESC')
+        .addOrderBy('s.createdAt', 'DESC');
+      }
     } else {
       qb.orderBy('s.createdAt', 'DESC');
     }

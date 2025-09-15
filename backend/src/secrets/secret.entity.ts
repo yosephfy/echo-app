@@ -8,6 +8,7 @@ import {
   OneToMany,
   ManyToMany,
   JoinTable,
+  Index,
 } from 'typeorm';
 import { User } from '../users/user.entity';
 import { Bookmark } from 'src/bookmarks/bookmark.entity';
@@ -24,11 +25,15 @@ export enum SecretStatus {
 }
 
 @Entity()
+@Index(['status', 'createdAt'])  // Composite index for common queries
+@Index(['userId', 'status'])     // Index for user's own secrets
+@Index(['createdAt'])            // Index for time-based sorting
 export class Secret {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column('text')
+  @Index('IDX_secret_text_gin', { synchronize: false }) // GIN index for full text search
   text: string;
 
   // Multi-mood relation

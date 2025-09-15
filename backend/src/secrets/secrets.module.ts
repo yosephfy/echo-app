@@ -10,11 +10,13 @@ import { SecretsGateway } from './secrets.getaway';
 import { ModerationModule } from 'src/moderation/moderation.module';
 import { ReportsModule } from 'src/reports/reports.module';
 import { NotificationsModule } from 'src/notifications/notifications.module';
+import { DatabaseModule } from 'src/database/database.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Secret, Mood, Tag, Reaction]),
     NotificationsModule,
+    DatabaseModule,
   ],
   providers: [SecretsService, SecretsGateway],
   controllers: [SecretsController],

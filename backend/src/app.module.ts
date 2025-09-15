@@ -21,6 +21,7 @@ import { FirebaseModule } from './firebase/firebase.module';
 import { ChatModule } from './chat/chat.module';
 import { MoodsModule } from './moods/moods.module';
 import { TagsModule } from './tags/tags.module';
+import { DatabaseModule } from './database/database.module';
 
 @Module({
   providers: [
@@ -55,6 +56,7 @@ import { TagsModule } from './tags/tags.module';
     ChatModule,
     MoodsModule,
     TagsModule,
+    DatabaseModule,
 
     // ... your feature modules (Users, Auth) go here
   ],
