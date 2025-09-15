@@ -19,6 +19,7 @@ import {
   useTrendingSecrets,
   useTrendingTags,
   useTagFeed,
+  useExploreSearch,
 } from "../hooks/useDiscover";
 import { useTheme } from "../theme/ThemeContext";
 import { IconSvg } from "../icons/IconSvg";
@@ -75,6 +76,7 @@ export default function DiscoverScreen({ navigation }: Props) {
   const theme = useTheme();
   const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  
   // React Query hooks for Discover
   const trending = useTrendingSecrets(10, 24);
   const tagsQuery = useTrendingTags(20, 24);
@@ -83,11 +85,16 @@ export default function DiscoverScreen({ navigation }: Props) {
     20
   );
 
-  // Search functionality
+  // Explore search functionality
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [exploreSort, setExploreSort] = useState<'newest' | 'relevant'>('newest');
+  const exploreSearch = useExploreSearch(
+    { q: debouncedQuery, moods: selectedMoods, sort: exploreSort },
+    20
+  );
 
-  // Sort functionality
+  // Sort functionality (keeping for potential future use)
   const [sortBy, setSortBy] = useState<SortOption>("newest");
 
   // Tabs: we'll mirror Profile's MaterialTabBar; no local viewMode state needed
@@ -112,15 +119,15 @@ export default function DiscoverScreen({ navigation }: Props) {
     );
   };
 
-  // React Query handles fetching; effects not needed here
+  const clearSearch = () => {
+    setSearchQuery("");
+    setSelectedMoods([]);
+  };
 
   const cycleSortOption = () => {
-    const currentIndex = sortOptions.findIndex(
-      (option) => option.key === sortBy
-    );
-    const nextIndex = (currentIndex + 1) % sortOptions.length;
-    setSortBy(sortOptions[nextIndex].key);
+    setExploreSort(prev => prev === 'newest' ? 'relevant' : 'newest');
   };
+
   // Renderers for tabs
   const renderTrendingItem = ({ item }: { item: TrendingSecret }) => (
     <View style={styles.trendingContent}>
@@ -221,6 +228,151 @@ export default function DiscoverScreen({ navigation }: Props) {
     </View>
   );
 
+  const renderExploreContent = () => (
+    <View style={styles.exploreContainer}>
+      {/* Search Section */}
+      <View style={styles.searchSection}>
+        <View style={[styles.searchContainer, { borderColor: theme.colors.outline }]}>
+          <IconSvg icon="search-alt" size={20} />
+          <TextInput
+            style={[styles.searchInput, { color: theme.colors.text }]}
+            placeholder="Search secrets or #hashtags..."
+            placeholderTextColor={theme.colors.muted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={clearSearch}>
+              <IconSvg icon="close-circle" size={16} />
+            </TouchableOpacity>
+          )}
+        </View>
+        <TouchableOpacity
+          onPress={cycleSortOption}
+          style={[styles.sortButton, { borderColor: theme.colors.outline }]}
+        >
+          <IconSvg icon={exploreSort === 'newest' ? 'calendar-day' : 'fire'} size={16} />
+          <Text style={[styles.sortButtonText, { color: theme.colors.text }]}>
+            {exploreSort === 'newest' ? 'Newest' : 'Relevant'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Mood Filter Chips */}
+      <View style={styles.chipRow}>
+        {moodsCatalog.map((mood) => (
+          <TouchableOpacity
+            key={mood}
+            style={[
+              styles.chip,
+              {
+                backgroundColor: selectedMoods.includes(mood)
+                  ? theme.colors.primary + '20'
+                  : 'transparent',
+                borderColor: selectedMoods.includes(mood)
+                  ? theme.colors.primary
+                  : theme.colors.outline,
+              },
+            ]}
+            onPress={() => toggleMood(mood)}
+          >
+            <Text
+              style={{
+                color: selectedMoods.includes(mood)
+                  ? theme.colors.primary
+                  : theme.colors.text,
+              }}
+            >
+              {mood}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Show trending tags as suggestions when no search query */}
+      {!debouncedQuery.trim() && (
+        <>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+            🏷️ Trending Tags
+          </Text>
+          <Text style={[styles.sectionSubtitle, { color: theme.colors.muted }]}>
+            Tap a tag to search for related secrets
+          </Text>
+          {tagsQuery.loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+            </View>
+          ) : (
+            <View style={styles.hashtagGrid}>
+              {tagsQuery.tags.slice(0, 10).map((item) => (
+                <TouchableOpacity
+                  key={item.tag}
+                  onPress={() => setSearchQuery(`#${item.tag}`)}
+                >
+                  <HashtagChip
+                    tag={item.tag}
+                    count={item.count}
+                    isSelected={false}
+                    onPress={() => setSearchQuery(`#${item.tag}`)}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </>
+      )}
+
+      {/* Search Results */}
+      {exploreSearch.items.length > 0 && (
+        <>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text, marginTop: 24 }]}>
+            Search Results ({exploreSearch.total})
+          </Text>
+          <View>
+            {exploreSearch.items.map((secret) => (
+              <SecretItem
+                key={secret.id}
+                secret={secret}
+                display="normal"
+                navigation={navigation}
+              />
+            ))}
+            {exploreSearch.fetchingMore && (
+              <View style={styles.footerLoader}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+              </View>
+            )}
+          </View>
+        </>
+      )}
+
+      {/* Empty state for search */}
+      {debouncedQuery.trim() && exploreSearch.items.length === 0 && !exploreSearch.loading && (
+        <View style={styles.emptyContainer}>
+          <IconSvg icon="search-alt" size={48} />
+          <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+            No results found
+          </Text>
+          <Text style={[styles.emptySubtitle, { color: theme.colors.muted }]}>
+            Try different keywords or check your spelling
+          </Text>
+        </View>
+      )}
+
+      {/* Loading state */}
+      {exploreSearch.loading && exploreSearch.items.length === 0 && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={[styles.loadingText, { color: theme.colors.muted }]}>
+            Searching secrets...
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: theme.colors.background }]}
@@ -317,29 +469,29 @@ export default function DiscoverScreen({ navigation }: Props) {
         </Tabs.Tab>
 
         <Tabs.Tab
-          name="Tags"
-          key="hashtags"
+          name="Explore"
+          key="explore"
           label={() => (
             <View style={styles.tabLabelRow}>
-              <IconSvg icon="bookmarks" state="default" />
+              <IconSvg icon="search-alt" state="default" />
               <Text style={[styles.tabLabelText, { color: theme.colors.text }]}>
-                Tags
+                Explore
               </Text>
             </View>
           )}
         >
           <Tabs.ScrollView
-            style={styles.hashtagsContainer}
+            style={styles.exploreContainer}
             contentContainerStyle={{ paddingBottom: 24 }}
             refreshControl={
               <RefreshControl
-                refreshing={tagsQuery.loading}
-                onRefresh={tagsQuery.refresh}
+                refreshing={exploreSearch.refreshing}
+                onRefresh={exploreSearch.refresh}
                 tintColor={theme.colors.primary}
               />
             }
           >
-            {renderHashtagsContent()}
+            {renderExploreContent()}
           </Tabs.ScrollView>
         </Tabs.Tab>
       </Tabs.Container>
@@ -505,5 +657,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     marginTop: 8,
+  },
+  // Explore styles
+  exploreContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
 });
