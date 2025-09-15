@@ -10,9 +10,17 @@ import {
   Pressable,
   ActivityIndicator,
   ScrollView,
+  RefreshControl,
 } from "react-native";
+import { MaterialTabBar, Tabs } from "react-native-collapsible-tab-view";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { api } from "../api/client";
+import {
+  useTrendingSecrets,
+  useTrendingTags,
+  useTagFeed,
+  useExploreSearch,
+} from "../hooks/useDiscover";
 import { useTheme } from "../theme/ThemeContext";
 import { IconSvg } from "../icons/IconSvg";
 import HashtagChip from "../components/HashtagChip";
@@ -29,7 +37,7 @@ const moodsCatalog = [
 ];
 
 type SortOption = "newest" | "oldest" | "popular";
-type ViewMode = "feed" | "trending" | "hashtags";
+type ViewMode = "trending" | "hashtags";
 
 interface TrendingSecret {
   id: string;
@@ -39,6 +47,7 @@ interface TrendingSecret {
   status: string;
   createdAt: string;
   author: { id: string; handle: string; avatarUrl: string };
+  reactionsCount?: number;
 }
 
 interface TrendingTag {
@@ -55,20 +64,11 @@ const sortOptions: { key: SortOption; label: string; icon: string }[] = [
 ];
 
 const viewModes: { key: ViewMode; label: string; icon: string }[] = [
-  { key: "feed", label: "Feed", icon: "home" },
   { key: "trending", label: "Trending", icon: "fire" },
   { key: "hashtags", label: "Tags", icon: "bookmarks" },
 ];
 
-// Mock trending hashtags (will be replaced with API call)
-const mockTrendingTags = [
-  { tag: "selfcare", count: 24 },
-  { tag: "anxiety", count: 18 },
-  { tag: "relationships", count: 15 },
-  { tag: "work", count: 12 },
-  { tag: "dreams", count: 9 },
-  { tag: "growth", count: 8 },
-];
+// Note: previously had mockTrendingTags; removed to rely on API-only
 
 type Props = NativeStackScreenProps<TabParamList, "Discover">;
 
@@ -76,26 +76,29 @@ export default function DiscoverScreen({ navigation }: Props) {
   const theme = useTheme();
   const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [feed, setFeed] = useState<any[]>([]);
-  const [trendingSecrets, setTrendingSecrets] = useState<TrendingSecret[]>([]);
-  const [trendingTags, setTrendingTags] = useState<TrendingTag[]>([]);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loadingTrending, setLoadingTrending] = useState(false);
-  const [loadingTags, setLoadingTags] = useState(false);
   
-  // Search functionality
+  // React Query hooks for Discover
+  const trending = useTrendingSecrets(10, 24);
+  const tagsQuery = useTrendingTags(20, 24);
+  const tagFeed = useTagFeed(
+    { tags: selectedTags, moods: selectedMoods, search: "" },
+    20
+  );
+
+  // Explore search functionality
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  
-  // Sort functionality
+  const [exploreSort, setExploreSort] = useState<'newest' | 'relevant'>('newest');
+  const exploreSearch = useExploreSearch(
+    { q: debouncedQuery, moods: selectedMoods, sort: exploreSort },
+    20
+  );
+
+  // Sort functionality (keeping for potential future use)
   const [sortBy, setSortBy] = useState<SortOption>("newest");
-  
-  // View mode
-  const [viewMode, setViewMode] = useState<ViewMode>("feed");
-  
+
+  // Tabs: we'll mirror Profile's MaterialTabBar; no local viewMode state needed
+
   // Debounce search query
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -116,176 +119,32 @@ export default function DiscoverScreen({ navigation }: Props) {
     );
   };
 
-  const loadTrending = useCallback(async () => {
-    if (loadingTrending) return;
-    
-    setLoadingTrending(true);
-    try {
-      const res: { items: TrendingSecret[]; hours: number; limit: number } = 
-        await api.get("/secrets/trending", { limit: 10, hours: 24 });
-      setTrendingSecrets(res.items);
-    } catch (error) {
-      console.error("Failed to load trending secrets:", error);
-      setTrendingSecrets([]);
-    } finally {
-      setLoadingTrending(false);
-    }
-  }, [loadingTrending]);
-
-  const loadTrendingTags = useCallback(async () => {
-    if (loadingTags) return;
-    
-    setLoadingTags(true);
-    try {
-      const res: TrendingTag[] = await api.get("/tags/trending", { limit: 20, hours: 24 });
-      setTrendingTags(res);
-    } catch (error) {
-      console.error("Failed to load trending tags:", error);
-      // Fallback to mock data if API fails
-      setTrendingTags(mockTrendingTags.map(tag => ({ ...tag, slug: tag.tag, raw: tag.tag })));
-    } finally {
-      setLoadingTags(false);
-    }
-  }, [loadingTags]);
-
-  const load = useCallback(
-    async (nextPage = 1, isRefresh = false) => {
-      if (loading && !isRefresh) return;
-      
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-
-      try {
-        const params: { page: number; limit: number; moods?: string; tags?: string; search?: string } = {
-          page: nextPage,
-          limit: 20,
-        };
-        
-        if (selectedMoods.length) params.moods = selectedMoods.join(",");
-        if (selectedTags.length) params.tags = selectedTags.join(",");
-        if (debouncedQuery.trim()) params.search = debouncedQuery.trim();
-        
-        const res: any = await api.get("/secrets/feed", params);
-        
-        // Sort results based on selected sort option
-        let sortedItems = res.items;
-        if (sortBy === "oldest") {
-          sortedItems = [...res.items].sort((a, b) => 
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-          );
-        } else if (sortBy === "popular") {
-          // For now, we'll sort by a simple heuristic (could be enhanced with actual popularity data)
-          sortedItems = [...res.items].sort((a, b) => 
-            (b.reactionsCount || 0) - (a.reactionsCount || 0)
-          );
-        }
-        // "newest" is default sort from backend
-        
-        setFeed((prev) => (nextPage === 1 ? sortedItems : [...prev, ...sortedItems]));
-        setTotal(res.total);
-        setPage(res.page);
-      } catch (error) {
-        console.error("Failed to load feed:", error);
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [selectedMoods, selectedTags, debouncedQuery, sortBy, loading]
-  );
-
-  useEffect(() => {
-    if (viewMode === "feed") {
-      load(1, true);
-    } else if (viewMode === "trending") {
-      loadTrending();
-    } else if (viewMode === "hashtags") {
-      loadTrendingTags();
-    }
-  }, [selectedMoods, selectedTags, debouncedQuery, sortBy, viewMode]);
-
-  // Load trending data when switching to trending/hashtags view
-  useEffect(() => {
-    if (viewMode === "trending" && trendingSecrets.length === 0) {
-      loadTrending();
-    } else if (viewMode === "hashtags" && trendingTags.length === 0) {
-      loadTrendingTags();
-    }
-  }, [viewMode]);
+  const clearSearch = () => {
+    setSearchQuery("");
+    setSelectedMoods([]);
+  };
 
   const cycleSortOption = () => {
-    const currentIndex = sortOptions.findIndex(option => option.key === sortBy);
-    const nextIndex = (currentIndex + 1) % sortOptions.length;
-    setSortBy(sortOptions[nextIndex].key);
+    setExploreSort(prev => prev === 'newest' ? 'relevant' : 'newest');
   };
 
-  const clearAllFilters = () => {
-    setSelectedMoods([]);
-    setSelectedTags([]);
-    setSearchQuery("");
-    setSortBy("newest");
-  };
-
-  const renderTrendingContent = () => (
-    <ScrollView style={styles.trendingContainer}>
-      <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-        🔥 Trending Now
-      </Text>
-      <Text style={[styles.sectionSubtitle, { color: theme.colors.muted }]}>
-        Popular secrets from the past 24 hours
-      </Text>
-      
-      {loadingTrending ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={[styles.loadingText, { color: theme.colors.muted }]}>
-            Loading trending secrets...
-          </Text>
-        </View>
-      ) : trendingSecrets.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <IconSvg icon="fire" size={48} />
-          <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
-            No trending secrets
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: theme.colors.muted }]}>
-            Check back later for trending content
-          </Text>
-        </View>
-      ) : (
-        <View>
-          {trendingSecrets.map((secret, index) => (
-            <View key={secret.id} style={styles.trendingItem}>
-              <View style={styles.trendingRank}>
-                <Text style={styles.rankNumber}>{index + 1}</Text>
-              </View>
-              <View style={styles.trendingContent}>
-                <SecretItem
-                  secret={secret}
-                  display="condensed"
-                  navigation={navigation}
-                />
-              </View>
-            </View>
-          ))}
-        </View>
-      )}
-    </ScrollView>
+  // Renderers for tabs
+  const renderTrendingItem = ({ item }: { item: TrendingSecret }) => (
+    <View style={styles.trendingContent}>
+      <SecretItem secret={item} navigation={navigation} />
+    </View>
   );
 
   const renderHashtagsContent = () => (
-    <ScrollView style={styles.hashtagsContainer}>
+    <View style={styles.hashtagsContainer}>
       <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
         🏷️ Trending Hashtags
       </Text>
       <Text style={[styles.sectionSubtitle, { color: theme.colors.muted }]}>
         Discover secrets by popular topics
       </Text>
-      
-      {loadingTags ? (
+
+      {tagsQuery.loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={[styles.loadingText, { color: theme.colors.muted }]}>
@@ -294,30 +153,65 @@ export default function DiscoverScreen({ navigation }: Props) {
         </View>
       ) : (
         <>
-          <View style={styles.hashtagGrid}>
-            {trendingTags.map((item) => (
-              <HashtagChip
-                key={item.tag}
-                tag={item.tag}
-                count={item.count}
-                isSelected={selectedTags.includes(item.tag)}
-                onPress={toggleTag}
-              />
-            ))}
-          </View>
+          {tagsQuery.tags.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <IconSvg icon="bookmarks" size={40} />
+              <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+                No trending tags yet
+              </Text>
+              <Text
+                style={[styles.emptySubtitle, { color: theme.colors.muted }]}
+              >
+                Tags will appear as people use #hashtags. Pull to refresh.
+              </Text>
+              <TouchableOpacity
+                onPress={() => tagsQuery.refresh()}
+                style={[
+                  styles.sortButton,
+                  { borderColor: theme.colors.outline },
+                ]}
+              >
+                <Text
+                  style={[styles.sortButtonText, { color: theme.colors.text }]}
+                >
+                  Retry
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.hashtagGrid}>
+              {tagsQuery.tags.map((item) => (
+                <HashtagChip
+                  key={item.tag}
+                  tag={item.tag}
+                  count={item.count}
+                  isSelected={selectedTags.includes(item.tag)}
+                  onPress={toggleTag}
+                />
+              ))}
+            </View>
+          )}
 
           {selectedTags.length > 0 && (
             <>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text, marginTop: 24 }]}>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  { color: theme.colors.text, marginTop: 24 },
+                ]}
+              >
                 Secrets with selected tags
               </Text>
-              {loading ? (
+              {tagFeed.loading ? (
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color={theme.colors.primary} />
+                  <ActivityIndicator
+                    size="large"
+                    color={theme.colors.primary}
+                  />
                 </View>
               ) : (
                 <View>
-                  {feed.map((secret) => (
+                  {tagFeed.items.map((secret) => (
                     <SecretItem
                       key={secret.id}
                       secret={secret}
@@ -331,195 +225,287 @@ export default function DiscoverScreen({ navigation }: Props) {
           )}
         </>
       )}
-    </ScrollView>
+    </View>
   );
 
-  const renderItem = ({ item }: any) => (
-    <SecretItem
-      secret={item}
-      display="normal"
-      navigation={navigation}
-    />
-  );
+  const renderExploreContent = () => (
+    <View style={styles.exploreContainer}>
+      {/* Search Section */}
+      <View style={styles.searchSection}>
+        <View style={[styles.searchContainer, { borderColor: theme.colors.outline }]}>
+          <IconSvg icon="search-alt" size={20} />
+          <TextInput
+            style={[styles.searchInput, { color: theme.colors.text }]}
+            placeholder="Search secrets or #hashtags..."
+            placeholderTextColor={theme.colors.muted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={clearSearch}>
+              <IconSvg icon="close-circle" size={16} />
+            </TouchableOpacity>
+          )}
+        </View>
+        <TouchableOpacity
+          onPress={cycleSortOption}
+          style={[styles.sortButton, { borderColor: theme.colors.outline }]}
+        >
+          <IconSvg icon={exploreSort === 'newest' ? 'calendar-day' : 'fire'} size={16} />
+          <Text style={[styles.sortButtonText, { color: theme.colors.text }]}>
+            {exploreSort === 'newest' ? 'Newest' : 'Relevant'}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-  return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
-      {/* View Mode Tabs */}
-      <View style={styles.tabContainer}>
-        {viewModes.map((mode) => (
+      {/* Mood Filter Chips */}
+      <View style={styles.chipRow}>
+        {moodsCatalog.map((mood) => (
           <TouchableOpacity
-            key={mode.key}
+            key={mood}
             style={[
-              styles.tab,
+              styles.chip,
               {
-                backgroundColor: viewMode === mode.key ? theme.colors.primary : 'transparent',
-                borderBottomColor: viewMode === mode.key ? theme.colors.primary : 'transparent',
+                backgroundColor: selectedMoods.includes(mood)
+                  ? theme.colors.primary + '20'
+                  : 'transparent',
+                borderColor: selectedMoods.includes(mood)
+                  ? theme.colors.primary
+                  : theme.colors.outline,
               },
             ]}
-            onPress={() => setViewMode(mode.key)}
+            onPress={() => toggleMood(mood)}
           >
-            <IconSvg 
-              icon={mode.icon as any} 
-              size={16} 
-              state={viewMode === mode.key ? "pressed" : "default"}
-            />
-            <Text 
-              style={[
-                styles.tabText,
-                { color: viewMode === mode.key ? "#fff" : theme.colors.text }
-              ]}
+            <Text
+              style={{
+                color: selectedMoods.includes(mood)
+                  ? theme.colors.primary
+                  : theme.colors.text,
+              }}
             >
-              {mode.label}
+              {mood}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      {viewMode === "feed" && (
+      {/* Show trending tags as suggestions when no search query */}
+      {!debouncedQuery.trim() && (
         <>
-          {/* Search Bar */}
-          <View style={styles.searchSection}>
-            <View
-              style={[
-                styles.searchContainer,
-                {
-                  borderColor: theme.colors.outline,
-                  backgroundColor: theme.colors.surface,
-                },
-              ]}
-            >
-              <IconSvg icon="search-alt" size={18} />
-              <TextInput
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder="Search secrets..."
-                placeholderTextColor={theme.colors.muted}
-                style={[styles.searchInput, { color: theme.colors.text }]}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              {!!searchQuery && (
-                <Pressable onPress={() => setSearchQuery("")}>
-                  <IconSvg icon="wrong" size={16} />
-                </Pressable>
-              )}
-            </View>
-            
-            {/* Sort Button */}
-            <Pressable
-              onPress={cycleSortOption}
-              style={[
-                styles.sortButton,
-                {
-                  borderColor: theme.colors.outline,
-                  backgroundColor: theme.colors.surface,
-                },
-              ]}
-            >
-              <IconSvg 
-                icon={sortOptions.find(opt => opt.key === sortBy)?.icon as any || "calendar-day"} 
-                size={16} 
-              />
-              <Text style={[styles.sortButtonText, { color: theme.colors.text }]}>
-                {sortOptions.find(opt => opt.key === sortBy)?.label}
-              </Text>
-            </Pressable>
-          </View>
-
-          {/* Mood Filter Chips */}
-          <View style={styles.chipRow}>
-            {moodsCatalog.map((m) => {
-              const active = selectedMoods.includes(m);
-              return (
-                <TouchableOpacity
-                  key={m}
-                  style={[
-                    styles.chip,
-                    active
-                      ? {
-                          borderColor: theme.colors.primary,
-                          backgroundColor: theme.colors.primary,
-                        }
-                      : {
-                          borderColor: theme.colors.outline,
-                          backgroundColor: theme.colors.surface,
-                        },
-                  ]}
-                  onPress={() => toggleMood(m)}
-                >
-                  <Text style={{ color: active ? "#fff" : theme.colors.text }}>
-                    {m}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-            {(selectedMoods.length > 0 || selectedTags.length > 0 || searchQuery || sortBy !== "newest") && (
-              <TouchableOpacity
-                onPress={clearAllFilters}
-                style={[
-                  styles.chip, 
-                  { 
-                    borderColor: theme.colors.error,
-                    backgroundColor: theme.colors.error + "20",
-                  }
-                ]}
-              >
-                <Text style={{ color: theme.colors.error }}>Clear All</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Results */}
-          {loading && feed.length === 0 ? (
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+            🏷️ Trending Tags
+          </Text>
+          <Text style={[styles.sectionSubtitle, { color: theme.colors.muted }]}>
+            Tap a tag to search for related secrets
+          </Text>
+          {tagsQuery.loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={theme.colors.primary} />
-              <Text style={[styles.loadingText, { color: theme.colors.muted }]}>
-                Discovering secrets...
-              </Text>
-            </View>
-          ) : feed.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <IconSvg icon="search-alt" size={48} />
-              <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
-                No secrets found
-              </Text>
-              <Text style={[styles.emptySubtitle, { color: theme.colors.muted }]}>
-                {searchQuery || selectedMoods.length > 0 || selectedTags.length > 0
-                  ? "Try adjusting your search or filters"
-                  : "Be the first to share a secret!"}
-              </Text>
             </View>
           ) : (
-            <FlatList
-              data={feed}
-              keyExtractor={(i) => i.id}
-              renderItem={renderItem}
-              onEndReached={() => feed.length < total && !loading && load(page + 1)}
-              onEndReachedThreshold={0.5}
-              refreshing={refreshing}
-              onRefresh={() => load(1, true)}
-              ListFooterComponent={() =>
-                loading && feed.length > 0 ? (
-                  <View style={styles.footerLoader}>
-                    <ActivityIndicator size="small" color={theme.colors.primary} />
-                  </View>
-                ) : null
-              }
-            />
+            <View style={styles.hashtagGrid}>
+              {tagsQuery.tags.slice(0, 10).map((item) => (
+                <TouchableOpacity
+                  key={item.tag}
+                  onPress={() => setSearchQuery(`#${item.tag}`)}
+                >
+                  <HashtagChip
+                    tag={item.tag}
+                    count={item.count}
+                    isSelected={false}
+                    onPress={() => setSearchQuery(`#${item.tag}`)}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
           )}
         </>
       )}
 
-      {viewMode === "trending" && renderTrendingContent()}
-      {viewMode === "hashtags" && renderHashtagsContent()}
+      {/* Search Results */}
+      {exploreSearch.items.length > 0 && (
+        <>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text, marginTop: 24 }]}>
+            Search Results ({exploreSearch.total})
+          </Text>
+          <View>
+            {exploreSearch.items.map((secret) => (
+              <SecretItem
+                key={secret.id}
+                secret={secret}
+                display="normal"
+                navigation={navigation}
+              />
+            ))}
+            {exploreSearch.fetchingMore && (
+              <View style={styles.footerLoader}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+              </View>
+            )}
+          </View>
+        </>
+      )}
+
+      {/* Empty state for search */}
+      {debouncedQuery.trim() && exploreSearch.items.length === 0 && !exploreSearch.loading && (
+        <View style={styles.emptyContainer}>
+          <IconSvg icon="search-alt" size={48} />
+          <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+            No results found
+          </Text>
+          <Text style={[styles.emptySubtitle, { color: theme.colors.muted }]}>
+            Try different keywords or check your spelling
+          </Text>
+        </View>
+      )}
+
+      {/* Loading state */}
+      {exploreSearch.loading && exploreSearch.items.length === 0 && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={[styles.loadingText, { color: theme.colors.muted }]}>
+            Searching secrets...
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+
+  return (
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: theme.colors.background }]}
+    >
+      <Tabs.Container
+        lazy={false}
+        containerStyle={{ backgroundColor: theme.colors.background }}
+        renderTabBar={(props) => (
+          <MaterialTabBar
+            {...props}
+            labelStyle={styles.tabLabel}
+            activeColor={theme.colors.primary}
+            inactiveColor={theme.colors.muted}
+            indicatorStyle={{ backgroundColor: theme.colors.primary }}
+            style={{ backgroundColor: theme.colors.background, elevation: 0 }}
+            tabStyle={styles.tabStyle}
+          />
+        )}
+      >
+        <Tabs.Tab
+          name="Trending"
+          key="trending"
+          label={() => (
+            <View style={styles.tabLabelRow}>
+              <IconSvg icon="fire" state="default" />
+              <Text style={[styles.tabLabelText, { color: theme.colors.text }]}>
+                Trending
+              </Text>
+            </View>
+          )}
+        >
+          {trending.loading && trending.items.length === 0 ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+              <Text style={[styles.loadingText, { color: theme.colors.muted }]}>
+                Loading trending secrets...
+              </Text>
+            </View>
+          ) : trending.items.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <IconSvg icon="fire" size={48} />
+              <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+                No trending secrets
+              </Text>
+              <Text
+                style={[styles.emptySubtitle, { color: theme.colors.muted }]}
+              >
+                Check back later for trending content
+              </Text>
+            </View>
+          ) : (
+            <Tabs.FlatList
+              contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16 }}
+              data={trending.items}
+              keyExtractor={(i) => i.id}
+              renderItem={renderTrendingItem}
+              onEndReached={() =>
+                trending.hasMore &&
+                !trending.fetchingMore &&
+                trending.loadMore()
+              }
+              onEndReachedThreshold={0.5}
+              ListHeaderComponent={() => (
+                <>
+                  <Text
+                    style={[styles.sectionTitle, { color: theme.colors.text }]}
+                  >
+                    🔥 Trending Now
+                  </Text>
+                  <Text
+                    style={[
+                      styles.sectionSubtitle,
+                      { color: theme.colors.muted },
+                    ]}
+                  >
+                    Popular secrets from the past 24 hours
+                  </Text>
+                </>
+              )}
+              ListFooterComponent={() =>
+                trending.fetchingMore && trending.items.length > 0 ? (
+                  <View style={styles.footerLoader}>
+                    <ActivityIndicator
+                      size="small"
+                      color={theme.colors.primary}
+                    />
+                  </View>
+                ) : null
+              }
+              onRefresh={() => trending.refresh()}
+              refreshing={trending.refreshing}
+            />
+          )}
+        </Tabs.Tab>
+
+        <Tabs.Tab
+          name="Explore"
+          key="explore"
+          label={() => (
+            <View style={styles.tabLabelRow}>
+              <IconSvg icon="search-alt" state="default" />
+              <Text style={[styles.tabLabelText, { color: theme.colors.text }]}>
+                Explore
+              </Text>
+            </View>
+          )}
+        >
+          <Tabs.ScrollView
+            style={styles.exploreContainer}
+            contentContainerStyle={{ paddingBottom: 24 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={exploreSearch.refreshing}
+                onRefresh={exploreSearch.refresh}
+                tintColor={theme.colors.primary}
+              />
+            }
+          >
+            {renderExploreContent()}
+          </Tabs.ScrollView>
+        </Tabs.Tab>
+      </Tabs.Container>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1 },
   container: { flex: 1 },
+  tabLabel: { textTransform: "capitalize", fontSize: 14 },
+  tabStyle: { width: "auto", paddingHorizontal: 0 },
+  tabLabelRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  tabLabelText: { fontSize: 14, fontWeight: "600" },
   tabContainer: {
     flexDirection: "row",
     backgroundColor: "transparent",
@@ -574,11 +560,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
   },
-  chipRow: { 
-    flexDirection: "row", 
-    flexWrap: "wrap", 
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     paddingHorizontal: 16,
-    marginBottom: 12 
+    marginBottom: 12,
   },
   chip: {
     borderWidth: 1,
@@ -671,5 +657,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     marginTop: 8,
+  },
+  // Explore styles
+  exploreContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
 });

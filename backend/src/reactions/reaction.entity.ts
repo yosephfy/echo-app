@@ -5,6 +5,7 @@ import {
   ManyToOne,
   CreateDateColumn,
   Unique,
+  Index,
 } from 'typeorm';
 import { User } from '../users/user.entity';
 import { Secret } from '../secrets/secret.entity';
@@ -22,12 +23,14 @@ export class Reaction {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Index()
   @Column()
   userId: string;
 
   @ManyToOne(() => User, (user) => user.reactions, { onDelete: 'CASCADE' })
   user: User;
 
+  @Index()
   @Column()
   secretId: string;
 
@@ -42,6 +45,7 @@ export class Reaction {
   })
   type: ReactionType;
 
+  @Index()
   @CreateDateColumn()
   createdAt: Date;
 }

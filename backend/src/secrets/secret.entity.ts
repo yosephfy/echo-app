@@ -8,12 +8,15 @@ import {
   OneToMany,
   ManyToMany,
   JoinTable,
+  Index,
 } from 'typeorm';
 import { User } from '../users/user.entity';
 import { Bookmark } from 'src/bookmarks/bookmark.entity';
 import { Reply } from 'src/replies/reply.entity';
 import { Mood } from 'src/moods/mood.entity';
 import { Tag } from 'src/tags/tag.entity';
+import { Reaction } from 'src/reactions/reaction.entity';
+import { Cap } from 'src/caps/cap.entity';
 
 export enum SecretStatus {
   UNDER_REVIEW = 'under_review',
@@ -22,11 +25,15 @@ export enum SecretStatus {
 }
 
 @Entity()
+@Index(['status', 'createdAt'])  // Composite index for common queries
+@Index(['userId', 'status'])     // Index for user's own secrets
+@Index(['createdAt'])            // Index for time-based sorting
 export class Secret {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column('text')
+  @Index('IDX_secret_text_gin', { synchronize: false }) // GIN index for full text search
   text: string;
 
   // Multi-mood relation
@@ -69,6 +76,10 @@ export class Secret {
   @CreateDateColumn()
   createdAt: Date;
 
-  reactions: any;
-  caps: any;
+  // Aggregated engagement relations
+  @OneToMany(() => Reaction, (reaction) => reaction.secret)
+  reactions: Reaction[];
+
+  @OneToMany(() => Cap, (cap) => cap.secret)
+  caps: Cap[];
 }

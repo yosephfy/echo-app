@@ -107,10 +107,17 @@ export class SecretsController {
     @Request() req,
     @Query('limit') limit = '10',
     @Query('hours') hours = '24',
+    @Query('page') page = '1',
   ) {
     const limitNum = Math.min(Math.max(parseInt(limit, 10), 1), 50);
     const hoursNum = Math.min(Math.max(parseInt(hours, 10), 1), 168); // Max 1 week
-    return this.secrets.getTrending(req.user.userId, limitNum, hoursNum);
+    const pageNum = Math.max(parseInt(page, 10), 1);
+    return this.secrets.getTrending(
+      req.user.userId,
+      limitNum,
+      hoursNum,
+      pageNum,
+    );
   }
 
   @Get('secretslist/me')
@@ -193,5 +200,44 @@ export class SecretsController {
   async getCooldown(@Request() req) {
     // returns { start: Date, duration: number, remaining: number }
     return this.secrets.getCooldownInfo(req.user.userId);
+  }
+
+  /** GET /secrets/search - Enhanced search with hashtags, moods, and text */
+  @Get('search')
+  async search(
+    @Request() req,
+    @Query('q') q?: string,
+    @Query('moods') moodsCsv?: string,
+    @Query('tags') tagsCsv?: string,
+    @Query('sort') sort?: 'newest' | 'relevant',
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+  ) {
+    const pageNum = Math.max(parseInt(page, 10), 1);
+    const limitNum = Math.min(Math.max(parseInt(limit, 10), 1), 100);
+    const moods = moodsCsv
+      ? moodsCsv
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : undefined;
+    const tags = tagsCsv
+      ? tagsCsv
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : undefined;
+    
+    return this.secrets.searchSecrets(
+      req.user.userId,
+      {
+        q: q?.trim(),
+        moods,
+        tags,
+        sort: sort || 'newest',
+      },
+      pageNum,
+      limitNum,
+    );
   }
 }
