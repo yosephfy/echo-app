@@ -25,6 +25,7 @@ import { Alert } from "react-native";
 import { useComposer } from "../store/composer";
 import { useGlobalModal } from "./modal/GlobalModalProvider";
 import { MOOD_COLOR_MAP } from "../constants/moods";
+import Chip from "./Chip";
 
 export interface SecretItemProps {
   id: string;
@@ -328,72 +329,60 @@ export default function SecretItem({
 
       {/* MOODS under actions */}
       {!isCondensed && activeMoods.length > 0 && (
-        <Pressable
-          onPress={openMoodsModal}
-          accessibilityRole="button"
-          accessibilityLabel="View moods for this secret"
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "flex-end",
+            flexWrap: isExpanded ? "wrap" : "nowrap",
+            paddingHorizontal: 6,
+            marginTop: 8,
+            marginBottom: 2,
+            gap: isExpanded ? 6 : 0,
+          }}
         >
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "flex-end",
-              flexWrap: isExpanded ? "wrap" : "nowrap",
-              paddingHorizontal: 6,
-              marginTop: 8,
-              marginBottom: 2,
-            }}
-          >
-            {visibleMoodCodes.map((code, idx) => {
-              const color = MOOD_COLOR_MAP[code] || colors.primary;
-              return (
-                <View
-                  key={code + idx}
-                  style={{
-                    marginLeft: idx === 0 ? 0 : isExpanded ? 6 : -10,
-                    marginBottom: isExpanded ? 6 : 0,
-                    backgroundColor: color,
-                    paddingHorizontal: 8,
-                    paddingVertical: 4,
-                    borderRadius: 6,
-                    borderWidth: 1,
-                    borderColor: colors.background,
-                  }}
-                >
-                  <Text
-                    style={{ color: "#000", fontSize: 12, fontWeight: "600" }}
-                  >
-                    {code}
-                  </Text>
-                </View>
-              );
-            })}
-            {extraMoodCount > 0 && (
+          {visibleMoodCodes.map((code, idx) => {
+            const color = MOOD_COLOR_MAP[code] || colors.primary;
+            return (
               <View
-                style={{
-                  marginLeft:
-                    visibleMoodCodes.length === 0 ? 0 : isExpanded ? 6 : -10,
-                  marginBottom: isExpanded ? 6 : 0,
-                  backgroundColor: colors.surface,
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                  borderRadius: 6,
-                  borderWidth: 1,
-                  borderColor: colors.outline,
-                }}
+                key={code + idx}
+                style={{ marginLeft: idx === 0 ? 0 : isExpanded ? 0 : -30 }}
               >
-                <Text
-                  style={{
-                    color: colors.muted,
-                    fontSize: 12,
-                    fontWeight: "600",
-                  }}
-                >
-                  {extraMoodCount} more
-                </Text>
+                <Chip
+                  label={code}
+                  size="xs"
+                  variant="filled"
+                  color={color}
+                  bgColor={color}
+                  //textColor="#000"
+                  borderColor={colors.background}
+                  borderWidth={1}
+                  radius={6}
+                  widthMode="fixed"
+                  width={60}
+                  onPress={openMoodsModal}
+                />
               </View>
-            )}
-          </View>
-        </Pressable>
+            );
+          })}
+          {extraMoodCount > 0 && (
+            <View
+              style={{
+                marginLeft:
+                  visibleMoodCodes.length === 0 ? 0 : isExpanded ? 0 : -30,
+              }}
+            >
+              <Chip
+                label={`${extraMoodCount} more`}
+                size="xs"
+                variant="outline"
+                color={colors.outline}
+                textColor={colors.muted}
+                borderColor={colors.outline}
+                radius={6}
+              />
+            </View>
+          )}
+        </View>
       )}
 
       {/* Modals are managed globally via GlobalModalProvider */}

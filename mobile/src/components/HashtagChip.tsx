@@ -1,5 +1,6 @@
 import React from "react";
-import { TouchableOpacity, Text, StyleSheet } from "react-native";
+import { Text, View } from "react-native";
+import Chip from "./Chip";
 import { useTheme } from "../theme/ThemeContext";
 
 interface HashtagChipProps {
@@ -18,51 +19,40 @@ export default function HashtagChip({
   const theme = useTheme();
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.chip,
-        {
-          borderColor: isSelected ? theme.colors.primary : theme.colors.outline,
-          backgroundColor: isSelected ? theme.colors.primary : theme.colors.surface,
-        },
-      ]}
+    <Chip
+      labelComponent={
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Text
+            style={{
+              fontSize: 14,
+              fontWeight: "500",
+              color: isSelected ? "#fff" : theme.colors.text,
+            }}
+            numberOfLines={1}
+          >
+            #{tag}
+          </Text>
+          {typeof count === "number" ? (
+            <Text
+              style={{
+                marginLeft: 6,
+                fontSize: 12,
+                color: isSelected ? "#fff" : theme.colors.muted,
+              }}
+              numberOfLines={1}
+            >
+              {count}
+            </Text>
+          ) : null}
+        </View>
+      }
+      variant={isSelected ? "filled" : "soft"}
+      selected={isSelected}
+      size="md"
       onPress={() => onPress(tag)}
-    >
-      <Text style={[
-        styles.chipText,
-        { color: isSelected ? "#fff" : theme.colors.text }
-      ]}>
-        #{tag}
-      </Text>
-      {count && (
-        <Text style={[
-          styles.countText,
-          { color: isSelected ? "#fff" : theme.colors.muted }
-        ]}>
-          {count}
-        </Text>
-      )}
-    </TouchableOpacity>
+      style={{ marginRight: 8, marginBottom: 8 }}
+      numberOfLines={1}
+      ellipsizeMode="tail"
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginRight: 8,
-    marginBottom: 8,
-    gap: 4,
-  },
-  chipText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  countText: {
-    fontSize: 12,
-  },
-});
