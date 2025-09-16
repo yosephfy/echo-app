@@ -59,16 +59,7 @@ export default function ProfileScreen({ navigation }: Props) {
   const nav =
     useNavigation<NavigationProp<RootStackParamList, "AccountSettings">>();
 
-  const statsMap = useMemo(
-    () => ({
-      Posts: stats?.postsCount ?? 0,
-      Bookmarks: stats?.bookmarksCount ?? 0,
-      Streak: stats?.currentStreak ?? 0,
-      Reactions: stats?.totalReactions ?? 0,
-      Caps: stats?.totalCaps ?? 0,
-    }),
-    [stats]
-  );
+  // statsMap removed; StatArea handles display directly from stats
 
   const Header = useCallback(() => {
     return (
@@ -237,20 +228,21 @@ function SingleStatBox({ item }: { item: any }) {
 }
 
 function StatArea({ items }: { items: UserStats | null }) {
-  const objs = Object.entries(items ?? {}).map(
-    ([name, value]) =>
-      ({ name, value }) as { name: keyof UserStats; value: number }
-  );
+  if (!items) return null;
 
-  const ICON_MAP_STATS: Record<keyof UserStats, string> = {
-    postsCount: "cards",
-    bookmarksCount: "bookmarks",
-    currentStreak: "fire",
-    totalReactions: "heart-alt",
-    totalCaps: "cap",
-  };
-
-  const statItems = objs.map((i) => ({ ...i, icon: ICON_MAP_STATS[i.name] }));
+  // Curated subset: Posts, Bookmarks, Streak
+  const statItems = [
+    { name: "postsCount", value: items.postsCount, icon: "cards" },
+    { name: "bookmarksCount", value: items.bookmarksCount, icon: "bookmarks" },
+    { name: "currentStreak", value: items.currentStreak, icon: "fire" },
+    {
+      name: "reactionsReceived",
+      value: items.reactionsReceived,
+      icon: "heart",
+    },
+    { name: "capsReceived", value: items.capsReceived, icon: "cap" },
+    { name: "repliesReceived", value: items.repliesReceived, icon: "comment" },
+  ] as const;
 
   return (
     <View style={styles.statAreaWrap}>

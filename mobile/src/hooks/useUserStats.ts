@@ -5,8 +5,12 @@ export interface UserStats {
   postsCount: number;
   bookmarksCount: number;
   currentStreak: number;
-  totalReactions: number;
-  totalCaps: number;
+  reactionsGiven: number;
+  reactionsReceived: number;
+  capsGiven: number;
+  capsReceived: number;
+  repliesReceived: number;
+  avgReactionsPerPost: number;
 }
 
 export function useUserStats() {
