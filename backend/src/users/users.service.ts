@@ -163,11 +163,11 @@ export class UsersService {
 
   async getStats(userId: string) {
     // Count posts excluding REMOVED status
-    const postsCount = await this.secretsRepo.count({ 
-      where: { 
+    const postsCount = await this.secretsRepo.count({
+      where: {
         userId,
-        status: In(['published', 'under_review']) 
-      } 
+        status: In(['published', 'under_review']),
+      },
     });
 
     const bookmarksCount = await this.bookmarksRepo.count({
@@ -184,7 +184,9 @@ export class UsersService {
       .createQueryBuilder('reaction')
       .innerJoin('reaction.secret', 'secret')
       .where('secret.userId = :userId', { userId })
-      .andWhere('secret.status IN (:...statuses)', { statuses: ['published', 'under_review'] })
+      .andWhere('secret.status IN (:...statuses)', {
+        statuses: ['published', 'under_review'],
+      })
       .getCount();
 
     // Caps given by user
@@ -197,7 +199,9 @@ export class UsersService {
       .createQueryBuilder('cap')
       .innerJoin('cap.secret', 'secret')
       .where('secret.userId = :userId', { userId })
-      .andWhere('secret.status IN (:...statuses)', { statuses: ['published', 'under_review'] })
+      .andWhere('secret.status IN (:...statuses)', {
+        statuses: ['published', 'under_review'],
+      })
       .getCount();
 
     // Replies received on user's secrets (with status filter)
@@ -205,13 +209,16 @@ export class UsersService {
       .createQueryBuilder('secret')
       .leftJoin('secret.replies', 'reply')
       .where('secret.userId = :userId', { userId })
-      .andWhere('secret.status IN (:...statuses)', { statuses: ['published', 'under_review'] })
+      .andWhere('secret.status IN (:...statuses)', {
+        statuses: ['published', 'under_review'],
+      })
       .select('COUNT(reply.id)', 'count')
       .getRawOne()
-      .then(result => parseInt(result.count) || 0);
+      .then((result) => parseInt(result.count) || 0);
 
     // Calculate average reactions per post
-    const avgReactionsPerPost = postsCount > 0 ? reactionsReceived / postsCount : 0;
+    const avgReactionsPerPost =
+      postsCount > 0 ? reactionsReceived / postsCount : 0;
 
     // Assuming one active streak record per user
     const streak = await this.streaksRepo.findOne({ where: { userId } });

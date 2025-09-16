@@ -44,10 +44,10 @@ const TAB_CONFIG: {
   {
     key: "reactions",
     title: "Reactions",
-    path: "/secrets/secretslist/me",
+    path: "/reactions/me",
     icon: "heart",
   },
-  { key: "caps", title: "Caps", path: "/secrets/secretslist/me", icon: "cap" },
+  { key: "caps", title: "Caps", path: "/caps/me", icon: "cap" },
 ];
 
 type Props = NativeStackScreenProps<TabParamList, "Profile">;

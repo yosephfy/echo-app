@@ -40,20 +40,21 @@ export class BookmarksController {
     const pageNum = Math.max(parseInt(page, 10), 1);
     const limitNum = Math.min(Math.max(parseInt(limit, 10), 1), 100);
     const bookmarks = await this.svc.listForUser(userId);
+    const total = bookmarks.length; // total bookmarks
 
-    // paginate
+    // paginate ids then load in batch
     const start = (pageNum - 1) * limitNum;
-    const slice = bookmarks.slice(start, start + limitNum);
+    const ids = bookmarks.slice(start, start + limitNum).map((b) => b.secretId);
+    if (ids.length === 0)
+      return { items: [], total, page: pageNum, limit: limitNum };
 
-    // fetch secret details
-    const items = await Promise.all(
-      slice.map(async (bm) => {
-        const secret = await this.secretsSvc.getSecretById(bm.secretId);
-        return secret;
-      }),
-    );
+    // Use secrets service to fetch normalized secrets; preserve order
+    const secrets = await (this.secretsSvc as any).getSecretsByIds(ids);
+    const order = new Map(ids.map((id, idx) => [id, idx] as const));
+    secrets.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
 
-    const total = bookmarks.length; // Total bookmarks, not just page slice length
+    const { toSecretItemDto } = await import('../secrets/dtos/secret-item.dto');
+    const items = secrets.map((s: any) => toSecretItemDto(s));
     return { items, total, page: pageNum, limit: limitNum };
   }
 

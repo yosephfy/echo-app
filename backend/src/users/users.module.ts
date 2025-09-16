@@ -15,7 +15,16 @@ import { Reply } from 'src/replies/reply.entity';
 @Module({
   imports: [
     // e.g. in UsersModule
-    TypeOrmModule.forFeature([User, UserMetrics, Secret, Bookmark, Streak, Reaction, Cap, Reply]),
+    TypeOrmModule.forFeature([
+      User,
+      UserMetrics,
+      Secret,
+      Bookmark,
+      Streak,
+      Reaction,
+      Cap,
+      Reply,
+    ]),
   ],
   providers: [UsersService, HandleService],
   controllers: [UsersController],

@@ -130,12 +130,12 @@ describe('SecretsService', () => {
         'user1',
         { q: 'test', sort: 'newest' },
         1,
-        20
+        20,
       );
 
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         's.text ILIKE :searchText',
-        { searchText: '%test%' }
+        { searchText: '%test%' },
       );
       expect(result.items).toHaveLength(1);
       expect(result.total).toBe(1);
@@ -149,19 +149,19 @@ describe('SecretsService', () => {
         'user1',
         { q: 'hello #test #world', sort: 'newest' },
         1,
-        20
+        20,
       );
 
       // Should filter by extracted tags
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         'tg.slug IN (:...tags)',
-        { tags: ['test', 'world'] }
+        { tags: ['test', 'world'] },
       );
 
       // Should search text without hashtags
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         's.text ILIKE :searchText',
-        { searchText: '%hello%' }
+        { searchText: '%hello%' },
       );
     });
 
@@ -173,12 +173,12 @@ describe('SecretsService', () => {
         'user1',
         { moods: ['happy', 'sad'], sort: 'newest' },
         1,
-        20
+        20,
       );
 
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         'm.code IN (:...moods)',
-        { moods: ['happy', 'sad'] }
+        { moods: ['happy', 'sad'] },
       );
     });
 
@@ -190,12 +190,12 @@ describe('SecretsService', () => {
         'user1',
         { tags: ['gaming', 'music'], sort: 'newest' },
         1,
-        20
+        20,
       );
 
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         'tg.slug IN (:...tags)',
-        { tags: ['gaming', 'music'] }
+        { tags: ['gaming', 'music'] },
       );
     });
 
@@ -207,26 +207,24 @@ describe('SecretsService', () => {
         'user1',
         { q: 'important', sort: 'relevant' },
         1,
-        20
+        20,
       );
 
       expect(mockQueryBuilder.addSelect).toHaveBeenCalledWith(
-        "CASE WHEN s.text ILIKE :exactSearchText THEN 2 ELSE 1 END",
-        "relevance_score"
+        'CASE WHEN s.text ILIKE :exactSearchText THEN 2 ELSE 1 END',
+        'relevance_score',
       );
-      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('relevance_score', 'DESC');
+      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
+        'relevance_score',
+        'DESC',
+      );
     });
 
     it('should apply pagination correctly', async () => {
       mockQueryBuilder.getMany.mockResolvedValue([]);
       mockQueryBuilder.getRawOne.mockResolvedValue({ total: '0' });
 
-      await service.searchSecrets(
-        'user1',
-        { q: 'test' },
-        2,
-        10
-      );
+      await service.searchSecrets('user1', { q: 'test' }, 2, 10);
 
       expect(mockQueryBuilder.skip).toHaveBeenCalledWith(10); // (page - 1) * limit
       expect(mockQueryBuilder.take).toHaveBeenCalledWith(10);
@@ -252,8 +250,13 @@ describe('SecretsService', () => {
 
       expect(extractTags('Hello #world #test')).toEqual(['world', 'test']);
       expect(extractTags('No hashtags here')).toEqual([]);
-      expect(extractTags('#a #toolongtagnamethatshouldnotbeaccepted')).toEqual([]); // too short and too long
-      expect(extractTags('#valid #another_valid')).toEqual(['valid', 'another_valid']);
+      expect(extractTags('#a #toolongtagnamethatshouldnotbeaccepted')).toEqual(
+        [],
+      ); // too short and too long
+      expect(extractTags('#valid #another_valid')).toEqual([
+        'valid',
+        'another_valid',
+      ]);
     });
   });
 });

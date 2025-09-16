@@ -69,7 +69,7 @@ describe('SecretsController', () => {
           sort: 'newest',
         },
         1,
-        20
+        20,
       );
       expect(result).toEqual(mockResult);
     });
@@ -85,7 +85,7 @@ describe('SecretsController', () => {
         'gaming,music',
         'relevant',
         '2',
-        '10'
+        '10',
       );
 
       expect(service.searchSecrets).toHaveBeenCalledWith(
@@ -97,7 +97,7 @@ describe('SecretsController', () => {
           sort: 'relevant',
         },
         2,
-        10
+        10,
       );
       expect(result).toEqual(mockResult);
     });
@@ -113,7 +113,7 @@ describe('SecretsController', () => {
         ',,,', // empty tags with commas
         undefined,
         '1',
-        '20'
+        '20',
       );
 
       expect(service.searchSecrets).toHaveBeenCalledWith(
@@ -125,7 +125,7 @@ describe('SecretsController', () => {
           sort: 'newest',
         },
         1,
-        20
+        20,
       );
     });
 
@@ -140,14 +140,14 @@ describe('SecretsController', () => {
         undefined,
         undefined,
         '0', // should be constrained to 1
-        '500' // should be constrained to 100
+        '500', // should be constrained to 100
       );
 
       expect(service.searchSecrets).toHaveBeenCalledWith(
         'user1',
         expect.any(Object),
         1, // constrained from 0
-        100 // constrained from 500
+        100, // constrained from 500
       );
     });
 
@@ -159,7 +159,7 @@ describe('SecretsController', () => {
         mockRequest,
         undefined,
         ' happy , sad , ',
-        ' gaming , music , '
+        ' gaming , music , ',
       );
 
       expect(service.searchSecrets).toHaveBeenCalledWith(
@@ -171,7 +171,7 @@ describe('SecretsController', () => {
           sort: 'newest',
         },
         1,
-        20
+        20,
       );
     });
   });

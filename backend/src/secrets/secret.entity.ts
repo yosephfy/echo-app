@@ -25,9 +25,9 @@ export enum SecretStatus {
 }
 
 @Entity()
-@Index(['status', 'createdAt'])  // Composite index for common queries
-@Index(['userId', 'status'])     // Index for user's own secrets
-@Index(['createdAt'])            // Index for time-based sorting
+@Index(['status', 'createdAt']) // Composite index for common queries
+@Index(['userId', 'status']) // Index for user's own secrets
+@Index(['createdAt']) // Index for time-based sorting
 export class Secret {
   @PrimaryGeneratedColumn('uuid')
   id: string;

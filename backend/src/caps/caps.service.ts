@@ -1,8 +1,13 @@
 // backend/src/caps/caps.service.ts
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Cap } from './cap.entity';
+import { Secret } from 'src/secrets/secret.entity';
+import {
+  SecretItemDto,
+  toSecretItemDto,
+} from 'src/secrets/dtos/secret-item.dto';
 
 @Injectable()
 export class CapsService {
@@ -42,48 +47,65 @@ export class CapsService {
   async getSecretsUserCapped(
     userId: string,
     page: number = 1,
-    limit: number = 20
+    limit: number = 20,
   ): Promise<{
-    items: any[];
+    items: SecretItemDto[];
     total: number;
     page: number;
     limit: number;
   }> {
     const offset = (page - 1) * limit;
 
-    // Get secrets with cap date for ordering
-    const query = this.repo
-      .createQueryBuilder('cap')
-      .innerJoinAndSelect('cap.secret', 'secret')
-      .innerJoinAndSelect('secret.author', 'author')
-      .leftJoinAndSelect('secret.moods', 'moods')
-      .leftJoinAndSelect('secret.tags', 'tags')
-      .where('cap.userId = :userId', { userId })
-      .andWhere('secret.status IN (:...statuses)', { statuses: ['published', 'under_review'] })
-      .orderBy('cap.createdAt', 'DESC')
-      .take(limit)
-      .skip(offset);
+    // Step 1: get latest capped secret IDs order by cap.createdAt
+    const capped = await this.repo
+      .createQueryBuilder('c')
+      .select(['c.secretId AS secretId'])
+      .addSelect('MAX(c.createdAt)', 'lastCappedAt')
+      .innerJoin(
+        Secret,
+        's',
+        's.id = c.secretId AND s.status IN (:...status) AND (s.userId IS NULL OR s.userId <> :userId)',
+        {
+          status: ['published', 'under_review'] as any,
+          userId,
+        },
+      )
+      .where('c.userId = :userId', { userId })
+      .groupBy('c.secretId')
+      .orderBy('MAX(c.createdAt)', 'DESC')
+      .offset(offset)
+      .limit(limit)
+      .getRawMany<{ secretid: string; lastCappedAt: string }>();
 
-    const [caps, total] = await query.getManyAndCount();
+    // total distinct secrets capped by this user
+    const totalRes = await this.repo
+      .createQueryBuilder('c')
+      .innerJoin(
+        Secret,
+        's',
+        's.id = c.secretId AND s.status IN (:...status) AND (s.userId IS NULL OR s.userId <> :userId)',
+        {
+          status: ['published', 'under_review'] as any,
+          userId,
+        },
+      )
+      .select('COUNT(DISTINCT c.secretId)', 'total')
+      .where('c.userId = :userId', { userId })
+      .getRawOne<{ total: string }>();
+    const total = parseInt(totalRes?.total || '0', 10);
 
-    // Build response with reaction counts for each secret
-    const items = await Promise.all(
-      caps.map(async (cap) => {
-        const capsCount = await this.count(cap.secret.id);
-        
-        return {
-          secret: cap.secret,
-          reactionsCount: capsCount, // keeping consistent naming with reactions endpoint
-          cappedAt: cap.createdAt,
-        };
-      })
-    );
+    const ids = capped.map((c) => c.secretid);
+    if (ids.length === 0) return { items: [], total, page, limit };
 
-    return {
-      items,
-      total,
-      page,
-      limit,
-    };
+    const secrets = await this.repo.manager.getRepository(Secret).find({
+      where: { id: In(ids), status: In(['published', 'under_review'] as any) },
+      relations: ['author', 'moods', 'tags'],
+    });
+
+    const order = new Map(ids.map((id, idx) => [id, idx] as const));
+    secrets.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
+
+    const items = secrets.map((s) => toSecretItemDto(s));
+    return { items, total, page, limit };
   }
 }

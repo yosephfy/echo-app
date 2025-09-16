@@ -1,7 +1,12 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Reaction, ReactionType } from './reaction.entity';
+import { Secret } from 'src/secrets/secret.entity';
+import {
+  toSecretItemDto,
+  SecretItemDto,
+} from 'src/secrets/dtos/secret-item.dto';
 
 @Injectable()
 export class ReactionsService {
@@ -84,52 +89,69 @@ export class ReactionsService {
 
   /** Get paginated list of secrets the user has reacted to */
   async getSecretsUserReactedTo(
-    userId: string, 
-    page: number = 1, 
-    limit: number = 20
+    userId: string,
+    page: number = 1,
+    limit: number = 20,
   ): Promise<{
-    items: any[];
+    items: SecretItemDto[];
     total: number;
     page: number;
     limit: number;
   }> {
     const offset = (page - 1) * limit;
-    
-    // Get distinct secrets with latest reaction date for ordering
-    const query = this.repo
-      .createQueryBuilder('reaction')
-      .innerJoinAndSelect('reaction.secret', 'secret')
-      .innerJoinAndSelect('secret.author', 'author')
-      .leftJoinAndSelect('secret.moods', 'moods')
-      .leftJoinAndSelect('secret.tags', 'tags')
-      .where('reaction.userId = :userId', { userId })
-      .andWhere('secret.status IN (:...statuses)', { statuses: ['published', 'under_review'] })
-      .orderBy('reaction.createdAt', 'DESC')
-      .take(limit)
-      .skip(offset);
 
-    const [reactions, total] = await query.getManyAndCount();
+    // Step 1: get the latest reacted secret IDs ordered by reaction.createdAt
+    const reacted = await this.repo
+      .createQueryBuilder('r')
+      .select(['r.secretId AS secretId'])
+      .addSelect('MAX(r.createdAt)', 'lastReactedAt')
+      .innerJoin(
+        Secret,
+        's',
+        's.id = r.secretId AND s.status IN (:...status) AND (s.userId IS NULL OR s.userId <> :userId)',
+        {
+          status: ['published', 'under_review'] as any,
+          userId,
+        },
+      )
+      .where('r.userId = :userId', { userId })
+      .groupBy('r.secretId')
+      .orderBy('MAX(r.createdAt)', 'DESC')
+      .offset(offset)
+      .limit(limit)
+      .getRawMany<{ secretid: string; lastReactedAt: string }>();
 
-    // Build response with reaction counts for each secret
-    const items = await Promise.all(
-      reactions.map(async (reaction) => {
-        const reactionsCount = await this.countAll(reaction.secret.id);
-        const totalReactions = Object.values(reactionsCount).reduce((sum, count) => sum + count, 0);
-        
-        return {
-          secret: reaction.secret,
-          reactionsCount: totalReactions,
-          reactionType: reaction.type,
-          reactedAt: reaction.createdAt,
-        };
-      })
-    );
+    // total distinct secrets reacted to by this user
+    const totalRes = await this.repo
+      .createQueryBuilder('r')
+      .innerJoin(
+        Secret,
+        's',
+        's.id = r.secretId AND s.status IN (:...status) AND (s.userId IS NULL OR s.userId <> :userId)',
+        {
+          status: ['published', 'under_review'] as any,
+          userId,
+        },
+      )
+      .select('COUNT(DISTINCT r.secretId)', 'total')
+      .where('r.userId = :userId', { userId })
+      .getRawOne<{ total: string }>();
+    const total = parseInt(totalRes?.total || '0', 10);
 
-    return {
-      items,
-      total,
-      page,
-      limit,
-    };
+    const ids = reacted.map((r) => r.secretid);
+    if (ids.length === 0) return { items: [], total, page, limit };
+
+    // Step 2: load secrets with relations and allowed statuses
+    const secrets = await this.repo.manager.getRepository(Secret).find({
+      where: { id: In(ids), status: In(['published', 'under_review'] as any) },
+      relations: ['author', 'moods', 'tags'],
+    });
+
+    // Preserve ordering
+    const order = new Map(ids.map((id, idx) => [id, idx] as const));
+    secrets.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
+
+    const items = secrets.map((s) => toSecretItemDto(s));
+    return { items, total, page, limit };
   }
 }

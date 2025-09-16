@@ -227,7 +227,7 @@ export class SecretsController {
           .map((s) => s.trim())
           .filter(Boolean)
       : undefined;
-    
+
     return this.secrets.searchSecrets(
       req.user.userId,
       {

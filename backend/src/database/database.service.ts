@@ -21,7 +21,7 @@ export class DatabaseService implements OnModuleInit {
 
   private async initializeDatabase() {
     const queryRunner = this.dataSource.createQueryRunner();
-    
+
     try {
       await queryRunner.connect();
 
@@ -41,7 +41,7 @@ export class DatabaseService implements OnModuleInit {
         CREATE INDEX IF NOT EXISTS idx_secret_tags_secret_id 
         ON secret_tags ("secretId");
       `);
-      
+
       await queryRunner.query(`
         CREATE INDEX IF NOT EXISTS idx_secret_tags_tag_id 
         ON secret_tags ("tagId");
@@ -53,7 +53,7 @@ export class DatabaseService implements OnModuleInit {
         CREATE INDEX IF NOT EXISTS idx_secret_moods_secret_id 
         ON secret_moods ("secretId");
       `);
-      
+
       await queryRunner.query(`
         CREATE INDEX IF NOT EXISTS idx_secret_moods_mood_id 
         ON secret_moods ("moodId");
@@ -65,13 +65,12 @@ export class DatabaseService implements OnModuleInit {
         CREATE INDEX IF NOT EXISTS idx_secret_status_created_at 
         ON secret (status, "createdAt" DESC);
       `);
-      
+
       await queryRunner.query(`
         CREATE INDEX IF NOT EXISTS idx_secret_user_status 
         ON secret ("userId", status);
       `);
       this.logger.log('Composite indexes created for common search patterns');
-
     } catch (error) {
       this.logger.error('Error during database initialization:', error);
       throw error;
@@ -88,25 +87,25 @@ export class DatabaseService implements OnModuleInit {
     moods?: string[],
     tags?: string[],
     limit = 20,
-    offset = 0
-  ): Promise<{ items: any[], total: number }> {
+    offset = 0,
+  ): Promise<{ items: any[]; total: number }> {
     const queryRunner = this.dataSource.createQueryRunner();
-    
+
     try {
       await queryRunner.connect();
-      
+
       let whereClause = `s.status IN ('published', 'under_review')`;
       let joinClause = '';
       const params: any[] = [];
       let paramIndex = 1;
-      
+
       // Add similarity filter for text search
       if (searchText?.trim()) {
         whereClause += ` AND similarity(s.text, $${paramIndex}) > 0.1`;
         params.push(searchText);
         paramIndex++;
       }
-      
+
       // Add mood filtering
       if (moods && moods.length > 0) {
         joinClause += ` JOIN secret_moods sm ON s.id = sm."secretId" JOIN mood m ON sm."moodId" = m.id`;
@@ -114,15 +113,15 @@ export class DatabaseService implements OnModuleInit {
         params.push(moods);
         paramIndex++;
       }
-      
-      // Add tag filtering  
+
+      // Add tag filtering
       if (tags && tags.length > 0) {
         joinClause += ` JOIN secret_tags st ON s.id = st."secretId" JOIN tag t ON st."tagId" = t.id`;
         whereClause += ` AND t.slug = ANY($${paramIndex})`;
         params.push(tags);
         paramIndex++;
       }
-      
+
       // Count query
       const countQuery = `
         SELECT COUNT(DISTINCT s.id) as total
@@ -130,10 +129,10 @@ export class DatabaseService implements OnModuleInit {
         ${joinClause}
         WHERE ${whereClause}
       `;
-      
+
       const countResult = await queryRunner.query(countQuery, params);
       const total = parseInt(countResult[0].total, 10);
-      
+
       // Main search query with similarity scoring
       const searchQuery = `
         SELECT DISTINCT s.*, 
@@ -148,11 +147,11 @@ export class DatabaseService implements OnModuleInit {
         ORDER BY ${searchText?.trim() ? '(similarity + exact_match_boost) DESC,' : ''} s."createdAt" DESC
         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
       `;
-      
+
       params.push(limit, offset);
-      
+
       const items = await queryRunner.query(searchQuery, params);
-      
+
       return { items, total };
     } finally {
       await queryRunner.release();

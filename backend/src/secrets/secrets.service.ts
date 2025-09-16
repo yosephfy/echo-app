@@ -16,6 +16,7 @@ import { Tag } from 'src/tags/tag.entity';
 import { Reaction } from 'src/reactions/reaction.entity';
 import { Streak } from 'src/streaks/streak.entity';
 import { DatabaseService } from 'src/database/database.service';
+import { toSecretItemDto, SecretItemDto } from './dtos/secret-item.dto';
 
 const COOLDOWN_SECONDS = 24 * 60 * 60; // 24h
 
@@ -367,38 +368,25 @@ export class SecretsService {
 
     const [items, totalCount] = await q.getManyAndCount();
 
-    // Fetch reactions count for these items
-    const ids = items.map((s) => s.id);
-    const counts = ids.length
-      ? await this.reactionsRepo
-          .createQueryBuilder('r')
-          .select('r.secretId', 'secretId')
-          .addSelect('COUNT(1)', 'cnt')
-          .where('r.secretId IN (:...ids)', { ids })
-          .groupBy('r.secretId')
-          .getRawMany<{ secretId: string; cnt: string }>()
-      : [];
-    const byId2 = new Map(counts.map((c) => [c.secretId, Number(c.cnt)]));
-
     return {
-      items: items.map((s) => ({
-        id: s.id,
-        text: s.text,
-        moods: s.moods?.map((m) => ({ code: m.code, label: m.label })) || [],
-        tags: s.tags?.map((t) => t.slug) || [],
-        status: s.status,
-        createdAt: s.createdAt,
-        author: {
-          id: s.author.id,
-          handle: s.author.handle,
-          avatarUrl: s.author.avatarUrl,
-        },
-        reactionsCount: byId2.get(s.id) ?? 0,
-      })),
+      items: items.filter((s) => s.author).map((s) => toSecretItemDto(s)),
       total: totalCount,
       page,
       limit,
     };
+  }
+
+  /** Batch load secrets by IDs with relations, filtered to visible statuses */
+  async getSecretsByIds(ids: string[]): Promise<Secret[]> {
+    if (!ids.length) return [];
+    const secrets = await this.secretsRepo.find({
+      where: {
+        id: In(ids),
+        status: In([SecretStatus.PUBLISHED, SecretStatus.UNDER_REVIEW] as any),
+      },
+      relations: ['author', 'moods', 'tags'],
+    });
+    return secrets.filter((s) => !!s.author);
   }
 
   async getSecretById(secretId: string): Promise<Secret | null> {
@@ -537,31 +525,31 @@ export class SecretsService {
     // Parse query for hashtags and regular text
     let searchText = '';
     let queryTags: string[] = [];
-    
+
     if (params.q?.trim()) {
       const extractedTags = this.extractTagsFromText(params.q);
       queryTags = extractedTags;
-      
+
       // Remove hashtags from search text for better text search
-      searchText = params.q
-        .replace(/#[a-zA-Z0-9_]{2,32}/g, '')
-        .trim();
+      searchText = params.q.replace(/#[a-zA-Z0-9_]{2,32}/g, '').trim();
     }
 
     // Combine explicit tags with extracted hashtags from query
-    const allTags = [
-      ...(params.tags || []),
-      ...queryTags,
-    ].map(t => this.normalizeTag(t)).filter(Boolean);
+    const allTags = [...(params.tags || []), ...queryTags]
+      .map((t) => this.normalizeTag(t))
+      .filter(Boolean);
 
     // Text search using ILIKE for now (can be enhanced with pg_trgm later)
     if (searchText) {
       // Try to use pg_trgm similarity search for better results
       try {
         // Check if we can use enhanced search with similarity
-        qb.andWhere('(s.text ILIKE :searchText OR similarity(s.text, :searchText) > 0.1)', {
-          searchText: `%${searchText}%`,
-        });
+        qb.andWhere(
+          '(s.text ILIKE :searchText OR similarity(s.text, :searchText) > 0.1)',
+          {
+            searchText: `%${searchText}%`,
+          },
+        );
       } catch (error) {
         // Fallback to simple ILIKE if pg_trgm is not available
         qb.andWhere('s.text ILIKE :searchText', {
@@ -586,20 +574,22 @@ export class SecretsService {
       // Enhanced with pg_trgm similarity if available
       try {
         qb.addSelect(
-          "CASE WHEN s.text ILIKE :exactSearchText THEN 2 ELSE similarity(s.text, :searchTextForSimilarity) END",
-          "relevance_score"
-        ).setParameter('exactSearchText', `%${searchText}%`)
-        .setParameter('searchTextForSimilarity', searchText)
-        .orderBy('relevance_score', 'DESC')
-        .addOrderBy('s.createdAt', 'DESC');
+          'CASE WHEN s.text ILIKE :exactSearchText THEN 2 ELSE similarity(s.text, :searchTextForSimilarity) END',
+          'relevance_score',
+        )
+          .setParameter('exactSearchText', `%${searchText}%`)
+          .setParameter('searchTextForSimilarity', searchText)
+          .orderBy('relevance_score', 'DESC')
+          .addOrderBy('s.createdAt', 'DESC');
       } catch (error) {
         // Fallback to simple exact match scoring
         qb.addSelect(
-          "CASE WHEN s.text ILIKE :exactSearchText THEN 2 ELSE 1 END",
-          "relevance_score"
-        ).setParameter('exactSearchText', `%${searchText}%`)
-        .orderBy('relevance_score', 'DESC')
-        .addOrderBy('s.createdAt', 'DESC');
+          'CASE WHEN s.text ILIKE :exactSearchText THEN 2 ELSE 1 END',
+          'relevance_score',
+        )
+          .setParameter('exactSearchText', `%${searchText}%`)
+          .orderBy('relevance_score', 'DESC')
+          .addOrderBy('s.createdAt', 'DESC');
       }
     } else {
       qb.orderBy('s.createdAt', 'DESC');
@@ -677,16 +667,22 @@ export class SecretsService {
       streak.days += 1;
       streak.lastIncrementedOn = today;
       await this.streaksRepo.save(streak);
-      this.logger.log(`Incremented streak for user ${userId} to ${streak.days} days`);
+      this.logger.log(
+        `Incremented streak for user ${userId} to ${streak.days} days`,
+      );
     } else if (streak.lastIncrementedOn === today) {
       // lastIncrementedOn is today → no-op
-      this.logger.log(`No streak update needed for user ${userId} (already updated today)`);
+      this.logger.log(
+        `No streak update needed for user ${userId} (already updated today)`,
+      );
     } else {
       // Else → reset days = 1 and lastIncrementedOn = today
       streak.days = 1;
       streak.lastIncrementedOn = today;
       await this.streaksRepo.save(streak);
-      this.logger.log(`Reset streak for user ${userId} (last post was not consecutive)`);
+      this.logger.log(
+        `Reset streak for user ${userId} (last post was not consecutive)`,
+      );
     }
   }
 }

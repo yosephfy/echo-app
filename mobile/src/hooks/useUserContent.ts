@@ -20,11 +20,9 @@ function pathFor(type: ContentType): string {
     case "bookmarks":
       return "/bookmarks";
     case "reactions":
-      // if you have a dedicated endpoint, swap it here
-      return "/secrets/secretslist/me";
+      return "/reactions/me";
     case "caps":
-      // if you have a dedicated endpoint, swap it here
-      return "/secrets/secretslist/me";
+      return "/caps/me";
   }
 }
 
