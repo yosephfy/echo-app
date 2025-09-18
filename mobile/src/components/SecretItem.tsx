@@ -357,7 +357,7 @@ export default function SecretItem({
                   borderColor={colors.background}
                   borderWidth={1}
                   radius={6}
-                  widthMode="fixed"
+                  widthMode={isExpanded ? "auto" : "fixed"}
                   width={60}
                   onPress={openMoodsModal}
                 />
