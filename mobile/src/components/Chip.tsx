@@ -23,8 +23,17 @@ export type ChipProps = {
   selected?: boolean;
   disabled?: boolean;
   loading?: boolean;
-  leftIcon?: string; // IconName from IconSvg
-  rightIcon?: string; // IconName from IconSvg
+  // Icon support: provide an IconName (string) to render the project's IconSvg,
+  // or pass a custom React node via leftIconNode/rightIconNode.
+  leftIcon?: string; // IconName from IconSvg (backward-compatible)
+  rightIcon?: string; // IconName from IconSvg (backward-compatible)
+  leftIconNode?: React.ReactNode; // custom icon element to render instead of IconSvg
+  rightIconNode?: React.ReactNode; // custom icon element to render instead of IconSvg
+  // advanced IconSvg props forwarded when using leftIcon/rightIcon strings
+  iconState?: "default" | "pressed" | "disabled" | "focused" | "hovered";
+  iconSize?: number; // override computed icon size
+  iconFallbackColor?: keyof ReturnType<typeof useTheme>["colors"]; // fallback color key for IconSvg
+  iconStateStyles?: Partial<Record<string, Partial<any>>>; // forwarded to IconSvg as stateStyles
   variant?: ChipVariant;
   size?: ChipSize;
   color?: string; // override theme primary
@@ -77,6 +86,12 @@ export const Chip: React.FC<ChipProps> = ({
   numberOfLines = 1,
   ellipsizeMode = "tail",
   uppercase,
+  leftIconNode,
+  rightIconNode,
+  iconState = "default",
+  iconSize: explicitIconSize,
+  iconFallbackColor,
+  iconStateStyles,
 }) => {
   const { colors } = useTheme();
   const primary = color ?? colors.primary;
@@ -99,7 +114,7 @@ export const Chip: React.FC<ChipProps> = ({
     ...containerStyle,
     ...widthStyles,
     ...constrained,
-    borderRadius: typeof radius === "number" ? radius : 16,
+    borderRadius: typeof radius === "number" ? radius : 18,
     borderWidth:
       typeof borderWidth === "number"
         ? borderWidth
@@ -137,8 +152,18 @@ export const Chip: React.FC<ChipProps> = ({
       ]}
     >
       <View style={[styles.row, contentPad]}>
-        {leftIcon && !loading ? (
-          <IconSvg icon={leftIcon as any} state="default" size={iconSize} />
+        {leftIconNode ? (
+          leftIconNode
+        ) : leftIcon && !loading ? (
+          <IconSvg
+            icon={leftIcon as any}
+            state={iconState as any}
+            size={
+              typeof explicitIconSize === "number" ? explicitIconSize : iconSize
+            }
+            stateStyles={iconStateStyles as any}
+            fallbackColor={iconFallbackColor as any}
+          />
         ) : null}
         {loading ? <ActivityIndicator size="small" color={labelColor} /> : null}
         {hasCustomLabel ? (
@@ -159,8 +184,18 @@ export const Chip: React.FC<ChipProps> = ({
             {label}
           </Text>
         )}
-        {rightIcon ? (
-          <IconSvg icon={rightIcon as any} state="default" size={iconSize} />
+        {rightIconNode ? (
+          rightIconNode
+        ) : rightIcon ? (
+          <IconSvg
+            icon={rightIcon as any}
+            state={iconState as any}
+            size={
+              typeof explicitIconSize === "number" ? explicitIconSize : iconSize
+            }
+            stateStyles={iconStateStyles as any}
+            fallbackColor={iconFallbackColor as any}
+          />
         ) : null}
       </View>
     </Pressable>
@@ -171,7 +206,7 @@ function getSizeStyles(size: ChipSize) {
   switch (size) {
     case "xs":
       return {
-        containerStyle: { minHeight: 22 } as ViewStyle,
+        containerStyle: { minHeight: 18 } as ViewStyle,
         contentPad: { paddingHorizontal: 8, paddingVertical: 2 } as ViewStyle,
         textSize: { fontSize: 11, fontWeight: "600" } as TextStyle,
         iconSize: 12,
