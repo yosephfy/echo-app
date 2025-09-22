@@ -8,7 +8,7 @@ import {
 import { useMemo } from "react";
 import { api } from "../api/client";
 import { useEntities } from "../store/entities";
-import type { SecretItemProps } from "../components/SecretItem";
+import type { SecretItemProps } from "../components/Secret/SecretItem";
 import { FeedPage } from "./types";
 
 /** ---------------------------

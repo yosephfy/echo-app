@@ -7,9 +7,9 @@ import {
   ViewStyle,
   StyleProp,
 } from "react-native";
-import { useTheme } from "../theme/ThemeContext";
-import { IconSvg } from "../icons/IconSvg";
-import { IconName } from "../icons/icons";
+import { useTheme } from "../../theme/ThemeContext";
+import { IconSvg } from "../../icons/IconSvg";
+import { IconName } from "../../icons/icons";
 
 interface ActionButtonProps {
   icon: IconName;
@@ -68,14 +68,18 @@ const styles = StyleSheet.create({
   button: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 4,
+    paddingHorizontal: 0,
     borderRadius: 6,
-    marginHorizontal: 4,
-    justifyContent: "center",
+    marginHorizontal: 0,
+    justifyContent: "flex-end",
     gap: 4,
+    //backgroundColor: "pink",
   },
   label: {
-    fontSize: 14,
+    //position: "absolute",
+    fontSize: 12,
+    //right: 0,
+    //bottom: -15,
   },
   spinnerDot: {
     width: 6,

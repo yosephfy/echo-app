@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { api } from "../api/client";
-import type { SecretItemProps } from "../components/SecretItem";
+import type { SecretItemProps } from "../components/Secret/SecretItem";
 import { useEntities } from "../store/entities";
 
 export type TrendingTag = {
@@ -158,23 +158,31 @@ export function useTagFeed(
 
 /** Infinite search for Explore tab (text + moods) */
 export function useExploreSearch(
-  params: { q?: string; moods?: string[]; sort?: 'newest' | 'relevant' },
+  params: { q?: string; moods?: string[]; sort?: "newest" | "relevant" },
   limit = 20
 ) {
   const upsertUsers = useEntities((s) => s.upsertUsers);
   const upsertSecrets = useEntities((s) => s.upsertSecrets);
 
-  const enabled = (params.q?.trim()?.length ?? 0) > 0 || (params.moods?.length ?? 0) > 0;
+  const enabled =
+    (params.q?.trim()?.length ?? 0) > 0 || (params.moods?.length ?? 0) > 0;
 
   const query = useInfiniteQuery<Paginated<SecretItemProps>>({
-    queryKey: ["discover", "explore", { q: params.q, moods: params.moods, sort: params.sort, limit }],
+    queryKey: [
+      "discover",
+      "explore",
+      { q: params.q, moods: params.moods, sort: params.sort, limit },
+    ],
     queryFn: async ({ pageParam = 1 }: any) => {
       const p: Record<string, string | number> = { page: pageParam, limit };
       const q = params.q?.trim();
       if (q) p.q = q;
       if (params.moods && params.moods.length) p.moods = params.moods.join(",");
       if (params.sort) p.sort = params.sort;
-      const res = await api.get<Paginated<SecretItemProps>>("/secrets/search", p);
+      const res = await api.get<Paginated<SecretItemProps>>(
+        "/secrets/search",
+        p
+      );
       upsertUsers(res.items.map((i: any) => i.author).filter(Boolean));
       upsertSecrets(res.items);
       return res;

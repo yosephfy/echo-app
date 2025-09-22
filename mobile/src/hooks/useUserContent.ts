@@ -2,7 +2,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { api } from "../api/client";
 import { useEntities } from "../store/entities";
-import type { SecretItemProps } from "../components/SecretItem";
+import type { SecretItemProps } from "../components/Secret/SecretItem";
 
 export type ContentType = "secrets" | "bookmarks" | "reactions" | "caps";
 

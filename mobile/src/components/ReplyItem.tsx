@@ -4,9 +4,9 @@ import { Alert, StyleSheet, Text, View } from "react-native";
 import { Reply } from "../hooks/useReplies";
 import { useTheme } from "../theme/ThemeContext";
 import { timeAgo } from "../utils/timeAgo";
-import ReactionPicker, { DEFAULT_REACTIONS } from "./ReactionPicker";
+import ReactionPicker, { DEFAULT_REACTIONS } from "./Secret/ReactionPicker";
 import { ReactionType } from "../hooks/useReactions";
-import ActionButton from "./ActionButton";
+import ActionButton from "./Secret/ActionButton";
 import Avatar from "./Avatar";
 import useReplyReactions from "../hooks/useReplyReactions";
 import useMe from "../hooks/useMe";
@@ -35,7 +35,7 @@ const ReplyItem: React.FC<Props> = ({ reply }) => {
     <View
       style={[
         styles.container,
-        { borderColor: colors.outline, backgroundColor: colors.surface },
+        { borderColor: colors.outline, backgroundColor: colors.card },
       ]}
     >
       {/* Header: avatar, username, timestamp, and reaction */}
@@ -44,17 +44,17 @@ const ReplyItem: React.FC<Props> = ({ reply }) => {
           <Avatar
             handle={reply.author.handle}
             url={reply.author.avatarUrl}
-            size={24}
+            size={32}
           />
-          <Text style={[styles.author, { color: colors.primary }]}>
-            @{reply.author.handle}
+          <Text style={[styles.author, { color: colors.text }]}>
+            {reply.author.handle}
           </Text>
           <Text style={[styles.dot, { color: colors.muted }]}>·</Text>
           <Text style={[styles.time, { color: colors.muted }]}>
             {timestamp}
           </Text>
         </View>
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           {isMine && "id" in reply && (
             <>
               <ActionButton
@@ -62,7 +62,7 @@ const ReplyItem: React.FC<Props> = ({ reply }) => {
                 onPress={() => {
                   rc.openEdit({ id: (reply as Reply).id, text: reply.text });
                 }}
-                size={20}
+                size={26}
               />
               <ActionButton
                 icon="trash"
@@ -84,7 +84,7 @@ const ReplyItem: React.FC<Props> = ({ reply }) => {
                     ]
                   )
                 }
-                size={20}
+                size={26}
               />
             </>
           )}
@@ -102,7 +102,7 @@ const ReplyItem: React.FC<Props> = ({ reply }) => {
               onPress={() => react(currentType ?? ReactionType.Love)}
               label={totalReactions > 0 ? totalReactions : undefined}
               active={!!currentType}
-              size={24}
+              size={26}
             />
           </ReactionPicker>
         </View>
@@ -110,18 +110,17 @@ const ReplyItem: React.FC<Props> = ({ reply }) => {
 
       {/* Comment text */}
       <Text style={[styles.text, { color: colors.text }]}>{reply.text}</Text>
-
-      {/* Edit now handled by ReplyInput via replyComposer store */}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    marginHorizontal: 12,
-    marginVertical: 4,
-    padding: 12,
-    borderRadius: 8,
+    borderRadius: 8.5,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginVertical: 5,
+    marginHorizontal: 10,
   },
   header: {
     flexDirection: "row",
@@ -135,8 +134,8 @@ const styles = StyleSheet.create({
   },
   author: {
     fontWeight: "600",
-    fontSize: 14,
-    marginLeft: 6,
+    fontSize: 17,
+    marginLeft: 10,
   },
   dot: {
     marginHorizontal: 6,
@@ -146,9 +145,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   text: {
-    fontSize: 15,
-    lineHeight: 20,
-    marginTop: 4,
+    fontSize: 17,
+    lineHeight: 22,
+    marginTop: 8,
   },
 });
 

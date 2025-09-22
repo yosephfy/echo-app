@@ -14,6 +14,9 @@ export interface ThemeTokens {
     muted: string;
     link: string;
 
+    // Icon
+    icon: string;
+
     // UI
     border: string;
     outline: string; // stronger border when needed
@@ -76,14 +79,17 @@ export const lightTheme: ThemeTokens = {
   colors: {
     // Base surfaces
     background: "#FFFFFF",
-    card: "#FFFFFF",
+    card: "#FFF7ED",
     surface: "#F8FAFC", // slate-50
     surfaceAlt: "#F1F5F9", // slate-100
 
     // Text
-    text: "#111827", // gray-900
+    text: "#333333", // gray-900
     muted: "#6B7280", // gray-500
     link: "#2563EB", // blue-600
+
+    //icon
+    icon: "#655C65",
 
     // UI
     border: "#E5E7EB", // gray-200
@@ -117,14 +123,17 @@ export const darkTheme: ThemeTokens = {
   colors: {
     // Base surfaces
     background: "#0B0B10",
-    card: "#141419",
+    card: "#333333",
     surface: "#16161C",
     surfaceAlt: "#1B1B22",
 
     // Text
-    text: "#E6E7EB",
+    text: "#dfdfdfff",
     muted: "#A1A1AA",
     link: "#60A5FA",
+
+    //icon
+    icon: "#655C65",
 
     // UI
     border: "#22232A",

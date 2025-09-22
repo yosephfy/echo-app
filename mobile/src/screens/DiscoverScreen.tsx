@@ -20,7 +20,7 @@ import { useTheme } from "../theme/ThemeContext";
 import { IconSvg } from "../icons/IconSvg";
 import HashtagChip from "../components/HashtagChip";
 import Chip from "../components/Chip";
-import SecretItem from "../components/SecretItem";
+import SecretItem from "../components/Secret/SecretItem";
 import { TabParamList } from "../navigation/AppNavigator";
 
 const moodsCatalog = [

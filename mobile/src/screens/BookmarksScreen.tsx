@@ -1,6 +1,6 @@
 import React from "react";
 import { FlatList, SafeAreaView, StyleSheet } from "react-native";
-import SecretItem, { SecretItemProps } from "../components/SecretItem";
+import SecretItem, { SecretItemProps } from "../components/Secret/SecretItem";
 import { useBookmarks } from "../hooks/useBookmarks";
 import { useTheme } from "../theme/ThemeContext";
 

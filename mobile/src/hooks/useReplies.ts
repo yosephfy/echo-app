@@ -3,7 +3,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import useSocket from "./useSocket";
 import { useEntities } from "../store/entities";
@@ -60,7 +60,6 @@ export function useReplies(secretId: string, limit = 10) {
     staleTime: 30_000,
     queryFn: async ({ pageParam = 1 }: any) => {
       const res = await fetchReplies(secretId, pageParam, limit);
-      upsertUsers(res.items.map((r) => r.author));
       return res;
     },
     getNextPageParam: (last, all) => {
@@ -75,6 +74,16 @@ export function useReplies(secretId: string, limit = 10) {
       query.data ? uniqueById(query.data.pages.flatMap((p) => p.items)) : [],
     [query.data]
   );
+
+  // When query data arrives, normalize authors into entities store.
+  useEffect(() => {
+    if (query.data?.pages) {
+      const authors = query.data.pages.flatMap((p) =>
+        p.items.map((r) => r.author)
+      );
+      if (authors.length) upsertUsers(authors);
+    }
+  }, [query.data, upsertUsers]);
 
   // Final list to render: pending (top) + server (below), BUT pending are tagged and have no id
   const items: UIReply[] = useMemo(

@@ -8,9 +8,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useTheme } from "../theme/ThemeContext";
-import { IconSvg } from "../icons/IconSvg";
-import { IconName } from "../icons/icons";
+import { useTheme } from "../../theme/ThemeContext";
+import { IconSvg } from "../../icons/IconSvg";
+import { IconName } from "../../icons/icons";
 
 export type ReactionItem = {
   key: string;

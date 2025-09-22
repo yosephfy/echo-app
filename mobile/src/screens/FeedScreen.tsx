@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -10,14 +10,15 @@ import {
 } from "react-native";
 import ComposeButton from "../components/ComposeButtonComponent";
 import ComposerModal from "../components/ComposerModal";
-import { useComposer } from "../store/composer";
-import SecretItem, { SecretItemProps } from "../components/SecretItem";
+import SecretItem, { SecretItemProps } from "../components/Secret/SecretItem";
+import useCooldown from "../hooks/useCooldown";
 import { useFeed } from "../hooks/useFeed";
 import useSocket from "../hooks/useSocket";
 import { TabParamList } from "../navigation/AppNavigator";
 import { useAuthStore } from "../store/authStore";
+import { useComposer } from "../store/composer";
 import { useTheme } from "../theme/ThemeContext";
-import useCooldown from "../hooks/useCooldown";
+import { IconSvg } from "../icons/IconSvg";
 
 type Props = NativeStackScreenProps<TabParamList, "Feed">;
 
@@ -65,10 +66,11 @@ export default function FeedScreen({ navigation }: Props) {
       <View
         style={[
           styles.headerContainer,
-          { borderColor: colors.outline, backgroundColor: colors.surface },
+          //{ borderColor: colors.outline, backgroundColor: colors.surface },
         ]}
       >
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Echo</Text>
+        <IconSvg icon={"shh_icon"} size={40} state="pressed" />
+        <Text style={[styles.headerTitle, { color: colors.text }]}>echo</Text>
       </View>
 
       {loading && items.length === 0 ? (
@@ -104,15 +106,16 @@ const styles = StyleSheet.create({
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    //justifyContent: "space-between",
     paddingVertical: 12,
-    height: 70,
-    borderBottomWidth: 1,
+    paddingHorizontal: 22,
+    height: 60,
+    gap: 10,
+    //borderBottomWidth: 1,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "bold",
-    color: "#333",
-    paddingHorizontal: 42,
+    //paddingHorizontal: 22,
   },
 });

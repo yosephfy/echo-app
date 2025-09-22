@@ -1,7 +1,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { api } from "../api/client";
-import type { SecretItemProps } from "../components/SecretItem";
+import type { SecretItemProps } from "../components/Secret/SecretItem";
 import { useEntities } from "../store/entities";
 
 type FeedPage = {

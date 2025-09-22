@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { MaterialTabBar, Tabs } from "react-native-collapsible-tab-view";
 import Avatar from "../components/Avatar";
-import SecretItem, { SecretItemProps } from "../components/SecretItem";
+import SecretItem, { SecretItemProps } from "../components/Secret/SecretItem";
 import useMe from "../hooks/useMe";
 import { useUserContent } from "../hooks/useUserContent";
 import { UserStats, useUserStats } from "../hooks/useUserStats";
