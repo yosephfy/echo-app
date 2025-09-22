@@ -420,6 +420,12 @@ export class SecretsService {
     if (typeof patch.text === 'string') next.text = patch.text;
     await this.secretsRepo.update({ id: secretId }, next);
 
+    // Load current relations to compute diffs safely for many-to-many
+    const current = await this.secretsRepo.findOne({
+      where: { id: secretId },
+      relations: ['moods', 'tags'],
+    });
+
     // Update relations if provided
     if (patch.moods) {
       const norm = Array.from(
@@ -428,11 +434,24 @@ export class SecretsService {
       const moodEntities = norm.length
         ? await this.moodRepo.find({ where: { code: In(norm), active: true } })
         : [];
-      await this.secretsRepo
+      const newIds = moodEntities.map((m) => m.id);
+      const currIds = (current?.moods || []).map((m) => m.id);
+      const toAdd = newIds.filter((id) => !currIds.includes(id));
+      const toRemove = currIds.filter((id) => !newIds.includes(id));
+      const rel = this.secretsRepo
         .createQueryBuilder()
         .relation(Secret, 'moods')
-        .of(entity.id)
-        .set(moodEntities.map((m) => m.id));
+        .of(entity.id);
+      if (toAdd.length || toRemove.length) {
+        // Prefer addAndRemove when available for atomicity
+        // @ts-ignore - method exists at runtime in TypeORM 0.3 for many-to-many
+        if (typeof (rel as any).addAndRemove === 'function') {
+          await (rel as any).addAndRemove(toAdd, toRemove);
+        } else {
+          if (toRemove.length) await (rel as any).remove(toRemove);
+          if (toAdd.length) await (rel as any).add(toAdd);
+        }
+      }
     }
     // Update tags: if provided, normalize; otherwise if text changed, extract from text
     if (patch.tags || typeof patch.text === 'string') {
@@ -464,11 +483,23 @@ export class SecretsService {
         // Avoid increment on updates to prevent inflation
         tagEntities.push(existing);
       }
-      await this.secretsRepo
+      const newIds = tagEntities.map((t) => t.id);
+      const currIds = (current?.tags || []).map((t) => t.id);
+      const toAdd = newIds.filter((id) => !currIds.includes(id));
+      const toRemove = currIds.filter((id) => !newIds.includes(id));
+      const rel = this.secretsRepo
         .createQueryBuilder()
         .relation(Secret, 'tags')
-        .of(entity.id)
-        .set(tagEntities.map((t) => t.id));
+        .of(entity.id);
+      if (toAdd.length || toRemove.length) {
+        // @ts-ignore - method exists at runtime in TypeORM 0.3 for many-to-many
+        if (typeof (rel as any).addAndRemove === 'function') {
+          await (rel as any).addAndRemove(toAdd, toRemove);
+        } else {
+          if (toRemove.length) await (rel as any).remove(toRemove);
+          if (toAdd.length) await (rel as any).add(toAdd);
+        }
+      }
     }
 
     return this.getSecretById(secretId);
