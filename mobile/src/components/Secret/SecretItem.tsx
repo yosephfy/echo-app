@@ -1,6 +1,5 @@
 import React from "react";
-import { Alert, LayoutAnimation, StyleSheet, Text, View } from "react-native";
-import { MOOD_COLOR_MAP } from "../../constants/moods";
+import { Alert, LayoutAnimation, StyleSheet, View } from "react-native";
 import { useBookmark } from "../../hooks/useBookmarks"; // ✅ was from useBookmarks
 import useCap from "../../hooks/useCap";
 import useMe from "../../hooks/useMe";
@@ -11,7 +10,7 @@ import { useSecretMutations } from "../../hooks/useSecretMutations";
 import { useShare } from "../../hooks/useShare";
 import { useComposer } from "../../store/composer";
 import { useTheme } from "../../theme/ThemeContext";
-import { useGlobalModal } from "../modal/GlobalModalProvider";
+import { timeAgo } from "../../utils/timeAgo";
 import CondensedSecretItem from "./CondensedSecretItem";
 import { InteractionRow } from "./InteractionRow";
 import SecretBody from "./SecretBody";
@@ -107,7 +106,7 @@ export default function SecretItem({
       <UserHeader
         avatarUri={author.avatarUrl}
         handle={author.handle}
-        timeAgo={"2mo ago"}
+        timeAgo={timeAgo(secret.createdAt, "medium")}
         leftActions={{
           shown: isMine ? ["delete", "edit"] : ["cap", "more"],
           list: [
