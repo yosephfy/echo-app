@@ -48,6 +48,7 @@ import screen_smartphone from '../../assets/icons/screen-smartphone.svg';
 import search_alt from '../../assets/icons/search-alt.svg';
 import settings from '../../assets/icons/settings.svg';
 import share from '../../assets/icons/share.svg';
+import shh_icon from '../../assets/icons/shh_icon.svg';
 import shield_lock from '../../assets/icons/shield-lock.svg';
 import shuffle from '../../assets/icons/shuffle.svg';
 import text_size from '../../assets/icons/text-size.svg';
@@ -105,6 +106,7 @@ const iconMap: Record<IconName, React.FC<SvgProps>> = {
   "search-alt": search_alt,
   "settings": settings,
   "share": share,
+  "shh_icon": shh_icon,
   "shield-lock": shield_lock,
   "shuffle": shuffle,
   "text-size": text_size,
@@ -115,7 +117,7 @@ const iconMap: Record<IconName, React.FC<SvgProps>> = {
 } as const;
 
 
-export type IconName = | "add-circle" | "animation" | "attach" | "bell" | "blocked" | "bookmark-fill" | "bookmark" | "bookmarks" | "calendar-day" | "camera" | "cap" | "cards" | "chat-round-line" | "check-circle" | "chevron-down" | "chevron-left" | "chevron-right" | "chevron-up" | "circle-user" | "close-circle" | "color-palette" | "comment" | "email" | "eye-off" | "face-screaming-in-fear" | "face-with-tears-of-joy" | "file-document" | "fire" | "heart-alt" | "heart-full" | "heart" | "help" | "home" | "image-square" | "laugh-emoji" | "lock" | "logout" | "more-horizontal" | "more-vertical" | "mute" | "pencil" | "pouting-face" | "profile-round" | "sad-but-relieved-face" | "screen-smartphone" | "search-alt" | "settings" | "share" | "shield-lock" | "shuffle" | "text-size" | "thumbs-up" | "tick-square" | "trash" | "wrong"
+export type IconName = | "add-circle" | "animation" | "attach" | "bell" | "blocked" | "bookmark-fill" | "bookmark" | "bookmarks" | "calendar-day" | "camera" | "cap" | "cards" | "chat-round-line" | "check-circle" | "chevron-down" | "chevron-left" | "chevron-right" | "chevron-up" | "circle-user" | "close-circle" | "color-palette" | "comment" | "email" | "eye-off" | "face-screaming-in-fear" | "face-with-tears-of-joy" | "file-document" | "fire" | "heart-alt" | "heart-full" | "heart" | "help" | "home" | "image-square" | "laugh-emoji" | "lock" | "logout" | "more-horizontal" | "more-vertical" | "mute" | "pencil" | "pouting-face" | "profile-round" | "sad-but-relieved-face" | "screen-smartphone" | "search-alt" | "settings" | "share" | "shh_icon" | "shield-lock" | "shuffle" | "text-size" | "thumbs-up" | "tick-square" | "trash" | "wrong"
 
 export default iconMap;
 
