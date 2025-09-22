@@ -20,6 +20,7 @@ import { useComposer } from "../store/composer";
 import { useSecretMutations } from "../hooks/useSecretMutations";
 import MoodPickerModal from "./MoodPickerModal";
 import { MOOD_COLOR_MAP } from "../constants/moods";
+import Chip from "./Chip";
 
 const MAX_CHARS = 2000;
 
@@ -89,7 +90,7 @@ export default function ComposerModal() {
               { color: colors.text, fontSize: fontSizes.lg },
             ]}
           >
-            \n {composer.mode === "edit" ? "Edit Secret" : "Share a Secret"}
+            {composer.mode === "edit" ? "Edit Secret" : "Share a Secret"}
           </Text>
 
           <ScrollView
@@ -165,55 +166,58 @@ export default function ComposerModal() {
                 </TouchableOpacity>
               </View>
               <View style={{ flexDirection: "row", alignItems: "center" }}>
-                {/* Stacked selected chips */}
-                <View style={{ flexDirection: "row", marginRight: 12 }}>
-                  {composer.moods.map((code, idx) => {
-                    const left = idx * -14;
+                <View
+                  style={{ flexDirection: "row", flexWrap: "wrap", flex: 1 }}
+                >
+                  {composer.moods.map((code) => {
                     const bg = MOOD_COLOR_MAP[code] || colors.primary;
                     return (
-                      <TouchableOpacity
+                      <Chip
                         key={code}
-                        onLongPress={() => composer.toggleMood(code)}
-                        onPress={composer.showMoodPicker}
-                        style={{
-                          marginLeft: left,
-                          backgroundColor: bg,
-                          paddingHorizontal: 10,
-                          paddingVertical: 6,
-                          borderRadius: 16,
-                          borderWidth: 1,
-                          borderColor: colors.background,
-                        }}
-                      >
-                        <Text style={{ color: "#000", fontWeight: "600" }}>
-                          {code}
-                        </Text>
-                      </TouchableOpacity>
+                        label={code}
+                        size="xs"
+                        variant="filled"
+                        color={bg}
+                        bgColor={bg}
+                        textColor={colors.text}
+                        borderColor={colors.background}
+                        borderWidth={1}
+                        radius={8}
+                        // toggle on press, open picker on long press
+                        onPress={() => composer.toggleMood(code)}
+                        onLongPress={composer.showMoodPicker}
+                        accessibilityLabel={`${code} mood`}
+                        leftIcon="close-circle"
+                        iconStateStyles={{ default: { color: "#fffff2" } }}
+                        style={{ marginRight: 8, marginBottom: 8, height: 28 }}
+                      />
                     );
                   })}
                 </View>
-                {/* Open global mood picker */}
+              </View>
+
+              {/* Picker button moved below chips for clarity */}
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "flex-end",
+                  marginTop: 8,
+                }}
+              >
                 <TouchableOpacity
                   onPress={composer.showMoodPicker}
                   style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
                     backgroundColor: colors.primary,
-                    borderRadius: 20,
+                    borderRadius: 16,
                   }}
                 >
                   <Text style={{ color: "#fff", fontWeight: "600" }}>
-                    {composer.moods.length ? "Add / Remove" : "Select Moods"}
+                    Browse moods
                   </Text>
                 </TouchableOpacity>
               </View>
-              {composer.moods.length > 0 && (
-                <Text
-                  style={{ color: colors.muted, marginTop: 6, fontSize: 12 }}
-                >
-                  {composer.moods.length}/3 selected
-                </Text>
-              )}
             </View>
 
             {/* PANIC DELETE (only for create) */}
