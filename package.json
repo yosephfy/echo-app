@@ -10,8 +10,7 @@
     "format": "prettier --write .",
     "build": "npm --workspace=backend run build",
     "start:prod": "npm --workspace=backend run start:prod",
-    "start": "npm --workspace=backend run start",
-    "prepare": "husky install"
+    "start": "npm --workspace=backend run start"
   },
   "lint-staged": {
     "*.{js,ts,tsx,jsx,json,md}": [
