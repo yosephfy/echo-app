@@ -9,7 +9,7 @@
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "format": "prettier --write .",
     "build": "npm --workspace=backend run build",
-    "start:prod": "npm --workspace=backend run start:prod",
+    "start:prod": "npm --workspace=backend run start:prod --port ${PORT-3000}",
     "start": "npm --workspace=backend run start",
     "prepare": "husky install"
   },
