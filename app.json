@@ -5,6 +5,9 @@
         "projectId": "19e5b6c4-b20b-46af-87f8-33cf17fb15e1"
       }
     },
-    "owner": "yosephmas"
+    "owner": "yosephmas",
+    "android": {
+      "package": "com.yosephmas.echoapp"
+    }
   }
 }
