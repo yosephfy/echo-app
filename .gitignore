@@ -23,8 +23,8 @@ build/
 .expo/
 .expo-shared/
 web-build/
-android/
-ios/
+/android/
+/ios/
 
 # macOS / Linux / Windows
 .DS_Store
