@@ -18,10 +18,7 @@
       "eslint --fix"
     ]
   },
-  "main": "mobile/App.tsx",
-  "expo": {
-    "entryPoint": "mobile/App.tsx"
-  },
+  
   "devDependencies": {
     "eslint": "^9.29.0",
     "eslint-config-prettier": "^10.1.5",
@@ -29,5 +26,9 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.1.2",
     "prettier": "^3.5.3"
-  }
+  },
+  "dependencies": {
+    "expo": "~53.0.23"
+  },
+  "resolutions": {}
 }
