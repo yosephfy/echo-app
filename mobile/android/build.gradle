@@ -12,29 +12,25 @@ buildscript {
   }
 }
 
+def reactNativeAndroidDir = new File(
+  providers.exec {
+    workingDir(rootDir)
+    commandLine("node", "--print", "require.resolve('react-native/package.json')")
+  }.standardOutput.asText.get().trim(),
+  "../android"
+)
+
 allprojects {
   repositories {
+    maven {
+      // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
+      url(reactNativeAndroidDir)
+    }
+
     google()
     mavenCentral()
     maven { url 'https://www.jitpack.io' }
   }
-}
-
-// Ensure libraries can find react-native in a monorepo/workspaces setup
-// Define canonical locations as early as possible at the root project level
-ext {
-  // Path to the react-native package directory (monorepo-friendly)
-  REACT_NATIVE_NODE_MODULES_DIR = new File([
-    "node",
-    "--print",
-    "require('path').dirname(require.resolve('react-native/package.json'))"
-  ].execute(null, rootDir).text.trim())
-
-  // Path alias to the react-native package directory
-  REACT_NATIVE_DIR = REACT_NATIVE_NODE_MODULES_DIR
-
-  // Path to the ReactAndroid sources
-  REACT_ANDROID_DIR = new File(REACT_NATIVE_DIR, 'ReactAndroid')
 }
 
 apply plugin: "expo-root-project"
