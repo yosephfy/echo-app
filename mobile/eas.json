@@ -8,19 +8,22 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "ORG_GRADLE_PROJECT_REACT_NATIVE_NODE_MODULES_DIR": "../../node_modules"
+        "REACT_NATIVE_NODE_MODULES_DIR": "../../node_modules",
+        "ORG_GRADLE_PROJECT_reactNativeNodeModulesDir": "../../node_modules"
       }
     },
     "preview": {
       "distribution": "internal",
       "env": {
-        "ORG_GRADLE_PROJECT_REACT_NATIVE_NODE_MODULES_DIR": "../../node_modules"
+        "REACT_NATIVE_NODE_MODULES_DIR": "../../node_modules",
+        "ORG_GRADLE_PROJECT_reactNativeNodeModulesDir": "../../node_modules"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "ORG_GRADLE_PROJECT_REACT_NATIVE_NODE_MODULES_DIR": "../../node_modules"
+        "REACT_NATIVE_NODE_MODULES_DIR": "../../node_modules",
+        "ORG_GRADLE_PROJECT_reactNativeNodeModulesDir": "../../node_modules"
       }
     }
   },
