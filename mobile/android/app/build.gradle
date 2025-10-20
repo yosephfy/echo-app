@@ -6,8 +6,10 @@ def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
 
 // Provide REACT_NATIVE_NODE_MODULES_DIR for libraries that require it
 ext {
-    REACT_NATIVE_NODE_MODULES_DIR = new File(["node", "--print", "require('path').dirname(require('path').dirname(require.resolve('react-native/package.json')))"]
+    // Point to the react-native package folder (not the parent node_modules)
+    REACT_NATIVE_NODE_MODULES_DIR = new File(["node", "--print", "require('path').dirname(require.resolve('react-native/package.json'))"]
             .execute(null, rootDir).text.trim())
+    REACT_ANDROID_DIR = new File(REACT_NATIVE_NODE_MODULES_DIR, 'ReactAndroid')
 }
 
 /**

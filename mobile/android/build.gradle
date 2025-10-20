@@ -21,13 +21,20 @@ allprojects {
 }
 
 // Ensure libraries can find react-native in a monorepo/workspaces setup
-// Some Gradle scripts (e.g., @react-native-picker/picker) look for this property
+// Define canonical locations as early as possible at the root project level
 ext {
+  // Path to the react-native package directory (monorepo-friendly)
   REACT_NATIVE_NODE_MODULES_DIR = new File([
     "node",
     "--print",
-    "require('path').dirname(require('path').dirname(require.resolve('react-native/package.json')))"
+    "require('path').dirname(require.resolve('react-native/package.json'))"
   ].execute(null, rootDir).text.trim())
+
+  // Path alias to the react-native package directory
+  REACT_NATIVE_DIR = REACT_NATIVE_NODE_MODULES_DIR
+
+  // Path to the ReactAndroid sources
+  REACT_ANDROID_DIR = new File(REACT_NATIVE_DIR, 'ReactAndroid')
 }
 
 apply plugin: "expo-root-project"
