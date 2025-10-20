@@ -25,6 +25,8 @@ build/
 web-build/
 /android/
 /ios/
+mobile/android/
+mobile/ios/
 
 # macOS / Linux / Windows
 .DS_Store
