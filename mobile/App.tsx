@@ -2,6 +2,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { useEffect } from "react";
 import "react-native-gesture-handler";
 import "react-native-reanimated";
+import "./src/reanimated-setup";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { api } from "./src/api/client";
 import AppNavigator from "./src/navigation/AppNavigator"; // placeholder for main app flow
