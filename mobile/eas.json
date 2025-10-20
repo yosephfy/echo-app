@@ -10,7 +10,9 @@
       "env": {
         "REACT_NATIVE_NODE_MODULES_DIR": "../../node_modules",
         "ORG_GRADLE_PROJECT_reactNativeNodeModulesDir": "../../node_modules",
-        "ORG_GRADLE_PROJECT_reactNativeDir": "../../node_modules/react-native"
+        "ORG_GRADLE_PROJECT_reactNativeDir": "../../node_modules/react-native",
+        "ORG_GRADLE_PROJECT_newArchEnabled": "true",
+        "NEW_ARCH_ENABLED": "true"
       }
     },
     "preview": {
@@ -18,7 +20,9 @@
       "env": {
         "REACT_NATIVE_NODE_MODULES_DIR": "../../node_modules",
         "ORG_GRADLE_PROJECT_reactNativeNodeModulesDir": "../../node_modules",
-        "ORG_GRADLE_PROJECT_reactNativeDir": "../../node_modules/react-native"
+        "ORG_GRADLE_PROJECT_reactNativeDir": "../../node_modules/react-native",
+        "ORG_GRADLE_PROJECT_newArchEnabled": "true",
+        "NEW_ARCH_ENABLED": "true"
       }
     },
     "production": {
@@ -26,7 +30,9 @@
       "env": {
         "REACT_NATIVE_NODE_MODULES_DIR": "../../node_modules",
         "ORG_GRADLE_PROJECT_reactNativeNodeModulesDir": "../../node_modules",
-        "ORG_GRADLE_PROJECT_reactNativeDir": "../../node_modules/react-native"
+        "ORG_GRADLE_PROJECT_reactNativeDir": "../../node_modules/react-native",
+        "ORG_GRADLE_PROJECT_newArchEnabled": "true",
+        "NEW_ARCH_ENABLED": "true"
       }
     }
   },
