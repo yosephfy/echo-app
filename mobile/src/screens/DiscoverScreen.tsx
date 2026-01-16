@@ -20,7 +20,7 @@ import { useTheme } from "../theme/ThemeContext";
 import { IconSvg } from "../icons/IconSvg";
 import HashtagChip from "../components/HashtagChip";
 import Chip from "../components/Chip";
-import SecretItem from "../components/Secret/SecretItem";
+import SecretItem, { type SecretItemProps } from "../components/Secret/SecretItem";
 import { TabParamList } from "../navigation/AppNavigator";
 
 const moodsCatalog = [
@@ -71,7 +71,7 @@ export default function DiscoverScreen({ navigation }: Props) {
   );
 
   const renderTrendingItem = useCallback(
-    ({ item, index }: { item: any; index: number }) => (
+    ({ item }: { item: SecretItemProps; index: number }) => (
       <View style={styles.trendingContent}>
         <SecretItem secret={item} navigation={navigation} display="normal" />
       </View>
@@ -251,7 +251,7 @@ export default function DiscoverScreen({ navigation }: Props) {
           ) : (
             <Tabs.FlatList
               data={trending.items}
-              keyExtractor={(i) => i.id}
+              keyExtractor={(i: SecretItemProps) => i.id}
               renderItem={renderTrendingItem}
               onEndReached={() =>
                 trending.hasMore &&
@@ -312,8 +312,8 @@ export default function DiscoverScreen({ navigation }: Props) {
         >
           <Tabs.FlatList
             data={exploreSearch.items}
-            keyExtractor={(i) => i.id}
-            renderItem={({ item }) => (
+            keyExtractor={(i: SecretItemProps) => i.id}
+            renderItem={({ item }: { item: SecretItemProps }) => (
               <SecretItem
                 secret={item}
                 display="normal"

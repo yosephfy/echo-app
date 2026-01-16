@@ -16,8 +16,12 @@ import { ModerationProcessor } from './moderation.processor';
     {
       provide: 'MOD_QUEUE',
       useFactory: (config: ConfigService) => {
+        const redisUrl =
+          config.get<string>('REDIS_URL') ??
+          process.env.REDIS_URL ??
+          'redis://localhost:6379';
         return new Queue('moderation', {
-          connection: { url: config.get<string>('REDIS_URL') },
+          connection: { url: redisUrl },
         });
       },
       inject: [ConfigService],

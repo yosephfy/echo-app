@@ -3,7 +3,7 @@ import * as SecureStore from "expo-secure-store";
 import { deduped } from "./dedupe";
 
 //export const BASE_URL = "http://localhost:3000";
-const BASE_URL = "https://backend-production-c054.up.railway.app";
+export const BASE_URL = "https://backend-production-c054.up.railway.app";
 
 interface ClientOptions {
   headers?: Record<string, string>;

@@ -1,6 +1,4 @@
-// backend/src/redis/redis.module.ts
-
-import { Module, Global } from '@nestjs/common';
+import { Module, Global, Logger } from '@nestjs/common';
 import Redis from 'ioredis';
 
 @Global()
@@ -9,8 +7,18 @@ import Redis from 'ioredis';
     {
       provide: 'REDIS',
       useFactory: () => {
+        const logger = new Logger('Redis');
         const url = process.env.REDIS_URL || 'redis://localhost:6379';
-        return new Redis(url);
+        const redis = new Redis(url, {
+          lazyConnect: true,
+          enableOfflineQueue: false,
+        });
+
+        redis.on('error', (err) => {
+          logger.error(`Redis error: ${err?.message ?? err}`);
+        });
+
+        return redis;
       },
     },
   ],

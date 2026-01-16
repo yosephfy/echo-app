@@ -9,6 +9,9 @@
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "format": "prettier --write .",
     "build": "npm --workspace=backend run build",
+    "dev:deps": "docker compose up -d postgres redis",
+    "dev:backend": "npm run dev:deps && npm --workspace=backend run start:dev",
+    "dev:mobile": "npm --workspace=mobile run start",
     "start:prod": "npm --workspace=backend run start:prod",
     "start": "npm --workspace=backend run start"
   },
